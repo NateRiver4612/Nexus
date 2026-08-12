@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# builds
+dist/
+build/
+.next/
+out/
+.turbo/
+coverage/
+
+# env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,6 @@
+[install]
+# keep the lockfile in sync with the workspace root
+# (empty-linked peers disabled by default)
+
+[workspace]
+# default workspace root is inferred from package.json "workspaces"

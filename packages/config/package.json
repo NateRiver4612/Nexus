@@ -1,0 +1,13 @@
+{
+  "name": "@nexus/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
+    "./tsconfig/hono.json": "./tsconfig/hono.json",
+    "./oxlint.json": "./oxlint.json",
+    "./prettier.json": "./prettier.json"
+  }
+}
