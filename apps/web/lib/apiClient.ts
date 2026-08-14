@@ -1,18 +1,16 @@
-import { z } from 'zod';
-
-import type { ApiError } from './contracts';
-import {
-  artifactSchema,
-  createArtifactSchema,
-  createKnowledgeItemSchema,
-  createPlannerItemSchema,
-  createProjectSchema,
-  knowledgeItemSchema,
-  notificationSchema,
-  plannerItemSchema,
-  projectSchema,
-  updateProjectSchema,
-} from './contracts';
+import type { ApiError } from '@nexus/types';
+import type {
+  Artifact,
+  CreateArtifactInput,
+  CreateKnowledgeItemInput,
+  CreatePlannerItemInput,
+  CreateProjectInput,
+  KnowledgeItem,
+  Notification,
+  PlannerItem,
+  Project,
+  UpdateProjectInput,
+} from '@nexus/types';
 
 export interface NexusClientOptions {
   baseUrl: string;
@@ -34,6 +32,7 @@ export class NexusClient {
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const headers = new Headers(init?.headers);
     headers.set('content-type', 'application/json');
+
     if (this.getToken) {
       const token = await this.getToken();
       if (token) headers.set('authorization', `Bearer ${token}`);
@@ -58,20 +57,20 @@ export class NexusClient {
     return `/v1/projects/${id}${path}`;
   }
 
-  async createProject(input: z.infer<typeof createProjectSchema>) {
-    return this.request('/v1/projects', { method: 'POST', body: JSON.stringify(input) });
+  async createProject(input: CreateProjectInput) {
+    return this.request<Project>('/v1/projects', { method: 'POST', body: JSON.stringify(input) });
   }
 
   async getProjects() {
-    return this.request<z.infer<typeof projectSchema>[]>('/v1/projects');
+    return this.request<Project[]>('/v1/projects');
   }
 
   async getProject(id: string) {
-    return this.request<z.infer<typeof projectSchema>>(this.projectPath(id));
+    return this.request<Project>(this.projectPath(id));
   }
 
-  async updateProject(id: string, input: z.infer<typeof updateProjectSchema>) {
-    return this.request<z.infer<typeof projectSchema>>(this.projectPath(id), {
+  async updateProject(id: string, input: UpdateProjectInput) {
+    return this.request<Project>(this.projectPath(id), {
       method: 'PATCH',
       body: JSON.stringify(input),
     });
@@ -82,44 +81,44 @@ export class NexusClient {
   }
 
   async getPlanner(projectId: string) {
-    return this.request<z.infer<typeof plannerItemSchema>[]>(`/v1/planner/${projectId}`);
+    return this.request<PlannerItem[]>(`/v1/planner/${projectId}`);
   }
 
-  async createPlannerItem(projectId: string, input: z.infer<typeof createPlannerItemSchema>) {
-    return this.request<z.infer<typeof plannerItemSchema>>(`/v1/planner/${projectId}`, {
+  async createPlannerItem(projectId: string, input: CreatePlannerItemInput) {
+    return this.request<PlannerItem>(`/v1/planner/${projectId}`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
   }
 
   async getArtifacts(projectId: string) {
-    return this.request<z.infer<typeof artifactSchema>[]>(`/v1/artifacts/${projectId}`);
+    return this.request<Artifact[]>(`/v1/artifacts/${projectId}`);
   }
 
-  async createArtifact(projectId: string, input: z.infer<typeof createArtifactSchema>) {
-    return this.request<z.infer<typeof artifactSchema>>(`/v1/artifacts/${projectId}`, {
+  async createArtifact(projectId: string, input: CreateArtifactInput) {
+    return this.request<Artifact>(`/v1/artifacts/${projectId}`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
   }
 
   async getKnowledge(projectId: string) {
-    return this.request<z.infer<typeof knowledgeItemSchema>[]>(`/v1/knowledge/${projectId}`);
+    return this.request<KnowledgeItem[]>(`/v1/knowledge/${projectId}`);
   }
 
-  async createKnowledgeItem(projectId: string, input: z.infer<typeof createKnowledgeItemSchema>) {
-    return this.request<z.infer<typeof knowledgeItemSchema>>(`/v1/knowledge/${projectId}`, {
+  async createKnowledgeItem(projectId: string, input: CreateKnowledgeItemInput) {
+    return this.request<KnowledgeItem>(`/v1/knowledge/${projectId}`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
   }
 
   async getNotifications() {
-    return this.request<z.infer<typeof notificationSchema>[]>('/v1/notifications');
+    return this.request<Notification[]>('/v1/notifications');
   }
 
   async markNotificationRead(id: string) {
-    return this.request<z.infer<typeof notificationSchema>>(`/v1/notifications/${id}/read`, {
+    return this.request<Notification>(`/v1/notifications/${id}/read`, {
       method: 'POST',
     });
   }

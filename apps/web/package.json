@@ -13,6 +13,7 @@
   "dependencies": {
     "@nexus/types": "workspace:*",
     "@nexus/ui": "workspace:*",
+    "@nexus/zod-schemas": "workspace:*",
     "better-auth": "^1.3.0",
     "next": "^15.5.0",
     "react": "^19.2.0",

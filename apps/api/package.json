@@ -12,6 +12,7 @@
     "lint": "oxlint src"
   },
   "dependencies": {
+    "@nexus/zod-schemas": "workspace:*",
     "@nexus/db": "workspace:*",
     "@nexus/types": "workspace:*",
     "better-auth": "^1.3.0",

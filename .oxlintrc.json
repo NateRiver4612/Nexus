@@ -1,3 +1,6 @@
 {
-  "extends": "./packages/config/oxlint.json"
+  "extends": "./packages/config/oxlint.json",
+  "options": {
+    "typeAware": true
+  }
 }
