@@ -1,8 +1,10 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { idSchema, projectSchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, idParamsSchema, projectSchema } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../shared/openapi';
+import type { Project } from '@nexus/types';
+
+import { bearerSecurity } from '../../../openapi';
 
 export const getProjectRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -10,12 +12,7 @@ export const getProjectRoute = defineOpenAPIRoute({
     path: '/{id}',
     security: bearerSecurity,
     request: {
-      params: z.object({
-        id: idSchema.openapi({
-          param: { name: 'id', in: 'path' },
-          example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        }),
-      }),
+      params: idParamsSchema,
     },
     responses: {
       200: {
@@ -23,19 +20,11 @@ export const getProjectRoute = defineOpenAPIRoute({
         description: 'Project retrieved',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
       404: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Project not found',
       },
     },
@@ -51,7 +40,7 @@ export const getProjectRoute = defineOpenAPIRoute({
         status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
+      } satisfies Project,
       200,
     );
   },

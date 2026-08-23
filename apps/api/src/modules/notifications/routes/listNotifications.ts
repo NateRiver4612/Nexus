@@ -1,8 +1,8 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { notificationSchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, notificationListSchema } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../shared/openapi';
+import { bearerSecurity } from '../../../openapi';
 
 export const listNotificationsRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -12,24 +12,16 @@ export const listNotificationsRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: {
-          'application/json': { schema: z.array(notificationSchema).openapi('Notifications') },
+          'application/json': { schema: notificationListSchema },
         },
         description: 'List notifications for the current user',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
       404: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Notification not found',
       },
     },

@@ -1,8 +1,12 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { idSchema, knowledgeItemSchema } from '@nexus/zod-schemas';
+import {
+  errorResponseSchema,
+  knowledgeItemListSchema,
+  projectIdParamsSchema,
+} from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../shared/openapi';
+import { bearerSecurity } from '../../../openapi';
 
 export const listKnowledgeRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -10,34 +14,21 @@ export const listKnowledgeRoute = defineOpenAPIRoute({
     path: '/{projectId}',
     security: bearerSecurity,
     request: {
-      params: z.object({
-        projectId: idSchema.openapi({
-          param: { name: 'projectId', in: 'path' },
-          example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        }),
-      }),
+      params: projectIdParamsSchema,
     },
     responses: {
       200: {
         content: {
-          'application/json': { schema: z.array(knowledgeItemSchema).openapi('KnowledgeItems') },
+          'application/json': { schema: knowledgeItemListSchema },
         },
         description: 'List knowledge items for a project',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
       404: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Knowledge item not found',
       },
     },

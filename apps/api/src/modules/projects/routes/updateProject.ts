@@ -1,8 +1,15 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { idSchema, projectSchema, updateProjectSchema } from '@nexus/zod-schemas';
+import {
+  errorResponseSchema,
+  idParamsSchema,
+  projectSchema,
+  updateProjectSchema,
+} from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../shared/openapi';
+import type { Project } from '@nexus/types';
+
+import { bearerSecurity } from '../../../openapi';
 
 export const updateProjectRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -10,12 +17,7 @@ export const updateProjectRoute = defineOpenAPIRoute({
     path: '/{id}',
     security: bearerSecurity,
     request: {
-      params: z.object({
-        id: idSchema.openapi({
-          param: { name: 'id', in: 'path' },
-          example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        }),
-      }),
+      params: idParamsSchema,
       body: {
         content: {
           'application/json': { schema: updateProjectSchema.openapi('UpdateProject') },
@@ -29,19 +31,11 @@ export const updateProjectRoute = defineOpenAPIRoute({
         description: 'Project updated',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
       404: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Project not found',
       },
     },
@@ -55,11 +49,11 @@ export const updateProjectRoute = defineOpenAPIRoute({
         id,
         name: body.name ?? 'Placeholder',
         slug: body.slug ?? 'placeholder',
-        description: 'description' in body ? body.description ?? null : null,
+        description: 'description' in body ? (body.description ?? null) : null,
         status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
+      } satisfies Project,
       200,
     );
   },

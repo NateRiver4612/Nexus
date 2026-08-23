@@ -1,9 +1,11 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { userSchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, userSchema } from '@nexus/zod-schemas';
 
-import { getUser } from '../../../shared/auth-middleware';
-import { bearerSecurity } from '../../../shared/openapi';
+import type { User } from '@nexus/types';
+
+import { getUser } from '../../../auth-middleware';
+import { bearerSecurity } from '../../../openapi';
 
 export const meRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -16,14 +18,21 @@ export const meRoute = defineOpenAPIRoute({
         description: 'Current user profile',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
     },
   }),
-  handler: (c) => c.json(getUser(c), 200),
+  handler: (c) => {
+    const user = getUser(c);
+    return c.json(
+      {
+        id: user.id,
+        email: user.email ?? '',
+        name: user.name ?? null,
+        image: user.image ?? null,
+      } satisfies User,
+      200,
+    );
+  },
 });

@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 
-import { requireAuth } from '../../../shared/auth-middleware';
+import { requireAuth } from '../../../auth-middleware';
 import { createArtifactRoute } from './createArtifact';
 import { deleteArtifactRoute } from './deleteArtifact';
 import { listArtifactsRoute } from './listArtifacts';
@@ -8,12 +8,12 @@ import { updateArtifactRoute } from './updateArtifact';
 
 export function artifactRoutes() {
   const app = new OpenAPIHono();
-
   app.use('*', requireAuth);
-  app.openapi(listArtifactsRoute.route, listArtifactsRoute.handler);
-  app.openapi(createArtifactRoute.route, createArtifactRoute.handler);
-  app.openapi(updateArtifactRoute.route, updateArtifactRoute.handler);
-  app.openapi(deleteArtifactRoute.route, deleteArtifactRoute.handler);
 
-  return app;
+  return app.openapiRoutes([
+    { route: listArtifactsRoute.route, handler: listArtifactsRoute.handler },
+    { route: createArtifactRoute.route, handler: createArtifactRoute.handler },
+    { route: updateArtifactRoute.route, handler: updateArtifactRoute.handler },
+    { route: deleteArtifactRoute.route, handler: deleteArtifactRoute.handler },
+  ] as const);
 }

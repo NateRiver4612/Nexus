@@ -1,8 +1,13 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { idSchema, plannerItemSchema, updatePlannerItemSchema } from '@nexus/zod-schemas';
+import {
+  errorResponseSchema,
+  idParamsSchema,
+  plannerItemSchema,
+  updatePlannerItemSchema,
+} from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../shared/openapi';
+import { bearerSecurity } from '../../../openapi';
 
 export const updatePlannerRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -10,12 +15,7 @@ export const updatePlannerRoute = defineOpenAPIRoute({
     path: '/items/{id}',
     security: bearerSecurity,
     request: {
-      params: z.object({
-        id: idSchema.openapi({
-          param: { name: 'id', in: 'path' },
-          example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        }),
-      }),
+      params: idParamsSchema,
       body: {
         content: {
           'application/json': {
@@ -31,19 +31,11 @@ export const updatePlannerRoute = defineOpenAPIRoute({
         description: 'Planner item updated',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
       404: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Planner item not found',
       },
     },
@@ -57,7 +49,7 @@ export const updatePlannerRoute = defineOpenAPIRoute({
         id,
         projectId: body.projectId ?? '3fa85f64-5717-4562-b3fc-2c963f66afa6',
         title: body.title ?? 'Placeholder',
-        description: 'description' in body ? body.description ?? null : null,
+        description: 'description' in body ? (body.description ?? null) : null,
         status: body.status ?? 'todo',
         priority: body.priority ?? 'medium',
         sortOrder: body.sortOrder ?? 0,

@@ -1,7 +1,5 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
-export { z } from '@hono/zod-openapi';
-
 export const bearerSecurity = [{ Bearer: [] }];
 
 export function registerSecuritySchemes(app: OpenAPIHono) {

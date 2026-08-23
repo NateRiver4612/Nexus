@@ -1,8 +1,8 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { projectSchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, projectListSchema } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../shared/openapi';
+import { bearerSecurity } from '../../../openapi';
 
 export const listProjectsRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -12,24 +12,16 @@ export const listProjectsRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: {
-          'application/json': { schema: z.array(projectSchema).openapi('Projects') },
+          'application/json': { schema: projectListSchema },
         },
         description: 'List projects for the current user',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
       404: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Project not found',
       },
     },

@@ -1,8 +1,8 @@
-import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
+import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { searchQuerySchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, searchQuerySchema, searchResultsSchema } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../shared/openapi';
+import { bearerSecurity } from '../../../openapi';
 
 export const searchRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -16,26 +16,13 @@ export const searchRoute = defineOpenAPIRoute({
       200: {
         content: {
           'application/json': {
-            schema: z
-              .array(
-                z.object({
-                  type: z.enum(['project', 'planner', 'artifact', 'knowledge']),
-                  id: z.string(),
-                  title: z.string(),
-                  snippet: z.string().nullable(),
-                }),
-              )
-              .openapi('SearchResults'),
+            schema: searchResultsSchema,
           },
         },
         description: 'Search across the workspace',
       },
       401: {
-        content: {
-          'application/json': {
-            schema: z.object({ error: z.object({ type: z.string(), message: z.string() }) }),
-          },
-        },
+        content: { 'application/json': { schema: errorResponseSchema } },
         description: 'Authentication required',
       },
     },

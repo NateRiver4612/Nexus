@@ -1,13 +1,11 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 
-import { requireAuth } from '../../../shared/auth-middleware';
+import { requireAuth } from '../../../auth-middleware';
 import { meRoute } from './me';
 
 export function userRoutes() {
   const app = new OpenAPIHono();
-
   app.use('*', requireAuth);
-  app.openapi(meRoute.route, meRoute.handler);
 
-  return app;
+  return app.openapiRoutes([{ route: meRoute.route, handler: meRoute.handler }] as const);
 }

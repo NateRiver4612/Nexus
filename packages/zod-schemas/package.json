@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hono/zod-openapi": "^1.5.2"
+    "@hono/zod-openapi": "^1.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

@@ -6,6 +6,7 @@ agent: build
 Commit the current changes following the Nexus commit format.
 
 Steps:
+
 1. Inspect the repo first: run `git status`, `git diff --stat`, `git diff`, and `git diff --cached --stat` to gather the full set of changes (staged and unstaged).
 2. Derive the ticket id from the current branch name (e.g. a branch like `feature/NEXUS-000_get_everything_working`). Extract the token matching `[A-Z]+-\d+` (that gives `NEXUS-000`) and use it as the ticket prefix. If the branch contains no such token, fall back to `NXS-000`.
 3. Write a commit message in this format:

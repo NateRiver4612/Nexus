@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 
-import { requireAuth } from '../../../shared/auth-middleware';
+import { requireAuth } from '../../../auth-middleware';
 import { createKnowledgeRoute } from './createKnowledge';
 import { deleteKnowledgeRoute } from './deleteKnowledge';
 import { listKnowledgeRoute } from './listKnowledge';
@@ -8,12 +8,12 @@ import { updateKnowledgeRoute } from './updateKnowledge';
 
 export function knowledgeRoutes() {
   const app = new OpenAPIHono();
-
   app.use('*', requireAuth);
-  app.openapi(listKnowledgeRoute.route, listKnowledgeRoute.handler);
-  app.openapi(createKnowledgeRoute.route, createKnowledgeRoute.handler);
-  app.openapi(updateKnowledgeRoute.route, updateKnowledgeRoute.handler);
-  app.openapi(deleteKnowledgeRoute.route, deleteKnowledgeRoute.handler);
 
-  return app;
+  return app.openapiRoutes([
+    { route: listKnowledgeRoute.route, handler: listKnowledgeRoute.handler },
+    { route: createKnowledgeRoute.route, handler: createKnowledgeRoute.handler },
+    { route: updateKnowledgeRoute.route, handler: updateKnowledgeRoute.handler },
+    { route: deleteKnowledgeRoute.route, handler: deleteKnowledgeRoute.handler },
+  ] as const);
 }
