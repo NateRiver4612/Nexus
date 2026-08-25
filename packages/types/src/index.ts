@@ -1,10 +1,17 @@
 import type { z } from 'zod';
 
 import {
+  aiRunListSchema,
+  aiRunSchema,
+  aiSuggestionListSchema,
+  aiSuggestionSchema,
   artifactListSchema,
   artifactSchema,
   createArtifactSchema,
+  createAiSuggestionSchema,
+  createConversationSchema,
   createKnowledgeItemSchema,
+  createMessageSchema,
   createNotificationSchema,
   createPlannerItemSchema,
   createProjectSchema,
@@ -14,6 +21,8 @@ import {
   idSchema,
   knowledgeItemListSchema,
   knowledgeItemSchema,
+  messageListSchema,
+  messageSchema,
   notificationListSchema,
   notificationSchema,
   okSchema,
@@ -27,16 +36,37 @@ import {
   searchResultSchema,
   searchResultsSchema,
   updateArtifactSchema,
+  updateAiSuggestionSchema,
+  updateConversationSchema,
   updateKnowledgeItemSchema,
   updatePlannerItemSchema,
   updateProjectSchema,
   userSchema,
+  conversationListSchema,
+  conversationSchema,
 } from '@nexus/zod-schemas';
 
 export type Id = z.infer<typeof idSchema>;
 export type IdParams = z.infer<typeof idParamsSchema>;
 export type ProjectIdParams = z.infer<typeof projectIdParamsSchema>;
 export type PaginationQuery = z.infer<typeof paginationSchema>;
+
+export type AiSuggestion = z.infer<typeof aiSuggestionSchema>;
+export type AiSuggestionList = z.infer<typeof aiSuggestionListSchema>;
+export type CreateAiSuggestionInput = z.infer<typeof createAiSuggestionSchema>;
+export type UpdateAiSuggestionInput = z.infer<typeof updateAiSuggestionSchema>;
+
+export type AiRun = z.infer<typeof aiRunSchema>;
+export type AiRunList = z.infer<typeof aiRunListSchema>;
+
+export type Conversation = z.infer<typeof conversationSchema>;
+export type ConversationList = z.infer<typeof conversationListSchema>;
+export type CreateConversationInput = z.infer<typeof createConversationSchema>;
+export type UpdateConversationInput = z.infer<typeof updateConversationSchema>;
+
+export type Message = z.infer<typeof messageSchema>;
+export type MessageList = z.infer<typeof messageListSchema>;
+export type CreateMessageInput = z.infer<typeof createMessageSchema>;
 
 export type Project = z.infer<typeof projectSchema>;
 export type ProjectList = z.infer<typeof projectListSchema>;
@@ -73,7 +103,7 @@ export type ApiError = z.infer<typeof errorSchema>;
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
 export type ApiModule =
-  'projects' | 'planner' | 'artifacts' | 'knowledge' | 'notifications' | 'search' | 'users';
+  'ai' | 'projects' | 'planner' | 'artifacts' | 'knowledge' | 'notifications' | 'search' | 'users';
 
 export type ApiContext = {
   user: { id: string; email: string; name: string | null } | null;

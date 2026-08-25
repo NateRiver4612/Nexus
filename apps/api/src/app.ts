@@ -6,6 +6,7 @@ import { logger } from 'hono/logger';
 import auth from './auth';
 import { handleHttpError } from './errors';
 import { docConfig, registerSecuritySchemes } from './openapi';
+import { aiRoutes } from './modules/ai/routes';
 import { artifactRoutes } from './modules/artifacts/routes';
 import { knowledgeRoutes } from './modules/knowledge/routes';
 import { notificationRoutes } from './modules/notifications/routes';
@@ -49,6 +50,7 @@ export function createApp() {
 
   // Modules
   const v1 = new OpenAPIHono()
+    .route('/ai', aiRoutes())
     .route('/projects', projectRoutes())
     .route('/planner', plannerRoutes())
     .route('/artifacts', artifactRoutes())

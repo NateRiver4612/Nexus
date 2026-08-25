@@ -1,3 +1,4 @@
+export * from './ai';
 export * from './artifacts';
 export * from './knowledge';
 export * from './notifications';

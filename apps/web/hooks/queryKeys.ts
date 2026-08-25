@@ -34,3 +34,25 @@ export const userKeys = {
 export const searchKeys = {
   results: (query: SearchQuery) => ['search', query] as const,
 };
+
+export const aiSuggestionKeys = {
+  all: ['ai', 'suggestions'] as const,
+  list: (projectId: string) => ['ai', 'suggestions', projectId] as const,
+};
+
+export const aiRunKeys = {
+  all: ['ai', 'runs'] as const,
+  list: (projectId: string) => ['ai', 'runs', projectId] as const,
+  detail: (id: string) => ['ai', 'runs', id] as const,
+};
+
+export const conversationKeys = {
+  all: ['ai', 'conversations'] as const,
+  list: (projectId: string) => ['ai', 'conversations', projectId] as const,
+  detail: (id: string) => ['ai', 'conversations', id] as const,
+};
+
+export const messageKeys = {
+  all: ['ai', 'messages'] as const,
+  list: (conversationId: string) => ['ai', 'messages', conversationId] as const,
+};

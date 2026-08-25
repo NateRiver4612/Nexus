@@ -1,3 +1,4 @@
+export * from './ai';
 export * from './artifacts';
 export * from './common';
 export * from './knowledge';
