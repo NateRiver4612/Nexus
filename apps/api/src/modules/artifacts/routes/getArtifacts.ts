@@ -5,7 +5,7 @@ import { artifactListSchema, errorResponseSchema, projectIdParamsSchema } from '
 import { bearerSecurity } from '../../../openapi';
 import type { ArtifactList } from '@nexus/types';
 
-export const listArtifactsRoute = defineOpenAPIRoute({
+export const getArtifactsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/{projectId}',

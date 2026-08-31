@@ -2,7 +2,7 @@ import type { CreateKnowledgeItemInput, UpdateKnowledgeItemInput } from '@nexus/
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function listKnowledge(projectId: string) {
+export async function getKnowledge(projectId: string) {
   return handleResponse(
     await apiClient.api.v1.knowledge[':projectId'].$get({ param: { projectId } }),
   );

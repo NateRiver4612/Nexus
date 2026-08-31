@@ -8,7 +8,7 @@ import {
 
 import { bearerSecurity } from '../../../openapi';
 
-export const listPlannerRoute = defineOpenAPIRoute({
+export const getPlannerRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/{projectId}',

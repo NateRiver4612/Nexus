@@ -1,21 +1,27 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, idParamsSchema, messageListSchema } from '@nexus/zod-schemas';
+import {
+  errorResponseSchema,
+  knowledgeItemListSchema,
+  projectIdParamsSchema,
+} from '@nexus/zod-schemas';
 
 import { bearerSecurity } from '../../../openapi';
 
-export const listMessagesRoute = defineOpenAPIRoute({
+export const getKnowledgeRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/conversations/items/{id}/messages',
+    path: '/{projectId}',
     security: bearerSecurity,
     request: {
-      params: idParamsSchema,
+      params: projectIdParamsSchema,
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: messageListSchema } },
-        description: 'List messages in a conversation',
+        content: {
+          'application/json': { schema: knowledgeItemListSchema },
+        },
+        description: 'List knowledge items for a project',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },
@@ -23,7 +29,7 @@ export const listMessagesRoute = defineOpenAPIRoute({
       },
       404: {
         content: { 'application/json': { schema: errorResponseSchema } },
-        description: 'Conversation not found',
+        description: 'Knowledge item not found',
       },
     },
   }),

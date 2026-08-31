@@ -1,20 +1,21 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, notificationListSchema } from '@nexus/zod-schemas';
+import { aiRunListSchema, errorResponseSchema, projectIdParamsSchema } from '@nexus/zod-schemas';
 
 import { bearerSecurity } from '../../../openapi';
 
-export const listNotificationsRoute = defineOpenAPIRoute({
+export const getAiRunsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/',
+    path: '/runs/{projectId}',
     security: bearerSecurity,
+    request: {
+      params: projectIdParamsSchema,
+    },
     responses: {
       200: {
-        content: {
-          'application/json': { schema: notificationListSchema },
-        },
-        description: 'List notifications for the current user',
+        content: { 'application/json': { schema: aiRunListSchema } },
+        description: 'List AI runs for a project',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },
@@ -22,7 +23,7 @@ export const listNotificationsRoute = defineOpenAPIRoute({
       },
       404: {
         content: { 'application/json': { schema: errorResponseSchema } },
-        description: 'Notification not found',
+        description: 'Project not found',
       },
     },
   }),

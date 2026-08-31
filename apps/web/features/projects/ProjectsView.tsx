@@ -1,17 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Search } from 'lucide-react';
 
 import type { Project } from '@nexus/types';
-import { Button, Input, Tabs, TabsList, TabsTrigger } from '@nexus/ui';
+import { Button, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@nexus/ui';
 
-import { useProjects } from '@/hooks';
+import { useGetProjects } from '@/hooks/useProjects';
 
 import { ProjectCard } from './ProjectCard';
 
-const sampleProjects: Project[] = Array.from({ length: 4 }, () => ({
-  id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+const sampleProjects: Project[] = Array.from({ length: 4 }, (i) => ({
+  id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' + i,
   name: 'Market Research',
   slug: 'market-research',
   description: 'Review Executive Summary',
@@ -27,35 +27,19 @@ const tabs = [
 ];
 
 export function ProjectsView() {
-  const { data } = useProjects();
+  useGetProjects();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState('active');
 
-  const projects = Array.isArray(data) && data.length > 0 ? data : sampleProjects;
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return projects.filter((project) => {
-      const matchesTab =
-        tab === 'active'
-          ? project.status === 'active'
-          : tab === 'archived'
-            ? project.status === 'archived'
-            : true;
-      const matchesQuery =
-        !q ||
-        project.name.toLowerCase().includes(q) ||
-        project.slug.toLowerCase().includes(q) ||
-        (project.description ?? '').toLowerCase().includes(q);
-      return matchesTab && matchesQuery;
-    });
-  }, [projects, query, tab]);
+  const projects = sampleProjects;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Projects</h1>
-        <Button>Create New</Button>
+        <Button className="bg-black text-white hover:bg-gray-800 py-1.5 rounded-lg">
+          Create New
+        </Button>
       </div>
 
       <div className="relative w-full max-w-xs">
@@ -76,17 +60,20 @@ export function ProjectsView() {
             </TabsTrigger>
           ))}
         </TabsList>
+        <TabsContent value="active">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {projects.map((project, index) => (
+              <ProjectCard key={project.id + index} project={project} />
+            ))}
+          </div>
+        </TabsContent>
+        <TabsContent value="shared">
+          <p className="mt-8 text-center text-sm text-muted-foreground">No projects found.</p>
+        </TabsContent>
+        <TabsContent value="archived">
+          <p className="mt-8 text-center text-sm text-muted-foreground">No projects found.</p>
+        </TabsContent>
       </Tabs>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filtered.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-      </div>
-
-      {filtered.length === 0 && (
-        <p className="mt-8 text-center text-sm text-muted-foreground">No projects found.</p>
-      )}
     </div>
   );
 }

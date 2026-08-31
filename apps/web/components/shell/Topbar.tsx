@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { useState } from 'react';
 
-import { useMe } from '@/hooks';
+import { useMe } from '@/hooks/useMe';
 import { isUser } from '@/lib/client';
 import { Avatar, AvatarFallback, AvatarImage, Input } from '@nexus/ui';
 

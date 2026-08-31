@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint src"
+    "lint": "oxlint --config ../../packages/config/oxlint.json src"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.5",

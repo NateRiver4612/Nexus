@@ -2,7 +2,7 @@ import type { CreateProjectInput, UpdateProjectInput } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function listProjects() {
+export async function getProjects() {
   return handleResponse(await apiClient.api.v1.projects.$get());
 }
 

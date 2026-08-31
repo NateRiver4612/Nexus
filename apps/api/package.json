@@ -13,7 +13,7 @@
     "start": "bun --env-file=../../.env src/index.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint src"
+    "lint": "oxlint --config ../../packages/config/oxlint.json src"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.6.0",

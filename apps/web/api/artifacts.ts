@@ -2,7 +2,7 @@ import type { CreateArtifactInput, UpdateArtifactInput } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function listArtifacts(projectId: string) {
+export async function getArtifacts(projectId: string) {
   return handleResponse(
     await apiClient.api.v1.artifacts[':projectId'].$get({ param: { projectId } }),
   );

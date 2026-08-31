@@ -5,10 +5,10 @@ import { createAiSuggestionRoute } from './createAiSuggestion';
 import { createConversationRoute } from './createConversation';
 import { deleteAiSuggestionRoute } from './deleteAiSuggestion';
 import { getAiRunRoute } from './getAiRun';
-import { listAiRunsRoute } from './listAiRuns';
-import { listAiSuggestionsRoute } from './listAiSuggestions';
-import { listConversationsRoute } from './listConversations';
-import { listMessagesRoute } from './listMessages';
+import { getAiRunsRoute } from './getAiRuns';
+import { getAiSuggestionsRoute } from './getAiSuggestions';
+import { getConversationsRoute } from './getConversations';
+import { getMessagesRoute } from './getMessages';
 import { postMessageRoute } from './postMessage';
 import { updateAiSuggestionRoute } from './updateAiSuggestion';
 import { updateConversationRoute } from './updateConversation';
@@ -18,16 +18,16 @@ export function aiRoutes() {
   app.use('*', requireAuth);
 
   return app.openapiRoutes([
-    { route: listAiSuggestionsRoute.route, handler: listAiSuggestionsRoute.handler },
+    { route: getAiSuggestionsRoute.route, handler: getAiSuggestionsRoute.handler },
     { route: createAiSuggestionRoute.route, handler: createAiSuggestionRoute.handler },
     { route: updateAiSuggestionRoute.route, handler: updateAiSuggestionRoute.handler },
     { route: deleteAiSuggestionRoute.route, handler: deleteAiSuggestionRoute.handler },
-    { route: listAiRunsRoute.route, handler: listAiRunsRoute.handler },
+    { route: getAiRunsRoute.route, handler: getAiRunsRoute.handler },
     { route: getAiRunRoute.route, handler: getAiRunRoute.handler },
-    { route: listConversationsRoute.route, handler: listConversationsRoute.handler },
+    { route: getConversationsRoute.route, handler: getConversationsRoute.handler },
     { route: createConversationRoute.route, handler: createConversationRoute.handler },
     { route: updateConversationRoute.route, handler: updateConversationRoute.handler },
-    { route: listMessagesRoute.route, handler: listMessagesRoute.handler },
+    { route: getMessagesRoute.route, handler: getMessagesRoute.handler },
     { route: postMessageRoute.route, handler: postMessageRoute.handler },
   ] as const);
 }

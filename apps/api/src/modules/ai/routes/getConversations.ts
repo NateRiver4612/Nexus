@@ -1,25 +1,25 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
-  aiSuggestionListSchema,
+  conversationListSchema,
   errorResponseSchema,
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
 
 import { bearerSecurity } from '../../../openapi';
 
-export const listAiSuggestionsRoute = defineOpenAPIRoute({
+export const getConversationsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/suggestions/{projectId}',
+    path: '/conversations/{projectId}',
     security: bearerSecurity,
     request: {
       params: projectIdParamsSchema,
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: aiSuggestionListSchema } },
-        description: 'List AI suggestions for a project',
+        content: { 'application/json': { schema: conversationListSchema } },
+        description: 'List conversations for a project',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },

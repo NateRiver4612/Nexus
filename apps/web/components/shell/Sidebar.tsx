@@ -13,7 +13,7 @@ import {
   Settings,
 } from 'lucide-react';
 
-import { useMe } from '@/hooks';
+import { useMe } from '@/hooks/useMe';
 import { isUser } from '@/lib/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@nexus/ui';
 

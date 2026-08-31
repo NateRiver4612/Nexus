@@ -1,27 +1,20 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import {
-  errorResponseSchema,
-  knowledgeItemListSchema,
-  projectIdParamsSchema,
-} from '@nexus/zod-schemas';
+import { errorResponseSchema, notificationListSchema } from '@nexus/zod-schemas';
 
 import { bearerSecurity } from '../../../openapi';
 
-export const listKnowledgeRoute = defineOpenAPIRoute({
+export const getNotificationsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/{projectId}',
+    path: '/',
     security: bearerSecurity,
-    request: {
-      params: projectIdParamsSchema,
-    },
     responses: {
       200: {
         content: {
-          'application/json': { schema: knowledgeItemListSchema },
+          'application/json': { schema: notificationListSchema },
         },
-        description: 'List knowledge items for a project',
+        description: 'List notifications for the current user',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },
@@ -29,7 +22,7 @@ export const listKnowledgeRoute = defineOpenAPIRoute({
       },
       404: {
         content: { 'application/json': { schema: errorResponseSchema } },
-        description: 'Knowledge item not found',
+        description: 'Notification not found',
       },
     },
   }),

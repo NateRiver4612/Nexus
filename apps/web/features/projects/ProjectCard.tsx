@@ -22,7 +22,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <Progress value={50} className="flex-1" />
+        <Progress value={50} />
         <span className="text-xs text-muted-foreground">50%</span>
       </div>
 

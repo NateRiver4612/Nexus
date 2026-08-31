@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint app components features hooks lib api next.config.ts"
+    "lint": "oxlint --config ../../packages/config/oxlint.json app components features hooks lib api next.config.ts"
   },
   "dependencies": {
     "@nexus/types": "workspace:*",

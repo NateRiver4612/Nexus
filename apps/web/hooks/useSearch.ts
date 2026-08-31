@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { SearchQuery } from '@nexus/types';
 
-import { search } from '@/api';
+import { search } from '@/api/search';
 
 import { searchKeys } from './queryKeys';
 

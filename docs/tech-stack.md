@@ -157,15 +157,15 @@ Nexus uses:
 
 with a **modular monolith architecture**.
 
-| Technology     | Purpose                   |
-| -------------- | ------------------------- |
-| **Hono**       | HTTP API                  |
-| **Bun** | Runtime |
-| **TypeScript** | Type safety               |
-| **Drizzle** | ORM / database access |
-| **Zod**        | Request validation        |
-| **Better Auth** | Authentication |
-| **BullMQ**     | Background job processing |
+| Technology      | Purpose                   |
+| --------------- | ------------------------- |
+| **Hono**        | HTTP API                  |
+| **Bun**         | Runtime                   |
+| **TypeScript**  | Type safety               |
+| **Drizzle**     | ORM / database access     |
+| **Zod**         | Request validation        |
+| **Better Auth** | Authentication            |
+| **BullMQ**      | Background job processing |
 
 ### Backend Architecture
 

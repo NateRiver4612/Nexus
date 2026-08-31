@@ -8,7 +8,7 @@ import type {
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function listAiSuggestions(projectId: string) {
+export async function getAiSuggestions(projectId: string) {
   return handleResponse(
     await apiClient.api.v1.ai.suggestions[':projectId'].$get({ param: { projectId } }),
   );
@@ -35,7 +35,7 @@ export async function deleteAiSuggestion(id: string) {
   );
 }
 
-export async function listAiRuns(projectId: string) {
+export async function getAiRuns(projectId: string) {
   return handleResponse(
     await apiClient.api.v1.ai.runs[':projectId'].$get({ param: { projectId } }),
   );
@@ -45,7 +45,7 @@ export async function getAiRun(id: string) {
   return handleResponse(await apiClient.api.v1.ai.runs.items[':id'].$get({ param: { id } }));
 }
 
-export async function listConversations(projectId: string) {
+export async function getConversations(projectId: string) {
   return handleResponse(
     await apiClient.api.v1.ai.conversations[':projectId'].$get({ param: { projectId } }),
   );
@@ -66,7 +66,7 @@ export async function updateConversation(id: string, input: UpdateConversationIn
   );
 }
 
-export async function listMessages(conversationId: string) {
+export async function getMessages(conversationId: string) {
   return handleResponse(
     await apiClient.api.v1.ai.conversations.items[':id'].messages.$get({
       param: { id: conversationId },

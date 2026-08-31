@@ -2,7 +2,7 @@ import type { CreatePlannerItemInput, UpdatePlannerItemInput } from '@nexus/type
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function listPlanner(projectId: string) {
+export async function getPlanner(projectId: string) {
   return handleResponse(
     await apiClient.api.v1.planner[':projectId'].$get({ param: { projectId } }),
   );

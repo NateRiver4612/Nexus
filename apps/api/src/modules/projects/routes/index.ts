@@ -4,15 +4,15 @@ import { requireAuth } from '../../../auth-middleware';
 import { createProjectRoute } from './createProject';
 import { deleteProjectRoute } from './deleteProject';
 import { getProjectRoute } from './getProject';
-import { listProjectsRoute } from './listProjects';
 import { updateProjectRoute } from './updateProject';
+import { getProjectsRoute } from './getProjects';
 
 export function projectRoutes() {
   const app = new OpenAPIHono();
   app.use('*', requireAuth);
 
   return app.openapiRoutes([
-    { route: listProjectsRoute.route, handler: listProjectsRoute.handler },
+    { route: getProjectsRoute.route, handler: getProjectsRoute.handler },
     { route: createProjectRoute.route, handler: createProjectRoute.handler },
     { route: getProjectRoute.route, handler: getProjectRoute.handler },
     { route: updateProjectRoute.route, handler: updateProjectRoute.handler },

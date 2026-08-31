@@ -2,7 +2,7 @@ import type { CreateNotificationInput } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function listNotifications() {
+export async function getNotifications() {
   return handleResponse(await apiClient.api.v1.notifications.$get());
 }
 

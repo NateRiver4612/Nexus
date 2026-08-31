@@ -4,7 +4,7 @@ import { errorResponseSchema, projectListSchema } from '@nexus/zod-schemas';
 
 import { bearerSecurity } from '../../../openapi';
 
-export const listProjectsRoute = defineOpenAPIRoute({
+export const getProjectsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/',
