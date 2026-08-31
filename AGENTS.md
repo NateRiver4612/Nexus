@@ -58,6 +58,7 @@ The product/architecture docs live in `docs/` and are the source of truth for in
 - Minimize assumptions: do not silently invent fields, endpoints, UI behavior, auth rules, error semantics, or naming. Follow existing conventions for trivial choices.
 - Inspect existing code before creating new abstractions: reuse existing schemas, types, utilities, and route patterns rather than adding new ones.
 - Keep changes small enough to review easily (1-3 files per step).
+- Never commit without approval: draft the commit message, show it to the user, and wait for the go-ahead before staging and committing.
 
 ## File naming
 
