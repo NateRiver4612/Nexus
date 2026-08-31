@@ -2,7 +2,7 @@ import { hc } from 'hono/client';
 import type { ClientResponse } from 'hono/client';
 
 import type { AppType } from '@nexus/api/client';
-import type { ErrorResponse } from '@nexus/types';
+import type { ErrorResponse, User } from '@nexus/types';
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
@@ -12,6 +12,10 @@ export const apiClient = hc<AppType>(baseUrl, {
 });
 
 export type ResponseData<R> = R extends ClientResponse<infer T, any, 'json'> ? T : never;
+
+export function isUser(value: unknown): value is User {
+  return typeof value === 'object' && value !== null && 'id' in value;
+}
 
 export async function handleResponse<R extends ClientResponse<any, any, 'json'>>(
   res: R,

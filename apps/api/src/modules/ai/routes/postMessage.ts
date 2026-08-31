@@ -1,6 +1,11 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { createMessageSchema, errorResponseSchema, idParamsSchema, messageSchema } from '@nexus/zod-schemas';
+import {
+  createMessageSchema,
+  errorResponseSchema,
+  idParamsSchema,
+  messageSchema,
+} from '@nexus/zod-schemas';
 
 import type { Message } from '@nexus/types';
 

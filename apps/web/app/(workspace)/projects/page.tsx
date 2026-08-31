@@ -1,3 +1,5 @@
+import { ProjectsView } from '@/features/projects/ProjectsView';
+
 export default function Page() {
-  return <h1 className="text-xl font-semibold">projects</h1>;
+  return <ProjectsView />;
 }

@@ -27,6 +27,16 @@ services:
       - nexus-redis:/data
     command: redis-server --appendonly yes
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - '5540:5540'
+    volumes:
+      - nexus-redisinsight:/data
+    depends_on:
+      - redis
+
 volumes:
   nexus-postgres:
   nexus-redis:
+  nexus-redisinsight:

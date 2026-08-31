@@ -49,11 +49,11 @@ export const updateAiSuggestionRoute = defineOpenAPIRoute({
         projectId: body.projectId ?? '3fa85f64-5717-4562-b3fc-2c963f66afa6',
         type: body.type ?? 'refactor',
         title: body.title ?? 'Placeholder',
-        description: 'description' in body ? body.description ?? null : null,
+        description: 'description' in body ? (body.description ?? null) : null,
         status: body.status ?? 'pending',
         metadata: body.metadata ?? {},
         createdAt: new Date().toISOString(),
-        expiresAt: 'expiresAt' in body ? body.expiresAt ?? null : null,
+        expiresAt: 'expiresAt' in body ? (body.expiresAt ?? null) : null,
       } satisfies AiSuggestion,
       200,
     );

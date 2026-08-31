@@ -8,7 +8,10 @@ export const aiSuggestionSchema = z
     projectId: idSchema,
     type: z.string().min(1).max(48).openapi({ example: 'refactor' }),
     title: z.string().min(1).max(255).openapi({ example: 'Extract validation helpers' }),
-    description: z.string().nullable().openapi({ example: 'Suggest splitting validation into shared utilities' }),
+    description: z
+      .string()
+      .nullable()
+      .openapi({ example: 'Suggest splitting validation into shared utilities' }),
     status: z.enum(['pending', 'accepted', 'dismissed', 'expired']).default('pending'),
     metadata: z.record(z.string(), z.unknown()).default({}),
     createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
@@ -51,7 +54,12 @@ export const conversationSchema = z
     id: idSchema,
     projectId: idSchema,
     userId: z.string().openapi({ example: 'seed@nexus.local' }),
-    title: z.string().min(1).max(255).default('New conversation').openapi({ example: 'Scope the AI module' }),
+    title: z
+      .string()
+      .min(1)
+      .max(255)
+      .default('New conversation')
+      .openapi({ example: 'Scope the AI module' }),
     createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
     updatedAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
   })
@@ -71,7 +79,10 @@ export const messageSchema = z
     conversationId: idSchema,
     role: z.enum(['user', 'assistant', 'system']).openapi({ example: 'user' }),
     content: z.string().min(1).openapi({ example: 'How should we scope AI runs?' }),
-    sourceId: z.string().nullable().openapi({ example: 'artifact:3fa85f64-5717-4562-b3fc-2c963f66afa6' }),
+    sourceId: z
+      .string()
+      .nullable()
+      .openapi({ example: 'artifact:3fa85f64-5717-4562-b3fc-2c963f66afa6' }),
     createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
   })
   .openapi('Message');

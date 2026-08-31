@@ -1,6 +1,10 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { aiSuggestionListSchema, errorResponseSchema, projectIdParamsSchema } from '@nexus/zod-schemas';
+import {
+  aiSuggestionListSchema,
+  errorResponseSchema,
+  projectIdParamsSchema,
+} from '@nexus/zod-schemas';
 
 import { bearerSecurity } from '../../../openapi';
 

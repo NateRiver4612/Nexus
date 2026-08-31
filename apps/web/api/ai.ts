@@ -16,7 +16,10 @@ export async function listAiSuggestions(projectId: string) {
 
 export async function createAiSuggestion(projectId: string, input: CreateAiSuggestionInput) {
   return handleResponse(
-    await apiClient.api.v1.ai.suggestions[':projectId'].$post({ param: { projectId }, json: input }),
+    await apiClient.api.v1.ai.suggestions[':projectId'].$post({
+      param: { projectId },
+      json: input,
+    }),
   );
 }
 
@@ -27,11 +30,15 @@ export async function updateAiSuggestion(id: string, input: UpdateAiSuggestionIn
 }
 
 export async function deleteAiSuggestion(id: string) {
-  return handleResponse(await apiClient.api.v1.ai.suggestions.items[':id'].$delete({ param: { id } }));
+  return handleResponse(
+    await apiClient.api.v1.ai.suggestions.items[':id'].$delete({ param: { id } }),
+  );
 }
 
 export async function listAiRuns(projectId: string) {
-  return handleResponse(await apiClient.api.v1.ai.runs[':projectId'].$get({ param: { projectId } }));
+  return handleResponse(
+    await apiClient.api.v1.ai.runs[':projectId'].$get({ param: { projectId } }),
+  );
 }
 
 export async function getAiRun(id: string) {
@@ -61,7 +68,9 @@ export async function updateConversation(id: string, input: UpdateConversationIn
 
 export async function listMessages(conversationId: string) {
   return handleResponse(
-    await apiClient.api.v1.ai.conversations.items[':id'].messages.$get({ param: { id: conversationId } }),
+    await apiClient.api.v1.ai.conversations.items[':id'].messages.$get({
+      param: { id: conversationId },
+    }),
   );
 }
 
