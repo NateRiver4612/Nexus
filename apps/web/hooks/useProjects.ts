@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { CreateProjectInput, UpdateProjectInput } from '@nexus/types';
 
-import { createProject, deleteProject, getProject, getProjects, updateProject } from '@/api/projects';
+import {
+  createProject,
+  deleteProject,
+  getProject,
+  getProjects,
+  updateProject,
+} from '@/api/projects';
 
 import { projectKeys } from './queryKeys';
 

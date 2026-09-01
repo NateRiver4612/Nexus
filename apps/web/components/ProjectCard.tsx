@@ -1,7 +1,9 @@
 import { Boxes } from 'lucide-react';
 
 import type { Project } from '@nexus/types';
-import { Badge, Card, Progress } from '@nexus/ui';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 
 interface ProjectCardProps {
   project: Project;

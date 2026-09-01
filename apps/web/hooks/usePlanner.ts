@@ -2,12 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { CreatePlannerItemInput, UpdatePlannerItemInput } from '@nexus/types';
 
-import {
-  createPlannerItem,
-  deletePlannerItem,
-  getPlanner,
-  updatePlannerItem,
-} from '@/api/planner';
+import { createPlannerItem, deletePlannerItem, getPlanner, updatePlannerItem } from '@/api/planner';
 
 import { plannerKeys } from './queryKeys';
 

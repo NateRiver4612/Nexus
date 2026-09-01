@@ -8,7 +8,6 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./*"],
-      "@nexus/ui/*": ["../../packages/ui/src/*"],
       "@nexus/types/*": ["../../packages/types/src/*"]
     }
   }

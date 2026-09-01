@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { Search } from 'lucide-react';
 
 import type { Project } from '@nexus/types';
-import { Button, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@nexus/ui';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useGetProjects } from '@/hooks/useProjects';
 
 import { ProjectCard } from './ProjectCard';
+import { useRouter } from 'next/navigation';
 
 const sampleProjects: Project[] = Array.from({ length: 4 }, (i) => ({
   id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' + i,
@@ -33,13 +36,13 @@ export function ProjectsView() {
 
   const projects = sampleProjects;
 
+  const router = useRouter();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Projects</h1>
-        <Button className="bg-black text-white hover:bg-gray-800 py-1.5 rounded-lg">
-          Create New
-        </Button>
+        <Button onClick={() => router.push('/new-project')}>Create New</Button>
       </div>
 
       <div className="relative w-full max-w-xs">

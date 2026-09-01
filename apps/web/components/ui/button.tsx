@@ -1,14 +1,14 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium',
+  'inline-flex items-center cursor-pointer justify-center transition gap-2 rounded-md text-sm font-medium',
   {
     variants: {
       variant: {
         default: 'bg-foreground text-background hover:opacity-90',
-        outline: 'border hover:bg-accent',
+        outline: 'border-border hover:bg-accent',
         ghost: 'hover:bg-accent',
       },
       size: {
@@ -17,7 +17,7 @@ export const buttonVariants = cva(
         lg: 'h-12 px-6',
       },
     },
-    defaultVariants: { variant: 'default', size: 'md' },
+    defaultVariants: { variant: 'default', size: 'sm' },
   },
 );
 

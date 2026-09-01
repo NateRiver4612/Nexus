@@ -6,7 +6,8 @@ import { useState } from 'react';
 
 import { useMe } from '@/hooks/useMe';
 import { isUser } from '@/lib/client';
-import { Avatar, AvatarFallback, AvatarImage, Input } from '@nexus/ui';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
 
 import { cn } from '@/lib/utils';
 
@@ -29,7 +30,7 @@ export function Topbar({ collapsed, onToggle }: TopbarProps) {
   }
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-4 border-b bg-card px-4">
+    <header className="flex h-16 shrink-0 items-center gap-4 border-b-border bg-card px-4">
       <button
         type="button"
         onClick={onToggle}

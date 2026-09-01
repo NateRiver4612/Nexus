@@ -15,7 +15,7 @@ import {
 
 import { useMe } from '@/hooks/useMe';
 import { isUser } from '@/lib/client';
-import { Avatar, AvatarFallback, AvatarImage } from '@nexus/ui';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 import { cn } from '@/lib/utils';
 
@@ -41,11 +41,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'flex h-screen shrink-0 flex-col border-r bg-card transition-[width] duration-200',
+        'flex h-screen shrink-0 flex-col border-r-border bg-card transition-[width] duration-200',
         collapsed ? 'w-16' : 'w-64',
       )}
     >
-      <div className="flex h-16 items-center gap-2 border-b px-4">
+      <div className="flex h-16 items-center gap-2 border-b-border px-4">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Boxes className="size-5" />
         </div>
@@ -54,7 +54,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {nav.map((item) => {
-          const active = pathname.startsWith(item.href);
+          const active =
+            pathname === '/new-project'
+              ? item.href === '/projects'
+              : pathname.startsWith(item.href);
+
           return (
             <Link
               key={item.href}
@@ -75,7 +79,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t p-3">
+      <div className="border-t-border p-3">
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
           <Avatar className="size-8">
             {user?.image && <AvatarImage src={user.image} alt={user?.name ?? 'User'} />}
