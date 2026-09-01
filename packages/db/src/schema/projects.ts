@@ -36,7 +36,7 @@ export const projects = pgTable(
     status: projectStatus('status').notNull().default('active'),
     startDate: timestamp('start_date', { withTimezone: true, mode: 'date' }),
     targetDate: timestamp('target_date', { withTimezone: true, mode: 'date' }),
-    createdBy: text('created_by')
+    createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -59,7 +59,7 @@ export const projectMembers = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
+    userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: projectRole('role').notNull().default('member'),
