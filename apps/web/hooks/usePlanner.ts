@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { CreatePlannerItemInput, UpdatePlannerItemInput } from '@nexus/types';
+import type { CreatePlannerItemInputType, UpdatePlannerItemInputType } from '@nexus/types';
 
 import { createPlannerItem, deletePlannerItem, getPlanner, updatePlannerItem } from '@/api/planner';
 
@@ -18,7 +18,7 @@ export function useCreatePlannerItem(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreatePlannerItemInput) => createPlannerItem(projectId, input),
+    mutationFn: (input: CreatePlannerItemInputType) => createPlannerItem(projectId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerKeys.list(projectId) }),
   });
 }
@@ -27,7 +27,7 @@ export function useUpdatePlannerItem(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdatePlannerItemInput }) =>
+    mutationFn: ({ id, input }: { id: string; input: UpdatePlannerItemInputType }) =>
       updatePlannerItem(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerKeys.list(projectId) }),
   });

@@ -1,17 +1,20 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 
-import { requireAuth } from '../../../auth-middleware';
 import { createProjectRoute } from './createProject';
 import { deleteProjectRoute } from './deleteProject';
+import { getOnboardingRoute } from './getOnboarding';
 import { getProjectRoute } from './getProject';
-import { updateProjectRoute } from './updateProject';
 import { getProjectsRoute } from './getProjects';
+import { saveOnboardingRoute } from './saveOnboarding';
+import { updateProjectRoute } from './updateProject';
 
 export function projectRoutes() {
   const app = new OpenAPIHono();
-  app.use('*', requireAuth);
+  // app.use('*', requireAuth);
 
   return app.openapiRoutes([
+    { route: getOnboardingRoute.route, handler: getOnboardingRoute.handler },
+    { route: saveOnboardingRoute.route, handler: saveOnboardingRoute.handler },
     { route: getProjectsRoute.route, handler: getProjectsRoute.handler },
     { route: createProjectRoute.route, handler: createProjectRoute.handler },
     { route: getProjectRoute.route, handler: getProjectRoute.handler },

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { CreateNotificationInput } from '@nexus/types';
+import type { CreateNotificationInputType } from '@nexus/types';
 
 import { createNotification, getNotifications, readNotification } from '@/api/notifications';
 
@@ -17,7 +17,7 @@ export function useCreateNotification() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateNotificationInput) => createNotification(input),
+    mutationFn: (input: CreateNotificationInputType) => createNotification(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
   });
 }

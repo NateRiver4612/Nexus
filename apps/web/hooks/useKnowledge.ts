@@ -1,11 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { CreateKnowledgeItemInput, UpdateKnowledgeItemInput } from '@nexus/types';
+import type {
+  CreateKnowledgeItemInputType,
+  CreateKnowledgeSourcesInputType,
+  CreateUploadUrlInputType,
+  KnowledgeSourceType,
+  UpdateKnowledgeItemInputType,
+} from '@nexus/types';
 
 import {
   createKnowledgeItem,
+  createKnowledgeSources,
   deleteKnowledgeItem,
   getKnowledge,
+  getKnowledgeSources,
+  getKnowledgeUploadUrl,
   updateKnowledgeItem,
 } from '@/api/knowledge';
 
@@ -23,7 +32,7 @@ export function useCreateKnowledgeItem(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateKnowledgeItemInput) => createKnowledgeItem(projectId, input),
+    mutationFn: (input: CreateKnowledgeItemInputType) => createKnowledgeItem(projectId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: knowledgeKeys.list(projectId) }),
   });
 }
@@ -32,7 +41,7 @@ export function useUpdateKnowledgeItem(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateKnowledgeItemInput }) =>
+    mutationFn: ({ id, input }: { id: string; input: UpdateKnowledgeItemInputType }) =>
       updateKnowledgeItem(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: knowledgeKeys.list(projectId) }),
   });
@@ -44,5 +53,33 @@ export function useDeleteKnowledgeItem(projectId: string) {
   return useMutation({
     mutationFn: (id: string) => deleteKnowledgeItem(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: knowledgeKeys.list(projectId) }),
+  });
+}
+
+export function useGetKnowledgeSources(projectId: string) {
+  return useQuery({
+    queryKey: knowledgeKeys.sources(projectId),
+    queryFn: () => getKnowledgeSources(projectId),
+    enabled: Boolean(projectId),
+    refetchInterval: (query) => {
+      const data = query.state.data as KnowledgeSourceType[] | undefined;
+      return data?.some((s) => s.status === 'pending' || s.status === 'processing') ? 1500 : false;
+    },
+  });
+}
+
+export function useCreateKnowledgeSources(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateKnowledgeSourcesInputType) =>
+      createKnowledgeSources(projectId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: knowledgeKeys.sources(projectId) }),
+  });
+}
+
+export function useCreateKnowledgeUploadUrl(projectId: string) {
+  return useMutation({
+    mutationFn: (input: CreateUploadUrlInputType) => getKnowledgeUploadUrl(projectId, input),
   });
 }

@@ -2,7 +2,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { aiRunSchema, errorResponseSchema, idParamsSchema } from '@nexus/zod-schemas';
 
-import type { AiRun } from '@nexus/types';
+import type { AiRunType } from '@nexus/types';
 
 import { bearerSecurity } from '../../../openapi';
 
@@ -43,7 +43,7 @@ export const getAiRunRoute = defineOpenAPIRoute({
         outputTokens: 0,
         createdAt: new Date().toISOString(),
         completedAt: null,
-      } satisfies AiRun,
+      } satisfies AiRunType,
       200,
     );
   },

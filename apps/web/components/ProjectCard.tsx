@@ -1,17 +1,17 @@
 import { Boxes } from 'lucide-react';
 
-import type { Project } from '@nexus/types';
+import type { ProjectType } from '@nexus/types';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 interface ProjectCardProps {
-  project: Project;
+  project: ProjectType;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
   return (
-    <Card className="flex flex-col gap-4 p-5">
+    <Card className="flex flex-col gap-4 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex size-9 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
           <Boxes className="size-5" />

@@ -1,14 +1,16 @@
 CREATE EXTENSION IF NOT EXISTS "vector";--> statement-breakpoint
 CREATE TYPE "public"."artifact_status" AS ENUM('queued', 'generating', 'ready', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."artifact_type" AS ENUM('report', 'presentation', 'spreadsheet', 'proposal', 'pdf', 'document', 'diagram', 'study_guide');--> statement-breakpoint
-CREATE TYPE "public"."document_status" AS ENUM('pending', 'processing', 'ready', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."event_status" AS ENUM('scheduled', 'cancelled', 'completed');--> statement-breakpoint
 CREATE TYPE "public"."membership_role" AS ENUM('owner', 'member');--> statement-breakpoint
 CREATE TYPE "public"."message_role" AS ENUM('user', 'assistant', 'system');--> statement-breakpoint
 CREATE TYPE "public"."milestone_status" AS ENUM('planned', 'active', 'paused', 'completed');--> statement-breakpoint
+CREATE TYPE "public"."project_onboarding_status" AS ENUM('draft', 'in_progress', 'completed');--> statement-breakpoint
 CREATE TYPE "public"."project_role" AS ENUM('owner', 'manager', 'member', 'viewer');--> statement-breakpoint
 CREATE TYPE "public"."project_status" AS ENUM('draft', 'active', 'paused', 'completed', 'archived');--> statement-breakpoint
 CREATE TYPE "public"."ai_run_status" AS ENUM('queued', 'processing', 'completed', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."source_status" AS ENUM('pending', 'processing', 'ready', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."source_type" AS ENUM('file', 'url', 'youtube', 'copied_text', 'audio', 'video');--> statement-breakpoint
 CREATE TYPE "public"."suggestion_status" AS ENUM('pending', 'accepted', 'dismissed', 'expired');--> statement-breakpoint
 CREATE TYPE "public"."task_priority" AS ENUM('low', 'medium', 'high', 'urgent');--> statement-breakpoint
 CREATE TYPE "public"."task_status" AS ENUM('todo', 'in_progress', 'completed', 'cancelled');--> statement-breakpoint
@@ -16,7 +18,7 @@ CREATE TABLE "accounts" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"access_token" text,
 	"refresh_token" text,
 	"id_token" text,
@@ -31,7 +33,7 @@ CREATE TABLE "accounts" (
 CREATE TABLE "activities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"type" varchar(64) NOT NULL,
 	"entity_type" varchar(32) NOT NULL,
 	"entity_id" uuid,
@@ -42,7 +44,7 @@ CREATE TABLE "activities" (
 CREATE TABLE "ai_runs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"type" varchar(64) NOT NULL,
 	"status" "ai_run_status" DEFAULT 'queued' NOT NULL,
 	"model" varchar(128),
@@ -71,7 +73,7 @@ CREATE TABLE "artifact_versions" (
 	"storage_key" text NOT NULL,
 	"mime_type" varchar(128) NOT NULL,
 	"size" bigint DEFAULT 0 NOT NULL,
-	"created_by" text NOT NULL,
+	"created_by" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -81,7 +83,7 @@ CREATE TABLE "artifacts" (
 	"name" varchar(255) NOT NULL,
 	"type" "artifact_type" NOT NULL,
 	"status" "artifact_status" DEFAULT 'queued' NOT NULL,
-	"created_by" text NOT NULL,
+	"created_by" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -96,7 +98,7 @@ CREATE TABLE "calendar_events" (
 	"end_at" timestamp with time zone NOT NULL,
 	"location" varchar(255),
 	"status" "event_status" DEFAULT 'scheduled' NOT NULL,
-	"created_by" text NOT NULL,
+	"created_by" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -104,32 +106,8 @@ CREATE TABLE "calendar_events" (
 CREATE TABLE "conversations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"title" varchar(255) DEFAULT 'New conversation' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "document_chunks" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"document_id" uuid NOT NULL,
-	"content" text NOT NULL,
-	"chunk_index" integer DEFAULT 0 NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"embedding" vector(1536),
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "documents" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"project_id" uuid NOT NULL,
-	"collection_id" uuid,
-	"name" varchar(255) NOT NULL,
-	"mime_type" varchar(128),
-	"storage_key" text NOT NULL,
-	"size" bigint DEFAULT 0 NOT NULL,
-	"status" "document_status" DEFAULT 'pending' NOT NULL,
-	"created_by" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -139,6 +117,35 @@ CREATE TABLE "knowledge_collections" (
 	"project_id" uuid NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"description" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "knowledge_source_chunks" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"knowledge_source_id" uuid NOT NULL,
+	"project_id" uuid NOT NULL,
+	"content" text NOT NULL,
+	"chunk_index" integer DEFAULT 0 NOT NULL,
+	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"embedding" vector(1536),
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "knowledge_sources" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"project_id" uuid NOT NULL,
+	"collection_id" uuid,
+	"source_type" "source_type" DEFAULT 'file' NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"mime_type" varchar(128),
+	"size_bytes" bigint DEFAULT 0 NOT NULL,
+	"source_ref" text,
+	"storage_key" text,
+	"content" text,
+	"error_message" text,
+	"status" "source_status" DEFAULT 'pending' NOT NULL,
+	"created_by" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -166,7 +173,7 @@ CREATE TABLE "milestones" (
 --> statement-breakpoint
 CREATE TABLE "notifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"type" varchar(48) NOT NULL,
 	"title" varchar(255) NOT NULL,
 	"message" text,
@@ -179,9 +186,21 @@ CREATE TABLE "notifications" (
 CREATE TABLE "project_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"role" "project_role" DEFAULT 'member' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "project_onboarding" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"workspace_id" uuid NOT NULL,
+	"onboarding_status" "project_onboarding_status" DEFAULT 'draft' NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"step" integer DEFAULT 1 NOT NULL,
+	"step_data" jsonb DEFAULT '{}' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_progress" (
@@ -203,7 +222,7 @@ CREATE TABLE "projects" (
 	"status" "project_status" DEFAULT 'active' NOT NULL,
 	"start_date" timestamp with time zone,
 	"target_date" timestamp with time zone,
-	"created_by" text NOT NULL,
+	"created_by" uuid NOT NULL,
 	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -211,7 +230,7 @@ CREATE TABLE "projects" (
 --> statement-breakpoint
 CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"token" text NOT NULL,
 	"ip_address" text,
@@ -232,14 +251,14 @@ CREATE TABLE "tasks" (
 	"position" integer DEFAULT 0 NOT NULL,
 	"due_date" timestamp with time zone,
 	"completed_at" timestamp with time zone,
-	"created_by" text NOT NULL,
+	"created_by" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "user_preferences" (
 	"id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"theme" varchar(16) DEFAULT 'system' NOT NULL,
 	"locale" varchar(16) DEFAULT 'en' NOT NULL,
 	"settings" jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -248,7 +267,7 @@ CREATE TABLE "user_preferences" (
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"name" text,
 	"email" text NOT NULL,
 	"email_verified" boolean DEFAULT false NOT NULL,
@@ -269,7 +288,7 @@ CREATE TABLE "verifications" (
 CREATE TABLE "workspace_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"role" "membership_role" DEFAULT 'member' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -278,7 +297,7 @@ CREATE TABLE "workspaces" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"slug" varchar(120) NOT NULL,
-	"created_by" text NOT NULL,
+	"created_by" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -298,16 +317,19 @@ ALTER TABLE "calendar_events" ADD CONSTRAINT "calendar_events_project_id_project
 ALTER TABLE "calendar_events" ADD CONSTRAINT "calendar_events_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "document_chunks" ADD CONSTRAINT "document_chunks_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "documents" ADD CONSTRAINT "documents_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "documents" ADD CONSTRAINT "documents_collection_id_knowledge_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."knowledge_collections"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "documents" ADD CONSTRAINT "documents_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "knowledge_collections" ADD CONSTRAINT "knowledge_collections_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_source_chunks" ADD CONSTRAINT "knowledge_source_chunks_knowledge_source_id_knowledge_sources_id_fk" FOREIGN KEY ("knowledge_source_id") REFERENCES "public"."knowledge_sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_source_chunks" ADD CONSTRAINT "knowledge_source_chunks_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_sources" ADD CONSTRAINT "knowledge_sources_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_sources" ADD CONSTRAINT "knowledge_sources_collection_id_knowledge_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."knowledge_collections"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_sources" ADD CONSTRAINT "knowledge_sources_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "milestones" ADD CONSTRAINT "milestones_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_members" ADD CONSTRAINT "project_members_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_members" ADD CONSTRAINT "project_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_onboarding" ADD CONSTRAINT "project_onboarding_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_onboarding" ADD CONSTRAINT "project_onboarding_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_progress" ADD CONSTRAINT "project_progress_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_progress" ADD CONSTRAINT "project_progress_current_task_id_tasks_id_fk" FOREIGN KEY ("current_task_id") REFERENCES "public"."tasks"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "projects" ADD CONSTRAINT "projects_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -330,15 +352,17 @@ CREATE INDEX "calendar_events_workspace_idx" ON "calendar_events" USING btree ("
 CREATE INDEX "calendar_events_project_idx" ON "calendar_events" USING btree ("project_id");--> statement-breakpoint
 CREATE INDEX "calendar_events_start_at_idx" ON "calendar_events" USING btree ("start_at");--> statement-breakpoint
 CREATE INDEX "conversations_project_idx" ON "conversations" USING btree ("project_id");--> statement-breakpoint
-CREATE INDEX "document_chunks_document_idx" ON "document_chunks" USING btree ("document_id","chunk_index");--> statement-breakpoint
-CREATE INDEX "documents_project_idx" ON "documents" USING btree ("project_id");--> statement-breakpoint
-CREATE INDEX "documents_collection_idx" ON "documents" USING btree ("collection_id");--> statement-breakpoint
-CREATE INDEX "documents_status_idx" ON "documents" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "knowledge_collections_project_idx" ON "knowledge_collections" USING btree ("project_id");--> statement-breakpoint
+CREATE INDEX "embeddingIndex" ON "knowledge_source_chunks" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
+CREATE INDEX "knowledge_source_chunks_project_idx" ON "knowledge_source_chunks" USING btree ("project_id");--> statement-breakpoint
+CREATE INDEX "knowledge_sources_project_idx" ON "knowledge_sources" USING btree ("project_id");--> statement-breakpoint
+CREATE INDEX "knowledge_sources_collection_idx" ON "knowledge_sources" USING btree ("collection_id");--> statement-breakpoint
+CREATE INDEX "knowledge_sources_status_idx" ON "knowledge_sources" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "messages_conversation_idx" ON "messages" USING btree ("conversation_id");--> statement-breakpoint
 CREATE INDEX "milestones_project_idx" ON "milestones" USING btree ("project_id","position");--> statement-breakpoint
 CREATE INDEX "notifications_user_idx" ON "notifications" USING btree ("user_id","read_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "project_members_unique_idx" ON "project_members" USING btree ("project_id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "project_onboarding_unique_idx" ON "project_onboarding" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "projects_workspace_idx" ON "projects" USING btree ("workspace_id");--> statement-breakpoint
 CREATE INDEX "projects_status_idx" ON "projects" USING btree ("status");--> statement-breakpoint
 CREATE UNIQUE INDEX "projects_workspace_slug_idx" ON "projects" USING btree ("workspace_id","slug");--> statement-breakpoint

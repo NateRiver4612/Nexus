@@ -7,9 +7,9 @@ import {
   artifacts,
   calendarEvents,
   conversations,
-  file,
   getDb,
   knowledgeCollections,
+  knowledgeSources,
   messages,
   milestones,
   notifications,
@@ -34,7 +34,7 @@ async function main() {
     artifactVersions,
     artifacts,
     calendarEvents,
-    file,
+    knowledgeSources,
     knowledgeCollections,
     tasks,
     milestones,
@@ -124,14 +124,14 @@ async function main() {
       .returning()
   )[0]!;
 
-  await db.insert(file).values({
+  await db.insert(knowledgeSources).values({
     projectId: project.id,
     collectionId: collection.id,
     sourceType: 'file',
     name: 'stack-notes.pdf',
-    fileMimeType: 'application/pdf',
+    mimeType: 'application/pdf',
     storageKey: 'knowledge/seed/stack-notes.pdf',
-    fileSizeBytes: 1024,
+    sizeBytes: 1024,
     status: 'ready',
     createdBy: authorId,
   });

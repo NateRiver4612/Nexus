@@ -400,65 +400,88 @@ export const knowledgeCollections = pgTable(
 
 ---
 
-# 9. Documents
+# 9. Knowledge Sources (`knowledge_sources`)
 
 ```tsx
-export constdocumentStatus=pgEnum("document_status",
-  ["pending","processing","ready","failed",
-  ]
-);export const documents=pgTable("documents",
-  {
-    id:uuid("id").defaultRandom().primaryKey(),
+export const sourceStatus = pgEnum('source_status', ['pending', 'processing', 'ready', 'failed']);
+export const sourceType = pgEnum('source_type', [
+  'file',
+  'url',
+  'youtube',
+  'copied_text',
+  'audio',
+  'video',
+]);
 
-    projectId:uuid("project_id").notNull().references(() =>projects.id, {
-        onDelete:"cascade",
-      }),
-
-    collectionId:uuid("collection_id").references(() =>knowledgeCollections.id, {
-        onDelete:"set null",
-      }),
-
-    name:text("name").notNull(),
-    mimeType:text("mime_type").notNull(),
-
-    storageKey:text("storage_key").notNull(),
-
-    size:bigint("size", {
-      mode:"number",
-    }),
-
-    status:documentStatus("status").notNull().default("pending"),
-
-    createdBy:uuid("created_by").notNull().references(() =>users.id),
-
-    createdAt:timestamp("created_at").defaultNow().notNull(),
-    updatedAt:timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => [index("documents_project_idx").on(table.projectId),index("documents_collection_idx").on(table.collectionId),index("documents_status_idx").on(table.status),
-  ]
-);
-
-```
-
----
-
-# 10. Document Chunks + pgvector
-
-```tsx
-export const documentChunks = pgTable(
-  'document_chunks',
+export const knowledgeSources = pgTable(
+  'knowledge_sources',
   {
     id: uuid('id').defaultRandom().primaryKey(),
 
-    documentId: uuid('document_id')
+    projectId: uuid('project_id')
       .notNull()
-      .references(() => documents.id, {
+      .references(() => projects.id, { onDelete: 'cascade' }),
+
+    collectionId: uuid('collection_id').references(() => knowledgeCollections.id, {
+      onDelete: 'set null',
+    }),
+
+    sourceType: sourceType('source_type').notNull().default('file'),
+    name: varchar('name', { length: 255 }).notNull(),
+    mimeType: varchar('mime_type', { length: 128 }),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull().default(0),
+    sourceRef: text('source_ref'),
+    storageKey: text('storage_key'),
+    content: text('content'),
+    errorMessage: text('error_message'),
+
+    status: sourceStatus('status').notNull().default('pending'),
+
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('knowledge_sources_project_idx').on(table.projectId),
+    index('knowledge_sources_collection_idx').on(table.collectionId),
+    index('knowledge_sources_status_idx').on(table.status),
+  ],
+);
+```
+
+> Source rows are the NotebookLM-style ingest unit: `sourceType` `file`/`url`/`youtube`/
+> `copied_text` (audio/video reserved, deferred). `sourceRef` holds a URL, `storageKey`
+> holds the S3 key for uploaded files, and `content` holds pasted text. See
+> `docs/knowledge-sources.md`.
+
+---
+
+# 10. Source Chunks + pgvector
+
+```tsx
+export const knowledgeSourceChunks = pgTable(
+  'knowledge_source_chunks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+
+    knowledgeSourceId: uuid('knowledge_source_id')
+      .notNull()
+      .references(() => knowledgeSources.id, {
+        onDelete: 'cascade',
+      }),
+
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, {
         onDelete: 'cascade',
       }),
 
     content: text('content').notNull(),
 
-    chunkIndex: integer('chunk_index').notNull(),
+    chunkIndex: integer('chunk_index').notNull().default(0),
 
     metadata: jsonb('metadata'),
 
@@ -468,11 +491,15 @@ export const documentChunks = pgTable(
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  (table) => [index('document_chunks_document_idx').on(table.documentId)],
+  (table) => ({
+    embeddingIdx: index('embeddingIndex').using('hnsw', table.embedding.op('vector_cosine_ops')),
+    projectIdx: index('knowledge_source_chunks_project_idx').on(table.projectId),
+  }),
 );
 ```
 
-The `1536` here is an **example**. We should set it to the dimension of whichever embedding model we actually choose.
+The `1536` matches OpenAI `text-embedding-3-small`. A source's chunks are
+sent to the RAG/pgvector layer.
 
 ---
 
@@ -891,7 +918,7 @@ projects                  calendar_events
 milestones   knowledge      artifacts    conversations    activities
  │              │              │              │
  ▼              ▼              ▼              ▼
-tasks        documents      versions       messages
+tasks    knowledge_sources   versions       messages
                 │
                 ▼
              chunks

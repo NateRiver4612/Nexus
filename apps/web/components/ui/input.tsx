@@ -7,7 +7,12 @@ export function Input({ className, type, ...props }: React.ComponentProps<'input
     <input
       type={type}
       className={cn(
-        'flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+        `flex h-10 w-full rounded-md border text-base text-black border-input bg-transparent px-3 py-2
+        shadow-sm transition-colors hover:border-gray-300 focus:border-blue-600
+        file:border-0 file:bg-transparent file:text-sm file:font-medium 
+        placeholder:text-muted-foreground 
+        focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-ring/50 
+        disabled:cursor-not-allowed disabled:opacity-50`,
         className,
       )}
       {...props}

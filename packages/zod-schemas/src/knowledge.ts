@@ -1,6 +1,89 @@
 import { z } from '@hono/zod-openapi';
 
-import { idSchema } from './common';
+import { idSchema, timestampSchema } from './common';
+import { ACCEPTED_FILE_TYPES } from './constants';
+
+export const knowledgeSourceType = z.enum([
+  'file',
+  'url',
+  'youtube',
+  'copied_text',
+  'audio',
+  'video',
+]);
+
+export const sourceStatus = z.enum(['pending', 'processing', 'ready', 'failed']);
+
+export const knowledgeSourceSchema = z
+  .object({
+    id: idSchema,
+    projectId: idSchema,
+    sourceType: knowledgeSourceType,
+    name: z.string().min(1).max(255).openapi({ example: 'research.pdf' }),
+    mimeType: z.enum(ACCEPTED_FILE_TYPES).nullish(),
+    size: z.number().int().nonnegative(),
+    sourceRef: z.string().nullish(),
+    storageKey: z.string().nullish(),
+    status: sourceStatus.default('pending'),
+    errorMessage: z.string().nullish(),
+    ...timestampSchema,
+  })
+  .openapi('KnowledgeSource');
+
+export const knowledgeSourceListSchema = z.array(knowledgeSourceSchema).openapi('KnowledgeSources');
+
+/** What actually gets created + enqueued for ingestion. */
+export const createKnowledgeSourceFileSchema = z.object({
+  sourceType: z.literal('file'),
+  name: z.string().min(1).max(255),
+  mimeType: z.enum(ACCEPTED_FILE_TYPES),
+  storageKey: z.string().min(1),
+  size: z.number().int().nonnegative().default(0),
+});
+
+export const createKnowledgeSourceUrlSchema = z.object({
+  sourceType: z.literal('url'),
+  url: z.url('Enter a valid URL.'),
+});
+
+export const createKnowledgeSourceYoutubeSchema = z.object({
+  sourceType: z.literal('youtube'),
+  url: z.url('Enter a valid URL.'),
+});
+
+export const createKnowledgeSourceTextSchema = z.object({
+  sourceType: z.literal('copied_text'),
+  title: z.string().min(1).max(255),
+  content: z.string().min(10).max(50_000),
+});
+
+export const createKnowledgeSourcesSchema = z
+  .array(
+    z.discriminatedUnion('sourceType', [
+      createKnowledgeSourceFileSchema,
+      createKnowledgeSourceUrlSchema,
+      createKnowledgeSourceYoutubeSchema,
+      createKnowledgeSourceTextSchema,
+    ]),
+  )
+  .openapi('CreateKnowledgeSources');
+
+export const createUploadUrlSchema = z.object({
+  name: z.string().min(1).max(255),
+  mimeType: z.enum(ACCEPTED_FILE_TYPES),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(25 * 1024 * 1024)
+    .optional(),
+});
+
+export const createUploadUrlResponseSchema = z.object({
+  url: z.string(),
+  key: z.string(),
+  bucket: z.string(),
+});
 
 export const knowledgeItemSchema = z
   .object({
@@ -12,8 +95,7 @@ export const knowledgeItemSchema = z
       .array(z.string())
       .default([])
       .openapi({ example: ['architecture', 'nexus'] }),
-    createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
-    updatedAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+    ...timestampSchema,
   })
   .openapi('KnowledgeItem');
 
@@ -23,6 +105,7 @@ export const createKnowledgeItemSchema = knowledgeItemSchema.pick({
   body: true,
   tags: true,
 });
+
 export const updateKnowledgeItemSchema = createKnowledgeItemSchema.partial();
 
 export const knowledgeItemListSchema = z.array(knowledgeItemSchema).openapi('KnowledgeItems');

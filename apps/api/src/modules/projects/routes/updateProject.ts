@@ -7,9 +7,9 @@ import {
   updateProjectSchema,
 } from '@nexus/zod-schemas';
 
-import type { Project } from '@nexus/types';
-
+import { HttpError } from '../../../errors';
 import { bearerSecurity } from '../../../openapi';
+import { update } from '../service';
 
 export const updateProjectRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -40,21 +40,16 @@ export const updateProjectRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
+  handler: async (c) => {
     const { id } = c.req.valid('param');
     const body = c.req.valid('json');
 
-    return c.json(
-      {
-        id,
-        name: body.name ?? 'Placeholder',
-        slug: body.slug ?? 'placeholder',
-        description: 'description' in body ? (body.description ?? null) : null,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } satisfies Project,
-      200,
-    );
+    const project = await update(id, {
+      name: body.name,
+      slug: body.slug,
+      description: body.description,
+    });
+    if (!project) throw HttpError.notFound('Project not found');
+    return c.json(project, 200);
   },
 });

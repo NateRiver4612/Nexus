@@ -7,7 +7,7 @@ import {
   messageSchema,
 } from '@nexus/zod-schemas';
 
-import type { Message } from '@nexus/types';
+import type { MessageType } from '@nexus/types';
 
 import { bearerSecurity } from '../../../openapi';
 
@@ -51,7 +51,7 @@ export const postMessageRoute = defineOpenAPIRoute({
         content: body.content,
         sourceId: body.sourceId ?? null,
         createdAt: new Date().toISOString(),
-      } satisfies Message,
+      } satisfies MessageType,
       201,
     );
   },

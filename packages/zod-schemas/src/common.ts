@@ -34,3 +34,9 @@ export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
 });
+
+// Plain field set (not a ZodObject) so it can be spread into other schemas.
+export const timestampSchema = {
+  createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+  updatedAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+};

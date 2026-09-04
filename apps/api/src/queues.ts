@@ -17,3 +17,11 @@ export function getQueue<T>(name: string) {
   globalForQueues.nexusQueues.set(name, queue);
   return queue;
 }
+
+export type KnowledgeProcessJob = { sourceId: string };
+
+export const KNOWLEDGE_QUEUE = 'knowledge-process';
+
+export function getKnowledgeQueue() {
+  return getQueue<KnowledgeProcessJob>(KNOWLEDGE_QUEUE);
+}

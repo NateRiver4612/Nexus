@@ -7,7 +7,7 @@ import {
   updateAiSuggestionSchema,
 } from '@nexus/zod-schemas';
 
-import type { AiSuggestion } from '@nexus/types';
+import type { AiSuggestionType } from '@nexus/types';
 
 import { bearerSecurity } from '../../../openapi';
 
@@ -54,7 +54,7 @@ export const updateAiSuggestionRoute = defineOpenAPIRoute({
         metadata: body.metadata ?? {},
         createdAt: new Date().toISOString(),
         expiresAt: 'expiresAt' in body ? (body.expiresAt ?? null) : null,
-      } satisfies AiSuggestion,
+      } satisfies AiSuggestionType,
       200,
     );
   },

@@ -2,9 +2,9 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { errorResponseSchema, idParamsSchema, projectSchema } from '@nexus/zod-schemas';
 
-import type { Project } from '@nexus/types';
-
+import { HttpError } from '../../../errors';
 import { bearerSecurity } from '../../../openapi';
+import { get } from '../service';
 
 export const getProjectRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -29,19 +29,10 @@ export const getProjectRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
+  handler: async (c) => {
     const { id } = c.req.valid('param');
-    return c.json(
-      {
-        id,
-        name: 'Placeholder',
-        slug: 'placeholder',
-        description: null,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } satisfies Project,
-      200,
-    );
+    const project = await get(id);
+    if (!project) throw HttpError.notFound('Project not found');
+    return c.json(project, 200);
   },
 });

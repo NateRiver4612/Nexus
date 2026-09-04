@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
 
-import type { Project } from '@nexus/types';
+import type { ProjectType } from '@nexus/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,7 +13,7 @@ import { useGetProjects } from '@/hooks/useProjects';
 import { ProjectCard } from './ProjectCard';
 import { useRouter } from 'next/navigation';
 
-const sampleProjects: Project[] = Array.from({ length: 4 }, (i) => ({
+const sampleProjects: ProjectType[] = Array.from({ length: 4 }, (i) => ({
   id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' + i,
   name: 'Market Research',
   slug: 'market-research',

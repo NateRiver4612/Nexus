@@ -1,8 +1,12 @@
-import type { SearchQuery } from '@nexus/types';
+import type { SearchQueryType } from '@nexus/types';
 
 export const projectKeys = {
   all: ['projects'] as const,
   detail: (id: string) => ['projects', id] as const,
+};
+
+export const onboardingKeys = {
+  all: ['projects', 'onboarding'] as const,
 };
 
 export const plannerKeys = {
@@ -20,6 +24,7 @@ export const artifactKeys = {
 export const knowledgeKeys = {
   all: ['knowledge'] as const,
   list: (projectId: string) => ['knowledge', 'list', projectId] as const,
+  sources: (projectId: string) => ['knowledge', 'sources', projectId] as const,
   detail: (id: string) => ['knowledge', id] as const,
 };
 
@@ -32,7 +37,7 @@ export const userKeys = {
 };
 
 export const searchKeys = {
-  results: (query: SearchQuery) => ['search', query] as const,
+  results: (query: SearchQueryType) => ['search', query] as const,
 };
 
 export const aiSuggestionKeys = {
