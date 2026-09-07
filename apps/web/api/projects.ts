@@ -42,10 +42,14 @@ export async function deleteProject(id: string): Promise<OkType> {
 }
 
 export async function getOnboarding(): Promise<OnboardingStateType> {
-  return (await handleResponse(await apiClient.api.v1.projects.onboarding.$get())) as OnboardingStateType;
+  return (await handleResponse(
+    await apiClient.api.v1.projects.onboarding.$get(),
+  )) as OnboardingStateType;
 }
 
-export async function saveOnboarding(input: UpdateOnboardingInputType): Promise<OnboardingStateType> {
+export async function saveOnboarding(
+  input: UpdateOnboardingInputType,
+): Promise<OnboardingStateType> {
   return (await handleResponse(
     await apiClient.api.v1.projects.onboarding.$patch({ json: input }),
   )) as OnboardingStateType;

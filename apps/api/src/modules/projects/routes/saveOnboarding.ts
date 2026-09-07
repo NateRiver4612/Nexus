@@ -1,16 +1,18 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, onboardingStateSchema, updateOnboardingSchema } from '@nexus/zod-schemas';
+import {
+  errorResponseSchema,
+  onboardingStateSchema,
+  updateOnboardingSchema,
+} from '@nexus/zod-schemas';
 
 import { getUser } from '../../../auth-middleware';
-import { bearerSecurity } from '../../../openapi';
 import { saveOnboarding } from '../service';
 
 export const saveOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
     path: '/onboarding',
-    security: bearerSecurity,
     request: {
       body: {
         content: {
@@ -37,6 +39,7 @@ export const saveOnboardingRoute = defineOpenAPIRoute({
   handler: async (c) => {
     const user = getUser(c);
     const body = c.req.valid('json');
+
     const state = await saveOnboarding(user.id, body);
     return c.json(state, 200);
   },

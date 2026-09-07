@@ -249,7 +249,9 @@ export const CardRadioGroup = ({
               })}
             </div>
 
-            {fieldError && <p className="text-xs text-red-600">{fieldError.message as string}</p>}
+            {fieldError && (
+              <p className="text-destructive font-medium text-sm">{fieldError.message as string}</p>
+            )}
           </div>
         );
       }}

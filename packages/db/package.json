@@ -9,18 +9,13 @@
     "./schema": "./src/schema.ts"
   },
   "scripts": {
-    "generate": "drizzle-kit generate",
-    "migrate": "drizzle-kit migrate",
-    "seed": "bun src/seed.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.44.0",
     "postgres": "^3.4.7"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.0",
     "typescript": "^5.9.3",
     "@types/bun": "^1.2.0",
     "@nexus/types": "workspace:*",

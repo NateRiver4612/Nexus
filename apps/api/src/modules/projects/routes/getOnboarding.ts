@@ -10,7 +10,6 @@ export const getOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/onboarding',
-    // security: bearerSecurity,
     responses: {
       200: {
         content: { 'application/json': { schema: onboardingStateSchema } },

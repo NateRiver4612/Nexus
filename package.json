@@ -17,9 +17,10 @@
     "lint": "turbo run lint",
     "format": "prettier --write --config packages/config/prettier.json .",
     "format:check": "prettier --check .",
-    "db:generate": "bun run --filter=@nexus/db generate",
-    "db:migrate": "bun run --filter=@nexus/db migrate",
-    "db:seed": "bun run --filter=@nexus/db seed"
+    "db:generate": "bun run --filter=@nexus/api db:generate",
+    "db:migrate": "bun run --filter=@nexus/api db:migrate",
+    "db:seed": "bun run --filter=@nexus/api db:seed",
+    "db:reset": "bash scripts/reset-db.sh"
   },
   "devDependencies": {
     "oxlint": "^0.17.0",

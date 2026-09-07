@@ -1,4 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS "vector";--> statement-breakpoint
 CREATE TYPE "public"."artifact_status" AS ENUM('queued', 'generating', 'ready', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."artifact_type" AS ENUM('report', 'presentation', 'spreadsheet', 'proposal', 'pdf', 'document', 'diagram', 'study_guide');--> statement-breakpoint
 CREATE TYPE "public"."event_status" AS ENUM('scheduled', 'cancelled', 'completed');--> statement-breakpoint
@@ -15,7 +14,7 @@ CREATE TYPE "public"."suggestion_status" AS ENUM('pending', 'accepted', 'dismiss
 CREATE TYPE "public"."task_priority" AS ENUM('low', 'medium', 'high', 'urgent');--> statement-breakpoint
 CREATE TYPE "public"."task_status" AS ENUM('todo', 'in_progress', 'completed', 'cancelled');--> statement-breakpoint
 CREATE TABLE "accounts" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -62,8 +61,9 @@ CREATE TABLE "ai_suggestions" (
 	"description" text,
 	"status" "suggestion_status" DEFAULT 'pending' NOT NULL,
 	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"expires_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"expires_at" timestamp with time zone
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "artifact_versions" (
@@ -198,7 +198,7 @@ CREATE TABLE "project_onboarding" (
 	"onboarding_status" "project_onboarding_status" DEFAULT 'draft' NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"step" integer DEFAULT 1 NOT NULL,
-	"step_data" jsonb DEFAULT '{}' NOT NULL,
+	"step_data" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -229,7 +229,7 @@ CREATE TABLE "projects" (
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"token" text NOT NULL,
@@ -257,7 +257,7 @@ CREATE TABLE "tasks" (
 );
 --> statement-breakpoint
 CREATE TABLE "user_preferences" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"theme" varchar(16) DEFAULT 'system' NOT NULL,
 	"locale" varchar(16) DEFAULT 'en' NOT NULL,
@@ -267,7 +267,7 @@ CREATE TABLE "user_preferences" (
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id" uuid PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text,
 	"email" text NOT NULL,
 	"email_verified" boolean DEFAULT false NOT NULL,
@@ -277,7 +277,7 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 CREATE TABLE "verifications" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"identifier" text NOT NULL,
 	"value" text NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
@@ -362,7 +362,7 @@ CREATE INDEX "messages_conversation_idx" ON "messages" USING btree ("conversatio
 CREATE INDEX "milestones_project_idx" ON "milestones" USING btree ("project_id","position");--> statement-breakpoint
 CREATE INDEX "notifications_user_idx" ON "notifications" USING btree ("user_id","read_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "project_members_unique_idx" ON "project_members" USING btree ("project_id","user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "project_onboarding_unique_idx" ON "project_onboarding" USING btree ("name");--> statement-breakpoint
+CREATE UNIQUE INDEX "project_onboarding_unique_idx" ON "project_onboarding" USING btree ("user_id","name");--> statement-breakpoint
 CREATE INDEX "projects_workspace_idx" ON "projects" USING btree ("workspace_id");--> statement-breakpoint
 CREATE INDEX "projects_status_idx" ON "projects" USING btree ("status");--> statement-breakpoint
 CREATE UNIQUE INDEX "projects_workspace_slug_idx" ON "projects" USING btree ("workspace_id","slug");--> statement-breakpoint

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Link2, Type, Upload, X } from 'lucide-react';
+import { ArrowLeft, ClipboardType, Link2, Play, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -16,8 +16,6 @@ import {
 type Mode = 'idle' | 'link' | 'text';
 
 interface UploadKnowledgeSourceProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   onFilesAdded: (files: File[]) => void;
   onLinkAdded: (url: string) => void;
   onTextAdded: (title: string, content: string) => void;
@@ -26,8 +24,6 @@ interface UploadKnowledgeSourceProps {
 const ACCEPTED_EXTENSIONS = '.pdf,.docx,.xlsx,.csv,.txt,.md,.jpg,.jpeg,.png,.webp';
 
 export function UploadKnowledgeSource({
-  open,
-  onOpenChange,
   onFilesAdded,
   onLinkAdded,
   onTextAdded,
@@ -39,15 +35,6 @@ export function UploadKnowledgeSource({
   const [textContent, setTextContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const resetAndClose = useCallback(() => {
-    setMode('idle');
-    setLinkValue('');
-    setTextTitle('');
-    setTextContent('');
-    setError(null);
-    onOpenChange(false);
-  }, [onOpenChange]);
 
   const handleFiles = useCallback(
     (fileList: FileList | File[]) => {
@@ -65,9 +52,8 @@ export function UploadKnowledgeSource({
 
       setError(null);
       onFilesAdded(validated);
-      resetAndClose();
     },
-    [onFilesAdded, resetAndClose],
+    [onFilesAdded],
   );
 
   const handleDrop = useCallback(
@@ -88,8 +74,7 @@ export function UploadKnowledgeSource({
       return;
     }
     onLinkAdded(result.data.url);
-    resetAndClose();
-  }, [linkValue, onLinkAdded, resetAndClose]);
+  }, [linkValue, onLinkAdded]);
 
   const handleTextSubmit = useCallback(() => {
     const result = createKnowledgeSourceTextSchema.safeParse({
@@ -101,8 +86,7 @@ export function UploadKnowledgeSource({
       return;
     }
     onTextAdded(result.data.title, result.data.content);
-    resetAndClose();
-  }, [textTitle, textContent, onTextAdded, resetAndClose]);
+  }, [textTitle, textContent, onTextAdded]);
 
   return (
     <div>
@@ -116,49 +100,51 @@ export function UploadKnowledgeSource({
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
             className={cn(
-              'flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-10 text-center transition-colors',
+              'flex flex-col items-center justify-center bg-background/50 rounded-xl border border-dashed px-6 py-10 text-center transition-colors',
               isDragging ? 'border-primary bg-primary/5' : 'border-border',
             )}
           >
-            <p className="text-sm text-muted-foreground">
-              Drop files here, or choose a source below
+            <p className="font-semibold text-base text-gray-700">
+              Drag and drop files here, or choose a source below
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">
               PDF, DOCX, XLSX, CSV, TXT, MD, or an image
             </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              className="h-auto flex-col gap-2 py-4"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="size-4" />
-              <span className="text-xs">Upload files</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col gap-2 py-4"
-              onClick={() => {
-                setError(null);
-                setMode('link');
-              }}
-            >
-              <Link2 className="size-4" />
-              <span className="text-xs">Add link</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col gap-2 py-4"
-              onClick={() => {
-                setError(null);
-                setMode('text');
-              }}
-            >
-              <Type className="size-4" />
-              <span className="text-xs">Paste text</span>
-            </Button>
+            <div className="grid grid-cols-3 gap-2 pt-6">
+              <Button
+                variant="outline"
+                className="flex border border-gray-300 rounded-full gap-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="size-4" color="black" />
+                <span className="text-sm text-black">Upload files</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex border border-gray-300 rounded-full gap-2"
+                onClick={() => {
+                  setError(null);
+                  setMode('link');
+                }}
+              >
+                <Link2 className="size-4" color="black" />
+                <div className="p-1 px-2 bg-red-500 rounded-sm">
+                  <Play color="white" strokeWidth={8} enableBackground={'white'} size={6} />
+                </div>
+                <span className="text-sm text-black">Add link</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex border border-gray-300 rounded-full gap-2"
+                onClick={() => {
+                  setError(null);
+                  setMode('text');
+                }}
+              >
+                <ClipboardType className="size-4" color="black" />
+                <span className="text-sm text-black">Copied text</span>
+              </Button>
+            </div>
           </div>
 
           <input
@@ -173,9 +159,19 @@ export function UploadKnowledgeSource({
       )}
 
       {mode === 'link' && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="knowledge-link">Website or YouTube URL</Label>
+        <div className="space-y-4 rounded-lg shadow-sm p-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                className="flex justify-between"
+                onClick={() => setMode('idle')}
+              >
+                <ArrowLeft size={18} />
+                <Label htmlFor="knowledge-link">Website or YouTube URL</Label>
+              </Button>
+              <Link2 size={20} />
+            </div>
             <Input
               id="knowledge-link"
               placeholder="https://…"
@@ -183,22 +179,35 @@ export function UploadKnowledgeSource({
               onChange={(e) => setLinkValue(e.target.value)}
               autoFocus
             />
-          </div>
-          <div className="flex justify-between">
-            <Button variant="ghost" onClick={() => setMode('idle')}>
-              Back
-            </Button>
-            <Button onClick={handleLinkSubmit} disabled={!linkValue}>
-              Add link
-            </Button>
+            <ul className=" text-xs text-muted-foreground list-disc text-start w-full list-inside space-y-1">
+              <li>To add multiple URLs, separate with a space or new line. </li>
+              <li>Only the visible text on the website will be imported at this time.</li>
+              <li>Paid articles are not supported. Only the</li>
+              <li>text transcript in YouTube will be imported at this time.</li>
+              <li>Only public YouTube videos are supported.</li>
+              <li>Recently uploaded videos may not be available to import.</li>
+            </ul>
           </div>
         </div>
       )}
 
       {mode === 'text' && (
-        <div className="space-y-4">
+        <div className="space-y-4 rounded-lg shadow-sm p-4">
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              variant="ghost"
+              className="flex justify-between"
+              onClick={() => setMode('idle')}
+            >
+              <ArrowLeft size={18} />
+              <p>Copied Text</p>
+            </Button>
+            <ClipboardType size={20} />
+          </div>
           <div className="space-y-2">
-            <Label htmlFor="knowledge-text-title">Title</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="knowledge-text-title">Title</Label>
+            </div>
             <Input
               id="knowledge-text-title"
               placeholder="Meeting notes, snippet, etc."
@@ -216,14 +225,6 @@ export function UploadKnowledgeSource({
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}
             />
-          </div>
-          <div className="flex justify-between">
-            <Button variant="ghost" onClick={() => setMode('idle')}>
-              Back
-            </Button>
-            <Button onClick={handleTextSubmit} disabled={!textTitle || !textContent}>
-              Add text
-            </Button>
           </div>
         </div>
       )}

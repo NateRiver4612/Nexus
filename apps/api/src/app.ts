@@ -4,6 +4,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 
 import auth from './auth';
+import { env } from './env';
 import { handleHttpError } from './errors';
 import { docConfig, registerSecuritySchemes } from './openapi';
 import { aiRoutes } from './modules/ai/routes';
@@ -22,7 +23,7 @@ export function createApp() {
   app.use(
     '*',
     cors({
-      origin: process.env.WEB_BASE_URL ?? 'http://localhost:3000',
+      origin: env.WEB_BASE_URL,
       credentials: true,
     }),
   );

@@ -7,10 +7,11 @@ import { getProjectRoute } from './getProject';
 import { getProjectsRoute } from './getProjects';
 import { saveOnboardingRoute } from './saveOnboarding';
 import { updateProjectRoute } from './updateProject';
+import { requireAuth } from '../../../auth-middleware';
 
 export function projectRoutes() {
   const app = new OpenAPIHono();
-  // app.use('*', requireAuth);
+  app.use('*', requireAuth);
 
   return app.openapiRoutes([
     { route: getOnboardingRoute.route, handler: getOnboardingRoute.handler },

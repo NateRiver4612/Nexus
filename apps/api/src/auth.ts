@@ -1,23 +1,42 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { dash } from '@better-auth/infra';
 
 import { accounts, getDb, sessions, users, verifications } from '@nexus/db';
+import { createAuthMiddleware } from 'better-auth/api';
+import { env } from './env';
 
 const auth = betterAuth({
   database: drizzleAdapter(getDb(), {
     provider: 'pg',
     schema: { users, sessions, accounts, verifications },
+    usePlural: true,
   }),
-  secret: process.env.BETTER_AUTH_SECRET ?? 'dev-only-secret-change-me',
-  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3001/api/auth',
-  trustedOrigins: process.env.WEB_BASE_URL ? [process.env.WEB_BASE_URL] : ['http://localhost:3000'],
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
+  trustedOrigins: [env.WEB_BASE_URL],
   emailAndPassword: {
     enabled: true,
   },
+  plugins: [dash()],
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/sign-up/email') {
+        console.log(ctx.body);
+        return;
+      }
+    }),
+  },
+  logger: {
+    level: 'debug',
+    log(level, message, meta) {
+      console.log(`[${level}] ${message}`, meta);
+    },
+  },
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
   },
   session: {
@@ -30,6 +49,9 @@ const auth = betterAuth({
   },
   advanced: {
     cookiePrefix: 'nexus',
+    database: {
+      generateId: 'uuid',
+    },
   },
 });
 

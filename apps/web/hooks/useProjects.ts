@@ -1,10 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type {
-  CreateProjectInputType,
-  UpdateOnboardingInputType,
-  UpdateProjectInputType,
-} from '@nexus/types';
+import type { UpdateOnboardingInputType, UpdateProjectInputType } from '@nexus/types';
 
 import {
   createProject,
@@ -17,6 +13,8 @@ import {
 } from '@/api/projects';
 
 import { onboardingKeys, projectKeys } from './queryKeys';
+import { createMutationHook } from '@/hooks/createMutation';
+import { createDetailQueryHook } from '@/hooks/createQuery';
 
 export function useGetProjects() {
   return useQuery({
@@ -25,37 +23,27 @@ export function useGetProjects() {
   });
 }
 
-export function useProject(id: string) {
-  return useQuery({
-    queryKey: projectKeys.detail(id),
-    queryFn: () => getProject(id),
-    enabled: Boolean(id),
-  });
-}
+export const useGetProjectById = createDetailQueryHook(getProject, (id) => projectKeys.detail(id));
 
-export function useCreateProject() {
-  const queryClient = useQueryClient();
+export const useCreateProject = createMutationHook(createProject, (queryClient) => ({
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+}));
 
-  return useMutation({
-    mutationFn: (input: CreateProjectInputType) => createProject(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
-  });
-}
-
-export const useGetProjectOnboarding = () => {
+export const useGetOnboarding = () => {
   return useQuery({
     queryKey: onboardingKeys.all,
     queryFn: () => getOnboarding(),
     retry: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
 
-export const useUpdateProjectOnboarding = () => {
+export const useSaveOnboardingStep = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: UpdateOnboardingInputType) => saveOnboarding(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: onboardingKeys.all }),
+    onSuccess: (data) => queryClient.setQueryData(onboardingKeys.all, data),
   });
 };
 

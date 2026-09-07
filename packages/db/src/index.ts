@@ -1,4 +1,3 @@
-import './env';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
@@ -9,7 +8,7 @@ type DbInstance = ReturnType<typeof createDb>;
 const globalForDb = globalThis as unknown as { nexusDb?: DbInstance };
 
 function createDb() {
-  const url = process.env.DATABASE_URL ?? 'postgres://nexus:nexus@localhost:5432/nexus';
+  const url = process.env.DATABASE_URL!;
   const client = postgres(url, { max: 10, prepare: false });
   return drizzle(client, { schema });
 }

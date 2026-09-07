@@ -1,5 +1,5 @@
 {
-  "id": "56e753fb-8feb-4fec-9f99-85ba32bf9a00",
+  "id": "f5d0bd9a-a8ed-4dba-b250-e368dee4d06a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -10,9 +10,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "account_id": {
           "name": "account_id",
@@ -382,6 +383,12 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -389,11 +396,12 @@
           "notNull": true,
           "default": "now()"
         },
-        "expires_at": {
-          "name": "expires_at",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
@@ -1711,7 +1719,7 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'{}'"
+          "default": "'{}'::jsonb"
         },
         "created_at": {
           "name": "created_at",
@@ -1732,6 +1740,12 @@
         "project_onboarding_unique_idx": {
           "name": "project_onboarding_unique_idx",
           "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "name",
               "isExpression": false,
@@ -2015,9 +2029,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "user_id": {
           "name": "user_id",
@@ -2282,9 +2297,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "user_id": {
           "name": "user_id",
@@ -2370,7 +2386,8 @@
           "name": "id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "name": {
           "name": "name",
@@ -2426,9 +2443,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "identifier": {
           "name": "identifier",

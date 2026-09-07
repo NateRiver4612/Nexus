@@ -23,8 +23,14 @@ The **DB schema is the target** (`packages/db/src/schema/*`). `@nexus/zod-schema
 
 ## Environment
 
-- Root `.env` is the source; dev/start scripts run `bun --env-file=../../.env ...`. `packages/db/src/env.ts` also loads the root `.env` for DB/seed/drizzle tooling.
+- `apps/api/.env` is the single source of backend credentials (Postgres/Redis/S3/Auth/AI). dev/start scripts run `bun --env-file=.env ...`; `drizzle.config.ts` loads it via `dotenv/config`; the root `docker-compose.yml` interpolates `POSTGRES_*` from it via `docker compose --env-file apps/api/.env`.
+- `DATABASE_URL` is required (no fallback) — `getDb()` in `packages/db` and `drizzle.config.ts` both read it.
 - Never hardcode secrets; read via `process.env` with sensible dev defaults.
+
+## DB tooling
+
+- Backend tooling lives here: `drizzle.config.ts`, `drizzle/` (migrations), `src/seed.ts`, `infra/postgres-init/` (init SQL mounted by docker-compose).
+- Scripts: `db:generate` (`drizzle-kit generate`), `db:migrate`, `db:seed`. The root `db:generate|migrate|seed|reset` scripts tunnel here via `--filter=@nexus/api`.
 
 ## Infra files
 

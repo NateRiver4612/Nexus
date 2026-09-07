@@ -1,5 +1,3 @@
-import './env';
-
 import {
   activities,
   aiSuggestions,
@@ -19,7 +17,7 @@ import {
   users,
   workspaceMembers,
   workspaces,
-} from './index';
+} from '@nexus/db';
 
 const db = getDb();
 

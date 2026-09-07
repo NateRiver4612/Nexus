@@ -1,14 +1,16 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+import { env } from './env';
+
 const globalForStorage = globalThis as unknown as { nexusS3?: S3Client };
 
 function s3Endpoint() {
-  return process.env.S3_ENDPOINT ?? 'http://localhost:9000';
+  return env.S3_ENDPOINT;
 }
 
 function s3Bucket() {
-  return process.env.S3_BUCKET ?? 'nexus';
+  return env.S3_BUCKET;
 }
 
 export function getStorage() {
@@ -16,12 +18,12 @@ export function getStorage() {
   if (!globalForStorage.nexusS3) {
     globalForStorage.nexusS3 = new S3Client({
       endpoint: s3Endpoint(),
-      region: process.env.S3_REGION ?? 'us-east-1',
+      region: env.S3_REGION,
       credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY ?? 'minioadmin',
-        secretAccessKey: process.env.S3_SECRET_KEY ?? 'minioadmin',
+        accessKeyId: env.S3_ACCESS_KEY,
+        secretAccessKey: env.S3_SECRET_KEY,
       },
-      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+      forcePathStyle: env.S3_FORCE_PATH_STYLE,
     });
   }
   return globalForStorage.nexusS3;

@@ -1,19 +1,21 @@
 import OpenAI from 'openai';
 
+import { env } from './env';
+
 /** Must match `file_chunks.embedding` dimensions. */
 export const EMBEDDING_DIMENSIONS = 1536;
 
 const globalForOpenAI = globalThis as unknown as { nexusOpenAI?: OpenAI };
 
 export function getEmbeddingModel() {
-  return process.env.AI_EMBEDDING_MODEL ?? 'text-embedding-3-small';
+  return env.AI_EMBEDDING_MODEL;
 }
 
 export function getOpenAI() {
   // Reuse a single client across hot-reloading dev servers.
   if (!globalForOpenAI.nexusOpenAI) {
     globalForOpenAI.nexusOpenAI = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY ?? 'sk-missing',
+      apiKey: env.OPENAI_API_KEY,
     });
   }
   return globalForOpenAI.nexusOpenAI;

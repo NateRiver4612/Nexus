@@ -9,30 +9,26 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { timestamps } from './columns';
+import { idColumn, timestamps } from './columns';
 
 /**
  * Better Auth identity tables.
  * `users` is the Nexus-side identity; credentials live on `accounts`.
  */
 export const users = pgTable('users', {
-  id: uuid().primaryKey(),
+  id: uuid('id').defaultRandom().primaryKey(),
   name: text('name'),
   email: text('email').notNull(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  ...timestamps,
 });
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 export const sessions = pgTable('sessions', {
-  id: text('id').primaryKey(),
+  id: idColumn(),
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -50,7 +46,7 @@ export const sessions = pgTable('sessions', {
 export type Session = typeof sessions.$inferSelect;
 
 export const accounts = pgTable('accounts', {
-  id: text('id').primaryKey(),
+  id: idColumn(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
   userId: uuid('user_id')
@@ -66,25 +62,17 @@ export const accounts = pgTable('accounts', {
   }),
   scope: text('scope'),
   password: text('password'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  ...timestamps,
 });
 
 export type Account = typeof accounts.$inferSelect;
 
 export const verifications = pgTable('verifications', {
-  id: text('id').primaryKey(),
+  id: idColumn(),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  ...timestamps,
 });
 
 export type Verification = typeof verifications.$inferSelect;
@@ -92,7 +80,7 @@ export type Verification = typeof verifications.$inferSelect;
 export const userPreferences = pgTable(
   'user_preferences',
   {
-    id: text('id').primaryKey(),
+    id: idColumn(),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),

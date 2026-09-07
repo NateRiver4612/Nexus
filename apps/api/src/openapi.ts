@@ -1,5 +1,7 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
+import { env } from './env';
+
 export const bearerSecurity = [{ Bearer: [] }];
 
 export function registerSecuritySchemes(app: OpenAPIHono) {
@@ -20,7 +22,7 @@ export function docConfig() {
     },
     servers: [
       {
-        url: process.env.API_BASE_URL ?? 'http://localhost:3001',
+        url: env.API_BASE_URL,
         description: 'Local development',
       },
     ],

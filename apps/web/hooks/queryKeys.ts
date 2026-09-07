@@ -7,6 +7,7 @@ export const projectKeys = {
 
 export const onboardingKeys = {
   all: ['projects', 'onboarding'] as const,
+  draft: ['projects', 'onboarding', 'draft'] as const,
 };
 
 export const plannerKeys = {

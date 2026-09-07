@@ -2,6 +2,7 @@ import { getRedis } from '../../redis';
 import { getKnowledgeQueue, KNOWLEDGE_QUEUE } from '../../queues';
 import { presignKnowledgePutUrl } from '../../storage';
 import { embedTexts } from '../../embeddings';
+import { env } from '../../env';
 import { chunkText } from './chunk';
 import { extractSourceText } from './extract';
 import { knowledgeRepository, type NewSourceRow, type SourceRow } from './repository';
@@ -123,7 +124,7 @@ export async function processSource(sourceId: string) {
 
     await knowledgeRepository.deleteChunksForSource(sourceId);
 
-    const canEmbed = Boolean(process.env.OPENAI_API_KEY);
+    const canEmbed = Boolean(env.OPENAI_API_KEY);
     const vectors = canEmbed ? await embedTexts(chunks) : [];
 
     const rows = chunks.map((content, index) => ({

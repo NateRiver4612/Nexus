@@ -48,10 +48,10 @@ export const onboardingStatusSchema = z
 
 export const onboardingStep1Schema = z.object({
   name: z
-    .string({
+    .string()
+    .min(1, {
       error: 'Project name is required',
     })
-    .min(1)
     .max(255)
     .openapi({ example: 'Market Research Report' }),
   description: z
@@ -59,7 +59,8 @@ export const onboardingStep1Schema = z.object({
     .nullish()
     .openapi({ example: 'A report on market research for the new product launch' }),
   category: z
-    .string({
+    .string()
+    .min(1, {
       error: 'Project category is required',
     })
     .openapi({
@@ -71,13 +72,6 @@ export const onboardingStep2Schema = z.object({
   context: z.string().openapi({
     example: `I need to research the the competitors, identify pricing strategies, and analyze the market trends to create a comprehensive report that will help us make informed decisions for our new product launch.`,
   }),
-  goals: z
-    .string()
-    .array()
-    .min(1)
-    .openapi({
-      example: ['Market Research', 'Competitor Analysis', 'Pricing Strategy'],
-    }),
 });
 
 export const onboardingStep3Schema = z.object({
@@ -144,11 +138,31 @@ export const onboardingStateSchema = z
 // Saving a step validates `data` against that step's schema.
 export const updateOnboardingSchema = z
   .discriminatedUnion('step', [
-    z.object({ step: z.literal(1), status: onboardingStatusSchema.optional(), data: onboardingStep1Schema }),
-    z.object({ step: z.literal(2), status: onboardingStatusSchema.optional(), data: onboardingStep2Schema }),
-    z.object({ step: z.literal(3), status: onboardingStatusSchema.optional(), data: onboardingStep3Schema }),
-    z.object({ step: z.literal(4), status: onboardingStatusSchema.optional(), data: onboardingStep4Schema }),
-    z.object({ step: z.literal(5), status: onboardingStatusSchema.optional(), data: onboardingStep5Schema }),
+    z.object({
+      step: z.literal(1),
+      status: onboardingStatusSchema.optional(),
+      data: onboardingStep1Schema,
+    }),
+    z.object({
+      step: z.literal(2),
+      status: onboardingStatusSchema.optional(),
+      data: onboardingStep2Schema,
+    }),
+    z.object({
+      step: z.literal(3),
+      status: onboardingStatusSchema.optional(),
+      data: onboardingStep3Schema,
+    }),
+    z.object({
+      step: z.literal(4),
+      status: onboardingStatusSchema.optional(),
+      data: onboardingStep4Schema,
+    }),
+    z.object({
+      step: z.literal(5),
+      status: onboardingStatusSchema.optional(),
+      data: onboardingStep5Schema,
+    }),
   ])
   .openapi('UpdateOnboarding');
 

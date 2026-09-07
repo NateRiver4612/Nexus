@@ -10,7 +10,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-import { idColumn } from './columns';
+import { idColumn, timestamps } from './columns';
 import { projects } from './projects';
 import { users } from './users';
 
@@ -37,8 +37,8 @@ export const aiSuggestions = pgTable(
     description: text('description'),
     status: suggestionStatus('status').notNull().default('pending'),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
+    ...timestamps,
   },
   (table) => [index('ai_suggestions_project_idx').on(table.projectId, table.status)],
 );

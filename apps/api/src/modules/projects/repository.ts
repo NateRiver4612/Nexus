@@ -1,6 +1,13 @@
 import { asc, eq } from 'drizzle-orm';
 
-import { getDb, projectMembers, projectOnboarding, projects, workspaceMembers, workspaces } from '@nexus/db';
+import {
+  getDb,
+  projectMembers,
+  projectOnboarding,
+  projects,
+  workspaceMembers,
+  workspaces,
+} from '@nexus/db';
 
 export type NewProjectRow = typeof projects.$inferInsert;
 export type NewOnboardingRow = typeof projectOnboarding.$inferInsert;
@@ -68,6 +75,10 @@ export const onboardingRepository = {
   },
 
   update(id: string, patch: Partial<NewOnboardingRow>) {
-    return getDb().update(projectOnboarding).set(patch).where(eq(projectOnboarding.id, id)).returning();
+    return getDb()
+      .update(projectOnboarding)
+      .set(patch)
+      .where(eq(projectOnboarding.id, id))
+      .returning();
   },
 };

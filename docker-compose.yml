@@ -4,15 +4,16 @@ services:
     container_name: nexus-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydb
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
     ports:
       - '5432:5432'
     volumes:
       - nexus-postgres:/var/lib/postgresql/data
+      - ./apps/api/infra/postgres-init/01-vector.sql:/docker-entrypoint-initdb.d/01-vector.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U nexus -d nexus']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nexus} -d ${POSTGRES_DB:-nexus}']
       interval: 5s
       timeout: 5s
       retries: 10

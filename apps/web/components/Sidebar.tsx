@@ -35,8 +35,8 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { data } = useMe();
-  const user = isUser(data) ? data : null;
+  const { data: userData } = useMe();
+  const user = isUser(userData) ? userData : null;
 
   return (
     <aside
