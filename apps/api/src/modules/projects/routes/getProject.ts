@@ -1,16 +1,15 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { errorResponseSchema, idParamsSchema, projectSchema } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
 import { HttpError } from '../../../errors';
-import { bearerSecurity } from '../../../openapi';
-import { get } from '../service';
+import { ProjectService } from '../service';
 
 export const getProjectRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/{id}',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
     },
@@ -31,7 +30,11 @@ export const getProjectRoute = defineOpenAPIRoute({
   }),
   handler: async (c) => {
     const { id } = c.req.valid('param');
-    const project = await get(id);
+
+    const db = getDb();
+    const projectService = ProjectService(db);
+
+    const project = await projectService.get(id);
     if (!project) throw HttpError.notFound('Project not found');
     return c.json(project, 200);
   },

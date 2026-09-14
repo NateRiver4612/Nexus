@@ -5,15 +5,14 @@ import {
   knowledgeSourceListSchema,
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
-import { bearerSecurity } from '../../../openapi';
 import { KnowledgeService } from '../service';
 
 export const getKnowledgeSourcesRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/{projectId}/sources',
-    security: bearerSecurity,
     request: {
       params: projectIdParamsSchema,
     },
@@ -34,7 +33,11 @@ export const getKnowledgeSourcesRoute = defineOpenAPIRoute({
   }),
   handler: async (c) => {
     const { projectId } = c.req.valid('param');
-    const items = await KnowledgeService().listSources(projectId);
+
+    const db = getDb();
+    const knowledgeService = KnowledgeService(db);
+
+    const items = await knowledgeService.listSources(projectId);
     return c.json(items, 200);
   },
 });

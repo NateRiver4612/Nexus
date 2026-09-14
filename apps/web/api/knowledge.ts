@@ -4,6 +4,7 @@ import type {
   CreateUploadUrlInputType,
   CreateUploadUrlResponseType,
   KnowledgeSourceListType,
+  KnowledgeSourceType,
   UpdateKnowledgeItemInputType,
 } from '@nexus/types';
 
@@ -59,4 +60,15 @@ export async function getKnowledgeUploadUrl(
       json: input,
     }),
   )) as CreateUploadUrlResponseType;
+}
+
+export async function deleteKnowledgeSource(
+  projectId: string,
+  sourceId: string,
+): Promise<KnowledgeSourceType> {
+  return (await handleResponse(
+    await apiClient.api.v1.knowledge[':projectId'].sources[':sourceId'].$delete({
+      param: { projectId, sourceId },
+    }),
+  )) as KnowledgeSourceType;
 }

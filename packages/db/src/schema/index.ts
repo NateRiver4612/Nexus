@@ -3,6 +3,7 @@ export * from './artifacts';
 export * from './calendar';
 export * from './columns';
 export * from './conversations';
+export * from './deliverables';
 export * from './knowledge';
 export * from './notifications';
 export * from './activities';

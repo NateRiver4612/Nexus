@@ -5,6 +5,7 @@ import {
   artifacts,
   calendarEvents,
   conversations,
+  deliverables,
   getDb,
   knowledgeCollections,
   knowledgeSources,
@@ -18,6 +19,8 @@ import {
   workspaceMembers,
   workspaces,
 } from '@nexus/db';
+
+import { DELIVERABLE_DEFINITIONS } from '@nexus/zod-schemas/constants';
 
 const db = getDb();
 
@@ -34,6 +37,7 @@ async function main() {
     calendarEvents,
     knowledgeSources,
     knowledgeCollections,
+    deliverables,
     tasks,
     milestones,
     projectMembers,
@@ -79,6 +83,16 @@ async function main() {
   await db
     .insert(projectMembers)
     .values({ projectId: project.id, userId: authorId, role: 'owner' });
+
+  // System-seeded deliverable presets — global catalog (no projectId, no createdBy).
+  await db.insert(deliverables).values(
+    DELIVERABLE_DEFINITIONS.map((definition) => ({
+      name: definition.label,
+      kind: definition.kind,
+      isCustom: false,
+      isSystem: true,
+    })),
+  );
 
   const milestone = (
     await db

@@ -1,0 +1,1 @@
+ALTER TABLE "deliverables" ALTER COLUMN "project_id" DROP NOT NULL;

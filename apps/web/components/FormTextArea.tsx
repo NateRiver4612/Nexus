@@ -1,14 +1,22 @@
 'use client';
 
-import * as React from 'react';
-import { Controller, useFormContext, type FieldValues, type FieldPath } from 'react-hook-form';
+import { useFormContext, type FieldValues, type FieldPath } from 'react-hook-form';
 import { Textarea } from './ui/textarea';
-import { FormLabel } from './ui/form';
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from './ui/form';
 import { cn } from '@/lib/utils';
 
-interface FormTextAreaProps<TFieldValues extends FieldValues = FieldValues> {
-  /** Field name — must match a key registered in the parent FormProvider's schema */
-  name: FieldPath<TFieldValues>;
+type FormTextAreaProps<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+> = {
+  name: TName;
   label?: string;
   description?: string;
   placeholder?: string;
@@ -16,14 +24,12 @@ interface FormTextAreaProps<TFieldValues extends FieldValues = FieldValues> {
   maxLength?: number;
   className?: string;
   disabled?: boolean;
-}
+};
 
-/**
- * A self-contained textarea. Reads/writes its value through `useFormContext`,
- * so it must be rendered inside a react-hook-form `<FormProvider {...methods}>`.
- * No value/onChange props needed — it controls itself.
- */
-export const FormTextArea = ({
+export function FormTextArea<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>({
   name,
   label,
   description,
@@ -32,59 +38,32 @@ export const FormTextArea = ({
   maxLength,
   className,
   disabled,
-}: FormTextAreaProps) => {
-  const {
-    control,
-    formState: { errors },
-  } = useFormContext();
-
-  const fieldError = errors[name as string];
-  const textareaId = React.useId();
-  const descriptionId = description ? `${textareaId}-description` : undefined;
-  const errorId = fieldError ? `${textareaId}-error` : undefined;
+}: FormTextAreaProps<TFieldValues, TName>) {
+  const { control } = useFormContext<TFieldValues>();
 
   return (
-    <Controller
-      name={name}
+    <FormField
       control={control}
+      name={name}
       render={({ field }) => {
         const length = typeof field.value === 'string' ? field.value.length : 0;
 
         return (
-          <div className={cn('flex flex-col gap-3', className)}>
+          <FormItem className={cn('flex flex-col gap-3', className)}>
             {label && <FormLabel>{label}</FormLabel>}
-
-            <Textarea
-              {...field}
-              id={textareaId}
-              rows={rows}
-              maxLength={maxLength}
-              placeholder={placeholder}
-              disabled={disabled}
-              aria-invalid={!!fieldError}
-              aria-describedby={cn(descriptionId, errorId) || undefined}
-              value={field.value ?? ''}
-              className={cn(
-                disabled && 'cursor-not-allowed opacity-50 bg-gray-50',
-                fieldError && 'border-red-500',
-              )}
-            />
-
+            <FormControl>
+              <Textarea
+                {...field}
+                rows={rows}
+                maxLength={maxLength}
+                placeholder={placeholder}
+                disabled={disabled}
+                className={cn(disabled && 'cursor-not-allowed opacity-50 bg-gray-50')}
+              />
+            </FormControl>
+            {description && <FormDescription>{description}</FormDescription>}
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                {fieldError ? (
-                  <p id={errorId} className="text-xs text-red-600">
-                    {fieldError.message as string}
-                  </p>
-                ) : (
-                  description && (
-                    <p id={descriptionId} className="text-xs text-gray-500">
-                      {description}
-                    </p>
-                  )
-                )}
-              </div>
-
+              <FormMessage />
               {maxLength && (
                 <span
                   className={cn(
@@ -96,9 +75,9 @@ export const FormTextArea = ({
                 </span>
               )}
             </div>
-          </div>
+          </FormItem>
         );
       }}
     />
   );
-};
+}

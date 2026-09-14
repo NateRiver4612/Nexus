@@ -2,13 +2,10 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { errorResponseSchema, idParamsSchema, messageListSchema } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../openapi';
-
 export const getMessagesRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/conversations/items/{id}/messages',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
     },

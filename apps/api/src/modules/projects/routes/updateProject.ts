@@ -2,22 +2,21 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
   errorResponseSchema,
-  idParamsSchema,
+  projectIdParamsSchema,
   projectSchema,
   updateProjectSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
 import { HttpError } from '../../../errors';
-import { bearerSecurity } from '../../../openapi';
-import { update } from '../service';
+import { ProjectService } from '../service';
 
 export const updateProjectRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
-    path: '/{id}',
-    security: bearerSecurity,
+    path: '/:projectId',
     request: {
-      params: idParamsSchema,
+      params: projectIdParamsSchema,
       body: {
         content: {
           'application/json': { schema: updateProjectSchema.openapi('UpdateProject') },
@@ -41,12 +40,16 @@ export const updateProjectRoute = defineOpenAPIRoute({
     },
   }),
   handler: async (c) => {
-    const { id } = c.req.valid('param');
+    const { projectId } = c.req.valid('param');
     const body = c.req.valid('json');
 
-    const project = await update(id, {
+    const db = getDb();
+    const projectService = ProjectService(db);
+
+    const project = await projectService.update(projectId, {
       name: body.name,
       slug: body.slug,
+      status: body.status,
       description: body.description,
     });
     if (!project) throw HttpError.notFound('Project not found');

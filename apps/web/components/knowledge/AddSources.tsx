@@ -7,12 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCreateKnowledgeSources, useCreateKnowledgeUploadUrl } from '@/hooks/useKnowledge';
+import { isYouTubeUrl } from '@/lib/youtube';
 
 type SourceStatus = 'idle' | 'submitting' | 'error';
-
-function youtubeUrl(url: string) {
-  return /youtu\.be\/|v=|watch\?v=/.test(url);
-}
 
 export function AddSources({ projectId }: { projectId: string }) {
   const createSources = useCreateKnowledgeSources(projectId);
@@ -68,7 +65,7 @@ export function AddSources({ projectId }: { projectId: string }) {
     if (!link) return;
     await start(async () => {
       await createSources.mutateAsync([
-        { sourceType: youtubeUrl(link) ? 'youtube' : 'url', url: link },
+        { sourceType: isYouTubeUrl(link) ? 'youtube' : 'url', url: link },
       ]);
       setLink('');
     });
@@ -81,9 +78,7 @@ export function AddSources({ projectId }: { projectId: string }) {
       return;
     }
     await start(async () => {
-      await createSources.mutateAsync([
-        { sourceType: 'copied_text', title: textTitle, content: textContent },
-      ]);
+      await createSources.mutateAsync([{ sourceType: 'copied_text', textTitle, textContent }]);
       setTextTitle('');
       setTextContent('');
     });

@@ -27,11 +27,11 @@ export async function createProject(input: CreateProjectInputType): Promise<Proj
 }
 
 export async function updateProject(
-  id: string,
+  projectId: string,
   input: UpdateProjectInputType,
 ): Promise<ProjectType> {
   return (await handleResponse(
-    await apiClient.api.v1.projects[':id'].$patch({ param: { id }, json: input }),
+    await apiClient.api.v1.projects[':projectId'].$patch({ param: { projectId }, json: input }),
   )) as ProjectType;
 }
 

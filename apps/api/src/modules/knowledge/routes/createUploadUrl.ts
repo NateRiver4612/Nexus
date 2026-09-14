@@ -6,15 +6,14 @@ import {
   errorResponseSchema,
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
-import { bearerSecurity } from '../../../openapi';
 import { KnowledgeService } from '../service';
 
 export const createUploadUrlRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
     path: '/{projectId}/sources/upload-url',
-    security: bearerSecurity,
     request: {
       params: projectIdParamsSchema,
       body: {
@@ -37,7 +36,11 @@ export const createUploadUrlRoute = defineOpenAPIRoute({
   }),
   handler: async (c) => {
     const input = c.req.valid('json');
-    const result = await KnowledgeService().getUploadUrl(input);
+
+    const db = getDb();
+    const knowledgeService = KnowledgeService(db);
+
+    const result = await knowledgeService.getUploadUrl(input);
     return c.json(result, 200);
   },
 });

@@ -1,26 +1,19 @@
-import { getRedis } from '../../redis';
-import { getKnowledgeQueue, KNOWLEDGE_QUEUE } from '../../queues';
 import { presignKnowledgePutUrl } from '../../storage';
 import { embedTexts } from '../../embeddings';
 import { env } from '../../env';
 import { chunkText } from './chunk';
 import { extractSourceText } from './extract';
-import { knowledgeRepository, type NewSourceRow, type SourceRow } from './repository';
+import { extractFromYoutube } from './youtube';
+import { KnowledgeRepository } from './repository';
+import type { Db } from '@nexus/db';
 import type {
   CreateKnowledgeSourceItemType,
   CreateUploadUrlInputType,
   CreateUploadUrlResponseType,
   KnowledgeSourceType,
 } from '@nexus/types';
-
-export function KnowledgeService() {
-  return {
-    createSources,
-    listSources,
-    getUploadUrl,
-    processSource,
-  };
-}
+import { mapInputToRow, publishStatus, sanitizeExtractedText, toSourceView } from './helpers';
+import { enqueueIngest, KNOWLEDGE_QUEUE_PROCESS, KNOWLEDGE_QUEUE_REMOVE } from '../../queues';
 
 type CreateSourceInput = {
   projectId: string;
@@ -28,149 +21,118 @@ type CreateSourceInput = {
   inputs: CreateKnowledgeSourceItemType[];
 };
 
-function mapInputToRow(
-  input: CreateKnowledgeSourceItemType,
-  projectId: string,
-  userId: string,
-): NewSourceRow {
-  if (input.sourceType === 'file') {
-    return {
-      projectId,
-      sourceType: 'file',
-      name: input.name,
-      mimeType: input.mimeType,
-      sizeBytes: input.size,
-      storageKey: input.storageKey,
-      status: 'pending',
-      createdBy: userId,
-    };
+export function KnowledgeService(db: Db) {
+  const repository = KnowledgeRepository(db);
+
+  async function createSources(input: CreateSourceInput): Promise<KnowledgeSourceType[]> {
+    const created: KnowledgeSourceType[] = [];
+
+    for (const item of input.inputs) {
+      const sourceRow = await mapInputToRow(item, input.projectId, input.userId);
+      const rows = await repository.insertSource(sourceRow);
+
+      for (const row of rows) {
+        await enqueueIngest({
+          name: KNOWLEDGE_QUEUE_PROCESS,
+          jobId: `ingest-${row.id}`,
+          data: {
+            sourceId: row.id,
+          },
+          options: {
+            attempts: 5,
+          },
+        });
+        created.push(toSourceView(row));
+      }
+    }
+
+    return created;
   }
 
-  if (input.sourceType === 'url' || input.sourceType === 'youtube') {
-    return {
-      projectId,
-      sourceType: input.sourceType,
-      name: input.url,
-      sourceRef: input.url,
-      status: 'pending',
-      createdBy: userId,
-    };
+  async function listSources(projectId: string): Promise<KnowledgeSourceType[]> {
+    const rows = await repository.listSources(projectId);
+    return rows.map(toSourceView);
   }
 
-  return {
-    projectId,
-    sourceType: 'copied_text',
-    name: input.title,
-    content: input.content,
-    status: 'pending',
-    createdBy: userId,
-  };
-}
+  async function deleteSource(projectId: string, sourceId: string) {
+    const deleted = await repository.deleteSource(sourceId, projectId);
+    if (!deleted) return null;
 
-export async function createSources({
-  projectId,
-  userId,
-  inputs,
-}: CreateSourceInput): Promise<KnowledgeSourceType[]> {
-  const created: KnowledgeSourceType[] = [];
+    const storageKey = deleted.storageKey;
+    if (storageKey) {
+      await enqueueIngest({
+        name: KNOWLEDGE_QUEUE_REMOVE,
+        jobId: `ingest-${sourceId}-cleanup`,
+        data: {
+          storageKey,
+        },
+      });
+    }
 
-  for (const input of inputs) {
-    const sourceRow = mapInputToRow(input, projectId, userId);
-    const rows = await knowledgeRepository.insertSource(sourceRow);
+    return toSourceView(deleted);
+  }
 
-    for (const row of rows) {
-      await enqueueIngest(row.id);
-      created.push(toSourceView(row));
+  async function getUploadUrl(
+    input: CreateUploadUrlInputType,
+  ): Promise<CreateUploadUrlResponseType> {
+    const key = `knowledge/${input.name}`;
+    const { url, bucket } = await presignKnowledgePutUrl(key, input.mimeType);
+    return { url, key, bucket };
+  }
+
+  async function processSource(sourceId: string) {
+    const source = await repository.getSourceById(sourceId);
+    if (!source) throw new Error('source not found');
+
+    await repository.updateSource(sourceId, { status: 'processing', errorMessage: null });
+    await publishStatus(source.projectId, sourceId, 'processing');
+
+    try {
+      // YouTube: fetch transcript + title together; the title becomes the
+      // source name once ingestion succeeds.
+      const youtube =
+        source.sourceType === 'youtube' ? await extractFromYoutube(source.sourceRef) : null;
+      const rawText = youtube ? youtube.content : await extractSourceText(source);
+      const updatedName = youtube && youtube.title !== 'Untitled' ? youtube.title : undefined;
+
+      const text = sanitizeExtractedText(rawText);
+      const chunks = chunkText(text);
+      if (chunks.length === 0) throw new Error('no text could be extracted');
+
+      const canEmbed = Boolean(env.OPENAI_API_KEY);
+      const vectors = canEmbed ? await embedTexts(chunks) : [];
+
+      const rows = chunks.map((content, index) => ({
+        knowledgeSourceId: source.id,
+        projectId: source.projectId,
+        content,
+        chunkIndex: index,
+        metadata: {},
+        embedding: canEmbed ? vectors[index] : null,
+      }));
+
+      await db.transaction(async (tx) => {
+        const txRepository = KnowledgeRepository(tx);
+        await txRepository.deleteChunksForSource(sourceId);
+        if (rows.length > 0) {
+          await txRepository.insertChunks(rows);
+        }
+        await txRepository.updateSource(sourceId, {
+          status: 'ready',
+          errorMessage: null,
+          ...(updatedName ? { name: updatedName } : {}),
+        });
+      });
+
+      await publishStatus(source.projectId, sourceId, 'ready');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+
+      await repository.updateSource(sourceId, { status: 'failed', errorMessage: message });
+      await publishStatus(source.projectId, sourceId, 'failed', message);
+      throw error;
     }
   }
 
-  return created;
-}
-
-/** Enqueue the ingestion job keyed on the source so re-submits don't double-process. */
-async function enqueueIngest(sourceId: string) {
-  // BullMQ custom ids cannot contain ":".
-  const jobId = `ingest-${sourceId}`;
-  const queue = getKnowledgeQueue();
-  // Allow re-processing a previously failed/ready source: drop any prior run first.
-  await queue.remove(jobId);
-  await queue.add(KNOWLEDGE_QUEUE, { sourceId }, { jobId, removeOnComplete: true });
-}
-
-export async function listSources(projectId: string): Promise<KnowledgeSourceType[]> {
-  const rows = await knowledgeRepository.listSources(projectId);
-  return rows.map(toSourceView);
-}
-
-export async function getUploadUrl(
-  input: CreateUploadUrlInputType,
-): Promise<CreateUploadUrlResponseType> {
-  const key = `knowledge/${crypto.randomUUID()}`;
-  const { url, bucket } = await presignKnowledgePutUrl(key, input.mimeType);
-  return { url, key, bucket };
-}
-
-export async function processSource(sourceId: string) {
-  const source = await knowledgeRepository.getSourceById(sourceId);
-  if (!source) throw new Error('source not found');
-
-  await knowledgeRepository.updateSource(sourceId, { status: 'processing', errorMessage: null });
-  await publishStatus(source.projectId, sourceId, 'processing');
-
-  try {
-    const text = await extractSourceText(source);
-    const chunks = chunkText(text);
-    if (chunks.length === 0) throw new Error('no text could be extracted');
-
-    await knowledgeRepository.deleteChunksForSource(sourceId);
-
-    const canEmbed = Boolean(env.OPENAI_API_KEY);
-    const vectors = canEmbed ? await embedTexts(chunks) : [];
-
-    const rows = chunks.map((content, index) => ({
-      knowledgeSourceId: source.id,
-      projectId: source.projectId,
-      content,
-      chunkIndex: index,
-      metadata: {},
-      embedding: canEmbed ? vectors[index] : null,
-    }));
-
-    if (rows.length > 0) {
-      await knowledgeRepository.insertChunks(rows);
-    }
-
-    await knowledgeRepository.updateSource(sourceId, { status: 'ready', errorMessage: null });
-    await publishStatus(source.projectId, sourceId, 'ready');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown error';
-    await knowledgeRepository.updateSource(sourceId, { status: 'failed', errorMessage: message });
-    await publishStatus(source.projectId, sourceId, 'failed', message);
-    throw error;
-  }
-}
-
-function publishStatus(projectId: string, sourceId: string, status: string, errorMessage?: string) {
-  const channel = `knowledge:${projectId}`;
-  return getRedis().publish(
-    channel,
-    JSON.stringify({ sourceId, status, errorMessage: errorMessage ?? null }),
-  );
-}
-
-function toSourceView(row: SourceRow): KnowledgeSourceType {
-  return {
-    id: row.id,
-    projectId: row.projectId,
-    sourceType: row.sourceType,
-    name: row.name,
-    mimeType: row.mimeType ?? null,
-    size: row.sizeBytes,
-    sourceRef: row.sourceRef ?? null,
-    storageKey: row.storageKey ?? null,
-    status: row.status,
-    errorMessage: row.errorMessage ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
+  return { createSources, listSources, getUploadUrl, processSource, deleteSource };
 }

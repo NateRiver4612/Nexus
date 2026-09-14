@@ -1,4 +1,4 @@
-import { projectOnboarding, projects } from '@nexus/db';
+import { projectOnboarding, projects, type Db } from '@nexus/db';
 import type {
   CreateProjectInputType,
   OnboardingStateType,
@@ -6,109 +6,178 @@ import type {
   UpdateOnboardingInputType,
 } from '@nexus/types';
 
-import { onboardingRepository, projectsRepository, type NewProjectRow } from './repository';
+import { HttpError } from '../../errors';
+import { OnboardingRepository, ProjectsRepository, type NewProjectRow } from './repository';
 
 type ProjectRow = typeof projects.$inferSelect;
 type OnboardingRow = typeof projectOnboarding.$inferSelect;
 
-export function ProjectService() {
-  return { create, get, list, update, remove, getOnboarding, saveOnboarding };
-}
+export function ProjectService(db: Db) {
+  const projectsRepository = ProjectsRepository(db);
 
-export async function create(
-  userId: string,
-  input: Pick<CreateProjectInputType, 'name' | 'slug' | 'description'>,
-): Promise<ProjectType> {
-  const workspace = await ensureWorkspace(userId);
+  async function create(
+    userId: string,
+    input: Pick<CreateProjectInputType, 'name' | 'slug' | 'description' | 'status'>,
+  ): Promise<ProjectType> {
+    const workspace = await ensureWorkspace(db, userId);
 
-  const rows = await projectsRepository.create({
-    workspaceId: workspace.id,
-    name: input.name,
-    slug: input.slug,
-    description: input.description ?? null,
-    status: 'active',
-    createdBy: userId,
-  });
-  const project = rows[0]!;
-
-  await projectsRepository.addProjectMember({
-    projectId: project.id,
-    userId,
-    role: 'owner',
-  });
-
-  return toProjectView(project);
-}
-
-export async function get(id: string): Promise<ProjectType | null> {
-  const row = await projectsRepository.getById(id);
-  return row ? toProjectView(row) : null;
-}
-
-export async function list(userId: string): Promise<ProjectType[]> {
-  const workspace = await ensureWorkspace(userId);
-  const rows = await projectsRepository.listByWorkspace(workspace.id);
-  return rows.map(toProjectView);
-}
-
-export async function update(id: string, patch: Partial<NewProjectRow>) {
-  const rows = await projectsRepository.update(id, patch);
-  return rows[0] ? toProjectView(rows[0]) : null;
-}
-
-export async function remove(id: string) {
-  await projectsRepository.remove(id);
-}
-
-export async function getOnboarding(userId: string): Promise<OnboardingStateType | null> {
-  const row = await onboardingRepository.getForUser(userId);
-  return row ? toOnboardingView(row) : null;
-}
-
-export async function saveOnboarding(
-  userId: string,
-  input: UpdateOnboardingInputType,
-): Promise<OnboardingStateType> {
-  const key = `step${input.step}`;
-  const name = input.step === 1 ? (input.data as { name: string }).name : undefined;
-
-  const existing = await onboardingRepository.getForUser(userId);
-  if (existing) {
-    const prev = (existing.stepData ?? {}) as Record<string, unknown>;
-    const rows = await onboardingRepository.update(existing.id, {
-      step: input.step,
-      status: input.status ?? existing.status,
-      name: name ?? existing.name,
-      stepData: { ...prev, [key]: input.data },
+    const rows = await projectsRepository.create({
+      workspaceId: workspace.id,
+      name: input.name,
+      slug: input.slug,
+      description: input.description ?? null,
+      status: 'active',
+      createdBy: userId,
     });
-    return toOnboardingView(rows[0]!);
+
+    const project = rows[0]!;
+
+    await projectsRepository.addProjectMember({
+      projectId: project.id,
+      userId,
+      role: 'owner',
+    });
+
+    return toProjectView(project);
   }
 
-  const workspace = await ensureWorkspace(userId);
-  const rows = await onboardingRepository.create({
-    userId,
-    workspaceId: workspace.id,
-    status: input.status ?? 'draft',
-    name: name ?? '',
-    step: input.step,
-    stepData: { [key]: input.data },
-  });
-  return toOnboardingView(rows[0]!);
+  async function get(id: string): Promise<ProjectType | null> {
+    const row = await projectsRepository.getById(id);
+    return row ? toProjectView(row) : null;
+  }
+
+  async function list(userId: string): Promise<ProjectType[]> {
+    const workspace = await ensureWorkspace(db, userId);
+    const rows = await projectsRepository.listByWorkspace(workspace.id);
+    return rows.map(toProjectView);
+  }
+
+  async function update(id: string, patch: Partial<NewProjectRow>) {
+    const rows = await projectsRepository.update(id, patch);
+    return rows[0] ? toProjectView(rows[0]) : null;
+  }
+
+  async function remove(id: string) {
+    await projectsRepository.remove(id);
+  }
+
+  return { create, get, list, update, remove };
 }
+
+export const OnboardingService = (db: Db) => {
+  const onboardingRepository = OnboardingRepository(db);
+
+  async function getOnboarding(userId: string): Promise<OnboardingStateType | null> {
+    const row = await onboardingRepository.getByUserId(userId);
+    return row ? toOnboardingView(row) : null;
+  }
+
+  async function saveOnboarding({
+    userId,
+    input,
+  }: {
+    userId: string;
+    input: UpdateOnboardingInputType;
+  }): Promise<OnboardingStateType> {
+    const key = `step${input.step}`;
+
+    const existing = await onboardingRepository.getByUserId(userId);
+
+    if (existing) {
+      assertOnboardingOrder(existing, input.step);
+      let projectId = existing.projectId;
+
+      const prev = (existing.stepData ?? {}) as Record<string, unknown>;
+
+      const updatedOnboarding = await onboardingRepository.update(existing.id, {
+        step: input.step,
+        projectId,
+        stepData: { ...prev, [key]: input.data },
+      });
+      return toOnboardingView(updatedOnboarding!);
+    }
+
+    const workspace = await ensureWorkspace(db, userId);
+
+    const step1Data = input.data as {
+      name: string;
+      description?: string | null | undefined;
+      category: string;
+    };
+
+    const createdOnboarding = await db.transaction(async (tx) => {
+      const txProjectService = ProjectService(tx);
+      const txOnboardingRepository = OnboardingRepository(tx);
+
+      const project = await txProjectService.create(userId, {
+        name: step1Data.name,
+        slug: slugify(step1Data.name),
+        description: step1Data.description ?? null,
+        status: 'draft',
+      });
+
+      const createdOnboarding = await txOnboardingRepository.create({
+        userId,
+        workspaceId: workspace.id,
+        projectId: project.id,
+        step: input.step,
+        stepData: { [key]: input.data },
+      });
+
+      return createdOnboarding;
+    });
+
+    return toOnboardingView(createdOnboarding!);
+  }
+
+  return {
+    getOnboarding,
+    saveOnboarding,
+  };
+};
 
 function toOnboardingView(row: OnboardingRow): OnboardingStateType {
   return {
     id: row.id,
     status: row.status,
-    name: row.name,
     step: row.step,
+    projectId: row.projectId,
     stepData: (row.stepData ?? {}) as OnboardingStateType['stepData'],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-async function ensureWorkspace(userId: string) {
+function slugify(input: string) {
+  return (
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'project'
+  );
+}
+
+/** A step may only be saved once every earlier step's data exists in stepData. */
+const stepPrerequisites: Record<number, number[]> = {
+  2: [1],
+  3: [1, 2],
+  4: [1, 2, 3],
+};
+
+function assertOnboardingOrder(existing: OnboardingRow, step: number) {
+  const stepData = (existing.stepData ?? {}) as Record<string, unknown>;
+
+  for (const required of stepPrerequisites[step] ?? []) {
+    if (!stepData[`step${required}`]) {
+      throw HttpError.validation(`Complete step ${required} before continuing.`);
+    }
+  }
+}
+
+async function ensureWorkspace(db: Db, userId: string) {
+  const projectsRepository = ProjectsRepository(db);
+
   const existing = await projectsRepository.findWorkspaceForUser(userId);
   if (existing) {
     return { id: existing.workspaceId };

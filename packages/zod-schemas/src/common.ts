@@ -1,8 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-export const idSchema = z.string().uuid().openapi({
-  example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-});
+export const idSchema = z.uuid();
 
 export const idParamsSchema = z.object({
   id: idSchema.openapi({

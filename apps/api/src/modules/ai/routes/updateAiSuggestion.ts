@@ -9,13 +9,10 @@ import {
 
 import type { AiSuggestionType } from '@nexus/types';
 
-import { bearerSecurity } from '../../../openapi';
-
 export const updateAiSuggestionRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
     path: '/suggestions/items/{id}',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
       body: {
@@ -53,6 +50,7 @@ export const updateAiSuggestionRoute = defineOpenAPIRoute({
         status: body.status ?? 'pending',
         metadata: body.metadata ?? {},
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         expiresAt: 'expiresAt' in body ? (body.expiresAt ?? null) : null,
       } satisfies AiSuggestionType,
       200,

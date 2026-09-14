@@ -26,6 +26,7 @@ export const knowledgeSourceSchema = z
     storageKey: z.string().nullish(),
     status: sourceStatus.default('pending'),
     errorMessage: z.string().nullish(),
+    content: z.string().nullish(),
     ...timestampSchema,
   })
   .openapi('KnowledgeSource');
@@ -42,7 +43,9 @@ export const createKnowledgeSourceFileSchema = z.object({
 });
 
 export const createKnowledgeSourceUrlSchema = z.object({
-  sourceType: z.literal('url'),
+  sourceType: z.literal('url', {
+    error: 'Enter a valid URL',
+  }),
   url: z.url('Enter a valid URL.'),
 });
 
@@ -53,8 +56,18 @@ export const createKnowledgeSourceYoutubeSchema = z.object({
 
 export const createKnowledgeSourceTextSchema = z.object({
   sourceType: z.literal('copied_text'),
-  title: z.string().min(1).max(255),
-  content: z.string().min(10).max(50_000),
+  textTitle: z
+    .string()
+    .min(1, {
+      error: 'Title is required',
+    })
+    .max(255),
+  textContent: z
+    .string()
+    .min(10, {
+      error: 'Should have a proper content',
+    })
+    .max(50_000),
 });
 
 export const createKnowledgeSourcesSchema = z
@@ -80,9 +93,16 @@ export const createUploadUrlSchema = z.object({
 });
 
 export const createUploadUrlResponseSchema = z.object({
-  url: z.string(),
+  url: z.url({
+    error: 'Enter a valid URL',
+  }),
   key: z.string(),
   bucket: z.string(),
+});
+
+export const deleteKnowledgeResourceSchema = z.object({
+  projectId: z.uuid(),
+  sourceId: z.uuid(),
 });
 
 export const knowledgeItemSchema = z

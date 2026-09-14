@@ -79,6 +79,7 @@ The product/architecture docs live in `docs/` and are the source of truth for in
 - Ask before deciding when there are multiple reasonable approaches, or when the change affects the database schema, public API contracts, auth, dependencies, or existing architecture decisions.
 - Validate a step (report what changed and what was verified), then stop and wait. Do not auto-continue to the next phase or do unrelated improvements.
 - Minimize assumptions: do not silently invent fields, endpoints, UI behavior, auth rules, error semantics, or naming. Follow existing conventions for trivial choices.
+- No code for code's sake: only add abstractions, "fancy" patterns, or refactors that solve a concrete, stated problem. Before proposing one, explain the problem it fixes; if it's not strictly necessary, leave the code as-is and say so. Prefer the smallest change that satisfies the requirement.
 - Inspect existing code before creating new abstractions: reuse existing schemas, types, utilities, and route patterns rather than adding new ones.
 - Keep changes small enough to review easily (1-3 files per step).
 - Never commit without approval: draft the commit message, show it to the user, and wait for the go-ahead before staging and committing.

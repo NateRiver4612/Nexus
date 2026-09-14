@@ -14,7 +14,7 @@ import {
 
 import { onboardingKeys, projectKeys } from './queryKeys';
 import { createMutationHook } from '@/hooks/createMutation';
-import { createDetailQueryHook } from '@/hooks/createQuery';
+import { createDetailQueryHook, createQueryHook } from '@/hooks/createQuery';
 
 export function useGetProjects() {
   return useQuery({
@@ -29,14 +29,12 @@ export const useCreateProject = createMutationHook(createProject, (queryClient) 
   onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
 }));
 
-export const useGetOnboarding = () => {
-  return useQuery({
-    queryKey: onboardingKeys.all,
-    queryFn: () => getOnboarding(),
-    retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-};
+export const useGetOnboarding = createQueryHook(getOnboarding, () => onboardingKeys.all, {
+  defaultOptions: {
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  },
+});
 
 export const useSaveOnboardingStep = () => {
   const queryClient = useQueryClient();

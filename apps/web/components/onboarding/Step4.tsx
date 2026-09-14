@@ -2,123 +2,132 @@
 
 import * as React from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { onboardingStep4Schema } from '@nexus/zod-schemas';
-import type { OnboardingStep4InputType } from '@nexus/types';
-import { Minus, Plus } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import type { OnboardingStep4InputType } from '@nexus/types';
+
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  CardCheckboxGroup,
+  type CardCheckboxOption,
+  type CardCheckboxValue,
+} from '@/components/CardCheckboxGroup';
+import {
+  useCreateDeliverable,
+  useGetDeliverables,
+  useGetSystemDeliverables,
+} from '@/hooks/useDeliverables';
 
 import type { StepHandle } from './shared';
-import { useDraftSync } from './useDraftSync';
+import { DELIVERABLE_KIND_ICONS } from '@nexus/zod-schemas/constants';
 
 type Step4Props = {
   ref?: React.Ref<StepHandle>;
+  projectId?: string | null;
   defaults?: Partial<OnboardingStep4InputType>;
   onSave: (data: OnboardingStep4InputType) => Promise<unknown>;
-  onDraftChange?: (data: Partial<OnboardingStep4InputType>) => void;
 };
 
-export function Step4({ ref, defaults, onSave, onDraftChange }: Step4Props) {
-  const savedDeliverables = defaults?.deliverables;
-  const form = useForm<OnboardingStep4InputType>({
+// The card group keeps { label, value: rowId }; stepData stores { id, name } — mapped on save.
+type Step4Form = { deliverables: CardCheckboxValue[] };
+
+export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
+  const { data: system } = useGetSystemDeliverables();
+  const { data: customs, isLoading } = useGetDeliverables({ variables: projectId ?? '' });
+  const createDeliverable = useCreateDeliverable();
+
+  const form = useForm<Step4Form>({
     defaultValues: {
-      deliverables:
-        savedDeliverables && savedDeliverables.length > 0 ? savedDeliverables : [''],
+      // Restore the last-saved selection like steps 1–3 (ids are real row ids).
+      deliverables: (defaults?.deliverables ?? []).map((item) => ({
+        label: item.name,
+        value: item.id,
+      })),
     },
-    resolver: zodResolver(onboardingStep4Schema),
   });
 
-  const [newDeliverable, setNewDeliverable] = React.useState('');
-  const deliverables = form.watch('deliverables') ?? [];
-  const deliverablesError = form.formState.errors.deliverables?.message;
+  const {
+    formState: { isDirty },
+  } = form;
+
+  const onCreateCustom = async (label: string): Promise<string> => {
+    const row = await createDeliverable.mutateAsync({
+      projectId: projectId!,
+      name: label,
+      kind: 'custom',
+      isCustom: true,
+    });
+    return `${row.id}`;
+  };
 
   React.useImperativeHandle(ref, () => ({
     save: async () => {
-      const valid = await form.trigger();
-      const trimmedDeliverables = form
-        .getValues('deliverables')
-        .map((deliverable) => deliverable.trim())
-        .filter(Boolean);
-      const deliverablesValid = trimmedDeliverables.length > 0;
-      if (!valid || !deliverablesValid) {
-        if (!deliverablesValid) {
-          form.setError('deliverables', { message: 'Add at least one deliverable' });
-        }
+      const values = form.getValues('deliverables') ?? [];
+
+      if (values.length === 0) {
+        form.setError('deliverables', { message: 'Select at least one deliverable' });
         return false;
       }
-      await onSave({ deliverables: trimmedDeliverables });
+
+      if (!isDirty) {
+        return true;
+      }
+
+      await onSave({
+        deliverables: values.map((v) => ({ id: v.value, name: v.label })),
+      });
       return true;
     },
   }));
 
-  useDraftSync(form, onDraftChange);
-
-  function addDeliverable() {
-    const trimmed = newDeliverable.trim();
-    if (!trimmed) return;
-    form.setValue(
-      'deliverables',
-      [...deliverables.filter((deliverable) => deliverable.trim() !== ''), trimmed],
-      { shouldValidate: true },
+  if (isLoading) {
+    return (
+      <div className="space-y-2 text-left">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
     );
-    setNewDeliverable('');
   }
 
-  function removeDeliverable(index: number) {
-    const next = [...deliverables];
-    next.splice(index, 1);
-    form.setValue('deliverables', next, { shouldValidate: true });
+  if (!projectId) {
+    return (
+      <div className="space-y-3 text-left text-sm text-muted-foreground">
+        <p>Finish step 1 first — the project has to exist before deliverables can be added.</p>
+      </div>
+    );
   }
+
+  const options: CardCheckboxOption[] = [
+    // Global system catalog (no projectId) — presets with icons.
+    ...(system ?? []).map((row) => ({
+      value: row.id,
+      label: row.name,
+      icon: DELIVERABLE_KIND_ICONS[row.kind],
+      isCustom: false,
+    })),
+    // This project's user-created deliverables.
+    ...(customs ?? [])
+      .filter((row) => row.isCustom)
+      .map((row) => ({
+        value: row.id,
+        label: row.name,
+        isCustom: true,
+      })),
+  ];
 
   return (
     <FormProvider {...form}>
       <div className="space-y-6 text-left">
-        <div className="flex flex-col gap-3">
-          <span className="text-sm font-medium text-foreground">Deliverables</span>
-          <div className="flex flex-col gap-2">
-            {deliverables.map((_, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Input
-                  {...form.register(`deliverables.${index}`)}
-                  placeholder="e.g. Market Research Report"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeDeliverable(index)}
-                  disabled={deliverables.length <= 1}
-                >
-                  <Minus className="size-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Input
-              value={newDeliverable}
-              onChange={(e) => setNewDeliverable(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addDeliverable();
-                }
-              }}
-              placeholder="Add a deliverable…"
-            />
-            <Button type="button" variant="outline" size="sm" onClick={addDeliverable}>
-              <Plus className="size-4" />
-              Add
-            </Button>
-          </div>
-
-          {deliverablesError && (
-            <p className="text-xs font-medium text-destructive">{deliverablesError}</p>
-          )}
-        </div>
+        <CardCheckboxGroup
+          projectId={projectId}
+          name="deliverables"
+          label="What deliverables do you need?"
+          options={options}
+          otherOption={{
+            label: 'Custom deliverable',
+            value: 'other',
+          }}
+          onCreateOption={onCreateCustom}
+        />
       </div>
     </FormProvider>
   );

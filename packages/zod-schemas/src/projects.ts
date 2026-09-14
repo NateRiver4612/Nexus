@@ -37,14 +37,12 @@ export const projectSchema = z
       .string()
       .nullable()
       .openapi({ example: 'Modular monolith for planning and collaboration' }),
-    status: z.enum(['active', 'archived']).default('active'),
+    status: z.enum(['active', 'archived', 'draft', 'completed']).default('draft'),
     ...timestampSchema,
   })
   .openapi('Project');
 
-export const onboardingStatusSchema = z
-  .enum(['draft', 'in_progress', 'completed'])
-  .default('draft');
+export const onboardingStatusSchema = z.enum(['in_progress', 'completed']).default('in_progress');
 
 export const onboardingStep1Schema = z.object({
   name: z
@@ -74,13 +72,30 @@ export const onboardingStep2Schema = z.object({
   }),
 });
 
+/** Serialized file metadata (a real `File` can't cross the wire or live in stepData jsonb). */
+export const onboardingStep3FileSchema = z.object({
+  name: z.string().min(1).max(255),
+  size: z.number().int().nonnegative(),
+  mimeType: z.string().nullish(),
+});
+
 export const onboardingStep3Schema = z.object({
-  files: fileSchema.array().min(1),
+  files: onboardingStep3FileSchema.array().default([]),
+  link: z
+    .url({
+      error: 'Enter a valid URL',
+    })
+    .nullish(),
+  textTitle: z.string().nullish(),
+  textContent: z.string().nullish(),
 });
 
 export const onboardingStep4Schema = z.object({
   deliverables: z
-    .string()
+    .object({
+      id: z.uuid(),
+      name: z.string(),
+    })
     .array()
     .min(1)
     .openapi({
@@ -128,8 +143,8 @@ export const onboardingStateSchema = z
   .object({
     id: idSchema,
     status: onboardingStatusSchema,
-    name: z.string().min(1).max(255),
     step: z.number().int().min(1).max(5).default(1),
+    projectId: idSchema,
     stepData: onboardingDataSchema.partial().default({}),
     ...timestampSchema,
   })
@@ -140,27 +155,22 @@ export const updateOnboardingSchema = z
   .discriminatedUnion('step', [
     z.object({
       step: z.literal(1),
-      status: onboardingStatusSchema.optional(),
       data: onboardingStep1Schema,
     }),
     z.object({
       step: z.literal(2),
-      status: onboardingStatusSchema.optional(),
       data: onboardingStep2Schema,
     }),
     z.object({
       step: z.literal(3),
-      status: onboardingStatusSchema.optional(),
       data: onboardingStep3Schema,
     }),
     z.object({
       step: z.literal(4),
-      status: onboardingStatusSchema.optional(),
       data: onboardingStep4Schema,
     }),
     z.object({
       step: z.literal(5),
-      status: onboardingStatusSchema.optional(),
       data: onboardingStep5Schema,
     }),
   ])
@@ -169,6 +179,7 @@ export const updateOnboardingSchema = z
 export const createProjectSchema = projectSchema.pick({
   name: true,
   slug: true,
+  status: true,
   description: true,
 });
 

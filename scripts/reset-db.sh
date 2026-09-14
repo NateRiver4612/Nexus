@@ -22,13 +22,13 @@ for i in $(seq 1 60); do
 done
 
 echo "==> Generating migrations"
-bun run db:generate
+bun run generate
 
 echo "==> Applying migrations"
-bun run db:migrate
+bun run migrate
 
 echo "==> Seeding database"
-bun run db:seed
+bun run seed
 
 echo "==> All steps succeeded. Starting the docker stack"
 docker compose --env-file "$ENV_FILE" up -d

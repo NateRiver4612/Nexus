@@ -1,45 +1,49 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, and } from 'drizzle-orm';
 
 import {
-  getDb,
   projectMembers,
   projectOnboarding,
   projects,
   workspaceMembers,
   workspaces,
+  type Db,
 } from '@nexus/db';
 
 export type NewProjectRow = typeof projects.$inferInsert;
 export type NewOnboardingRow = typeof projectOnboarding.$inferInsert;
 
-export const projectsRepository = {
+export const ProjectsRepository = (db: Db) => ({
   create(values: NewProjectRow) {
-    return getDb().insert(projects).values(values).returning();
+    return db.insert(projects).values(values).returning();
   },
 
   async getById(id: string) {
-    const rows = await getDb().select().from(projects).where(eq(projects.id, id)).limit(1);
+    const rows = await db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.id, id), eq(projects.status, 'completed')))
+      .limit(1);
     return rows[0];
   },
 
   listByWorkspace(workspaceId: string) {
-    return getDb()
+    return db
       .select()
       .from(projects)
-      .where(eq(projects.workspaceId, workspaceId))
+      .where(and(eq(projects.workspaceId, workspaceId), eq(projects.status, 'completed')))
       .orderBy(asc(projects.createdAt));
   },
 
   update(id: string, patch: Partial<NewProjectRow>) {
-    return getDb().update(projects).set(patch).where(eq(projects.id, id)).returning();
+    return db.update(projects).set(patch).where(eq(projects.id, id)).returning();
   },
 
   remove(id: string) {
-    return getDb().delete(projects).where(eq(projects.id, id)).returning();
+    return db.delete(projects).where(eq(projects.id, id)).returning();
   },
 
   async findWorkspaceForUser(userId: string) {
-    const rows = await getDb()
+    const rows = await db
       .select({ workspaceId: workspaceMembers.workspaceId })
       .from(workspaceMembers)
       .where(eq(workspaceMembers.userId, userId))
@@ -48,21 +52,21 @@ export const projectsRepository = {
   },
 
   createWorkspace(values: typeof workspaces.$inferInsert) {
-    return getDb().insert(workspaces).values(values).returning();
+    return db.insert(workspaces).values(values).returning();
   },
 
   addWorkspaceMember(values: typeof workspaceMembers.$inferInsert) {
-    return getDb().insert(workspaceMembers).values(values);
+    return db.insert(workspaceMembers).values(values);
   },
 
   addProjectMember(values: typeof projectMembers.$inferInsert) {
-    return getDb().insert(projectMembers).values(values);
+    return db.insert(projectMembers).values(values);
   },
-};
+});
 
-export const onboardingRepository = {
-  async getForUser(userId: string) {
-    const rows = await getDb()
+export const OnboardingRepository = (db: Db) => ({
+  async getByUserId(userId: string) {
+    const rows = await db
       .select()
       .from(projectOnboarding)
       .where(eq(projectOnboarding.userId, userId))
@@ -70,15 +74,13 @@ export const onboardingRepository = {
     return rows[0];
   },
 
-  create(values: NewOnboardingRow) {
-    return getDb().insert(projectOnboarding).values(values).returning();
+  async create(values: NewOnboardingRow) {
+    return (await db.insert(projectOnboarding).values(values).returning())[0];
   },
 
-  update(id: string, patch: Partial<NewOnboardingRow>) {
-    return getDb()
-      .update(projectOnboarding)
-      .set(patch)
-      .where(eq(projectOnboarding.id, id))
-      .returning();
+  async update(id: string, patch: Partial<NewOnboardingRow>) {
+    return (
+      await db.update(projectOnboarding).set(patch).where(eq(projectOnboarding.id, id)).returning()
+    )[0];
   },
-};
+});

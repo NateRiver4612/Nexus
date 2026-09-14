@@ -9,13 +9,10 @@ import {
 
 import type { MessageType } from '@nexus/types';
 
-import { bearerSecurity } from '../../../openapi';
-
 export const postMessageRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
     path: '/conversations/items/{id}/messages',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
       body: {
@@ -51,6 +48,7 @@ export const postMessageRoute = defineOpenAPIRoute({
         content: body.content,
         sourceId: body.sourceId ?? null,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       } satisfies MessageType,
       201,
     );

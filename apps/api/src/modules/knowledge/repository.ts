@@ -1,18 +1,20 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 
-import { getDb, knowledgeSourceChunks, knowledgeSources } from '@nexus/db';
+import { knowledgeSourceChunks, knowledgeSources, type Db } from '@nexus/db';
+
+type KnowledgeDb = Db | Parameters<Parameters<Db['transaction']>[0]>[0];
 
 export type SourceRow = typeof knowledgeSources.$inferSelect;
 export type NewSourceRow = typeof knowledgeSources.$inferInsert;
 export type NewChunkRow = typeof knowledgeSourceChunks.$inferInsert;
 
-export const knowledgeRepository = {
+export const KnowledgeRepository = (db: KnowledgeDb) => ({
   insertSource(values: NewSourceRow) {
-    return getDb().insert(knowledgeSources).values(values).returning();
+    return db.insert(knowledgeSources).values(values).returning();
   },
 
   async getSourceById(id: string) {
-    const rows = await getDb()
+    const rows = await db
       .select()
       .from(knowledgeSources)
       .where(eq(knowledgeSources.id, id))
@@ -21,32 +23,33 @@ export const knowledgeRepository = {
   },
 
   async listSources(projectId: string) {
-    return getDb()
+    return db
       .select()
       .from(knowledgeSources)
       .where(eq(knowledgeSources.projectId, projectId))
       .orderBy(asc(knowledgeSources.createdAt));
   },
 
-  async deleteSource(id: string) {
-    return getDb().delete(knowledgeSources).where(eq(knowledgeSources.id, id)).returning();
+  async deleteSource(id: string, projectId: string) {
+    return (
+      await db
+        .delete(knowledgeSources)
+        .where(and(eq(knowledgeSources.id, id), eq(knowledgeSources.projectId, projectId)))
+        .returning()
+    )[0];
   },
 
   updateSource(id: string, patch: Partial<NewSourceRow>) {
-    return getDb()
-      .update(knowledgeSources)
-      .set(patch)
-      .where(eq(knowledgeSources.id, id))
-      .returning();
+    return db.update(knowledgeSources).set(patch).where(eq(knowledgeSources.id, id)).returning();
   },
 
   async deleteChunksForSource(sourceId: string) {
-    return getDb()
+    return db
       .delete(knowledgeSourceChunks)
       .where(eq(knowledgeSourceChunks.knowledgeSourceId, sourceId));
   },
 
   insertChunks(rows: NewChunkRow[]) {
-    return getDb().insert(knowledgeSourceChunks).values(rows);
+    return db.insert(knowledgeSourceChunks).values(rows);
   },
-};
+});

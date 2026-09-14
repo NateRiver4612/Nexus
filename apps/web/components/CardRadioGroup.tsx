@@ -4,27 +4,11 @@ import { X, type LucideIcon } from 'lucide-react';
 import * as React from 'react';
 import { Controller, useFormContext, type FieldValues, type FieldPath } from 'react-hook-form';
 import { FormLabel } from './ui/form';
+import { slugify } from '@/lib/utils';
 
 // Minimal className combiner — swap for your existing `cn` from lib/utils if you have one.
 function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(' ');
-}
-
-// Turns a typed label into a stable, unique option value: "Product Design" -> "product-design".
-function slugify(label: string, taken: Set<string>) {
-  const base =
-    label
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') || 'custom';
-
-  let value = base;
-  let i = 2;
-  while (taken.has(value)) {
-    value = `${base}-${i++}`;
-  }
-  return value;
 }
 
 export interface CardRadioOption {
@@ -116,8 +100,7 @@ export const CardRadioGroup = ({
           setDraft('');
           if (!label) return; // empty submit just cancels back to the "Other" card
 
-          const taken = new Set(allOptions.map((o) => o.value));
-          const value = slugify(label, taken);
+          const value = slugify(label);
           const newOption: CardRadioOption = {
             value,
             label,
@@ -181,7 +164,7 @@ export const CardRadioGroup = ({
                         }}
                         onBlur={commitDraft}
                         placeholder="Type a category…"
-                        className="flex-1 bg-transparent text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400"
+                        className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
                       />
                     </div>
                   );
@@ -196,8 +179,6 @@ export const CardRadioGroup = ({
                     disabled={disabled}
                     tabIndex={isSelected || selectedIndex === -1 ? 0 : -1}
                     onClick={() => {
-                      console.log('clicked', option.value);
-
                       if (isOtherTrigger) {
                         setIsEditingOther(true);
                         return;
@@ -223,10 +204,7 @@ export const CardRadioGroup = ({
                       )}
                       <span className="flex flex-col">
                         <span
-                          className={cn(
-                            'text-sm font-medium',
-                            isSelected ? 'text-blue-600' : 'text-gray-900',
-                          )}
+                          className={cn('text-sm', isSelected ? 'text-blue-600' : 'text-gray-900')}
                         >
                           {option.label}
                         </span>
@@ -250,7 +228,7 @@ export const CardRadioGroup = ({
             </div>
 
             {fieldError && (
-              <p className="text-destructive font-medium text-sm">{fieldError.message as string}</p>
+              <p className="text-destructive text-sm">{fieldError.message as string}</p>
             )}
           </div>
         );

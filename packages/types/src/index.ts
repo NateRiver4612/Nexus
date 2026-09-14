@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import {
   aiRunListSchema,
@@ -58,6 +58,14 @@ import {
   onboardingDataSchema,
   onboardingStateSchema,
   updateOnboardingSchema,
+  createKnowledgeSourceTextSchema,
+  createKnowledgeSourceYoutubeSchema,
+  createDeliverableSchema,
+  deliverableSchema,
+  deliverableListSchema,
+  updateDeliverableSchema,
+  deliverableParamsSchema,
+  deliverableKindSchema,
 } from '@nexus/zod-schemas';
 
 export type OnboardingStatusType = z.infer<typeof onboardingStatusSchema>;
@@ -118,6 +126,14 @@ export type CreateKnowledgeSourcesInputType = z.infer<typeof createKnowledgeSour
 export type CreateKnowledgeSourceItemType = CreateKnowledgeSourcesInputType[number];
 export type CreateUploadUrlInputType = z.infer<typeof createUploadUrlSchema>;
 export type CreateUploadUrlResponseType = z.infer<typeof createUploadUrlResponseSchema>;
+export type CreateKnowledgeSourceTextType = z.infer<typeof createKnowledgeSourceTextSchema>;
+export type CreateKnowledgeSourceYoutubeType = z.infer<typeof createKnowledgeSourceYoutubeSchema>;
+export type DeliverableKindType = z.infer<typeof deliverableKindSchema>;
+export type DeliverableType = z.infer<typeof deliverableSchema>;
+export type DeliverableListType = z.infer<typeof deliverableListSchema>;
+export type CreateDeliverableInputType = z.infer<typeof createDeliverableSchema>;
+export type UpdateDeliverableInputType = z.infer<typeof updateDeliverableSchema>;
+export type DeliverableParamsType = z.infer<typeof deliverableParamsSchema>;
 
 export type NotificationType = z.infer<typeof notificationSchema>;
 export type NotificationListType = z.infer<typeof notificationListSchema>;

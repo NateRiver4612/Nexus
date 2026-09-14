@@ -1,4 +1,18 @@
-import { Code, DollarSign, Ellipsis, Megaphone, ScrollText, UserStar } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Calculator,
+  CalendarRange,
+  Code,
+  DollarSign,
+  Ellipsis,
+  FileText,
+  Megaphone,
+  NotebookPen,
+  Presentation,
+  ScrollText,
+  Table,
+  UserStar,
+} from 'lucide-react';
 
 export const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — bigger than your avatar upload limit, docs are larger
 export const ACCEPTED_FILE_TYPES = [
@@ -45,3 +59,29 @@ export const DEFAULT_ONBOARDING_CATEGORIES = [
     icon: Ellipsis,
   },
 ];
+
+/** Preset deliverable options shown in onboarding step 4 (custom is added by the user). */
+/* Deliverable presets split in two:
+   - DEFINITIONS: kind + label (shared — the seed creates these rows, client falls back to labels)
+   - KIND_ICONS: kind + icon (display only on the cards). */
+export const DELIVERABLE_DEFINITIONS = [
+  { kind: 'word_report', label: 'Word report' },
+  { kind: 'spreadsheet', label: 'Spreadsheet' },
+  { kind: 'presentation', label: 'Presentation' },
+  { kind: 'timeline', label: 'Timeline' },
+  { kind: 'meeting_notes', label: 'Meeting notes' },
+  { kind: 'research_summary', label: 'Research summary' },
+  { kind: 'financial_model', label: 'Financial model' },
+] as const;
+
+type DeliverableKindLiteral = (typeof DELIVERABLE_DEFINITIONS)[number]['kind'] | 'custom';
+
+export const DELIVERABLE_KIND_ICONS: Partial<Record<DeliverableKindLiteral, LucideIcon>> = {
+  word_report: FileText,
+  spreadsheet: Table,
+  presentation: Presentation,
+  timeline: CalendarRange,
+  meeting_notes: NotebookPen,
+  research_summary: ScrollText,
+  financial_model: Calculator,
+} as const;

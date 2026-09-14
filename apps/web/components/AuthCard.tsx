@@ -67,7 +67,7 @@ function SocialButton({ icon, label, onClick }: SocialButtonProps) {
       onClick={onClick}
       className={cn(
         'flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5',
-        'text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50',
+        'text-sm text-gray-700 transition-colors hover:bg-gray-50',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
       )}
     >
@@ -120,8 +120,8 @@ function LoginForm({
 
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">Password</label>
-            <a href="#" className="text-xs font-medium text-blue-600 hover:underline">
+            <label className="text-sm text-gray-700">Password</label>
+            <a href="#" className="text-xs text-blue-600 hover:underline">
               Forgot password?
             </a>
           </div>
@@ -133,7 +133,7 @@ function LoginForm({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-gray-900 py-2.5 text-sm text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? 'Logging in…' : 'Log in'}
         </button>
@@ -171,7 +171,7 @@ function RegisterForm({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-gray-900 py-2.5 text-sm text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? 'Creating account…' : 'Create account'}
         </button>
@@ -244,7 +244,7 @@ export function AuthCard({
         <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-900">
           <Sparkle className="h-4 w-4 text-white" />
         </span>
-        <span className="text-base font-semibold text-gray-900">Nexus</span>
+        <span className="font-semibold text-gray-900">Nexus</span>
       </div>
 
       <div className="w-full rounded-xl border border-gray-200 bg-white p-6">
@@ -260,7 +260,7 @@ export function AuthCard({
                 setError(null);
               }}
               className={cn(
-                'flex-1 border-b-2 pb-2.5 text-sm font-medium transition-colors',
+                'flex-1 border-b-2 pb-2.5 text-sm transition-colors',
                 tab === value
                   ? 'border-gray-900 text-gray-900'
                   : 'border-transparent text-gray-400 hover:text-gray-600',
@@ -302,7 +302,7 @@ export function AuthCard({
             <button
               type="button"
               onClick={() => setTab('register')}
-              className="font-medium text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline"
             >
               Sign up free
             </button>
@@ -313,7 +313,7 @@ export function AuthCard({
             <button
               type="button"
               onClick={() => setTab('login')}
-              className="font-medium text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline"
             >
               Log in
             </button>

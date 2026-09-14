@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
+@layer base {
+  body {
+    @apply text-base font-medium;
+  }
+}
+
 @theme {
   --color-background: #f7f7f8;
   --color-foreground: #323c46;

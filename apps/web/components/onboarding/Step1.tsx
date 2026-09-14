@@ -29,6 +29,7 @@ export function Step1({ ref, defaults, onSave, onDraftChange }: Step1Props) {
       description: defaults?.description ?? '',
       category: defaults?.category ?? '',
     },
+    mode: 'onTouched',
     resolver: zodResolver(onboardingStep1Schema),
   });
 
@@ -41,12 +42,12 @@ export function Step1({ ref, defaults, onSave, onDraftChange }: Step1Props) {
       if (!isDirty) return true;
 
       await trigger();
+
+      const name = getValues('name').trim();
+      const description = getValues('description') ?? null;
       const category = getValues('category');
 
-      const description = getValues('description') ?? null;
-
-      await onSave({ name: getValues('name').trim(), description, category: category.trim() });
-
+      await onSave({ name, description, category });
       return true;
     },
   }));

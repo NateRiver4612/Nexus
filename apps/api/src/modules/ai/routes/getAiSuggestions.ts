@@ -6,13 +6,10 @@ import {
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../openapi';
-
 export const getAiSuggestionsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/suggestions/{projectId}',
-    security: bearerSecurity,
     request: {
       params: projectIdParamsSchema,
     },

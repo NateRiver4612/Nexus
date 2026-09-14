@@ -11,13 +11,12 @@ type StepKey = keyof Partial<OnboardingDataType>;
 type DraftStepData = { [K in StepKey]?: Partial<OnboardingDataType[K]> };
 
 export type OnboardingDraft = {
-  /** 0-based wizard position; null until the user starts or hydrates. */
   step: number | null;
-  /** Typed/saved step values, overlaid on the server's stepData on load. */
+  projectId: string | null;
   stepData: DraftStepData;
 };
 
-const emptyDraft: OnboardingDraft = { step: null, stepData: {} };
+const emptyDraft: OnboardingDraft = { step: null, stepData: {}, projectId: null };
 
 /**
  * Persisted client-side draft of the onboarding wizard. Server state stays in
@@ -31,12 +30,13 @@ const emptyDraft: OnboardingDraft = { step: null, stepData: {} };
 export function useOnboardingDraft() {
   const queryClient = useQueryClient();
 
-  const { data } = useQuery<OnboardingDraft | null>({
+  const { data } = useQuery<OnboardingDraft>({
     queryKey: onboardingKeys.draft,
-    queryFn: () => null, // never fetches — restored/written from the persisted cache
+    queryFn: () => emptyDraft, // never invoked — enabled: false guarantees this
     enabled: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
+    initialData: emptyDraft,
+    staleTime: Infinity, // never considered stale — there's no server to compare against
+    gcTime: Infinity, // never garbage-collected while the app is open
   });
 
   const draft = data ?? emptyDraft;

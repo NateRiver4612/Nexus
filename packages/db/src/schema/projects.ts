@@ -25,7 +25,6 @@ export const projectStatus = pgEnum('project_status', [
 ]);
 
 export const projectOnboardingStatus = pgEnum('project_onboarding_status', [
-  'draft',
   'in_progress',
   'completed',
 ]);
@@ -43,10 +42,10 @@ export const projects = pgTable(
     slug: varchar('slug', { length: 120 }).notNull(),
     description: text('description'),
     readme: text('readme'),
-    status: projectStatus('status').notNull().default('active'),
+    status: projectStatus('status').notNull().default('draft'),
     startDate: timestamp('start_date', { withTimezone: true, mode: 'date' }),
     targetDate: timestamp('target_date', { withTimezone: true, mode: 'date' }),
-    createdBy: uuid('created_by')
+    createdBy: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -73,7 +72,7 @@ export const projectMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: projectRole('role').notNull().default('member'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    ...timestamps,
   },
   (table) => [uniqueIndex('project_members_unique_idx').on(table.projectId, table.userId)],
 );
@@ -85,16 +84,20 @@ export const projectOnboarding = pgTable(
     userId: uuid('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
+    projectId: uuid('project_id')
+      .references(() => projects.id, {
+        onDelete: 'cascade',
+      })
+      .notNull(),
     workspaceId: uuid('workspace_id')
       .references(() => workspaces.id, { onDelete: 'cascade' })
       .notNull(),
-    status: projectOnboardingStatus('onboarding_status').notNull().default('draft'),
-    name: varchar('name', { length: 255 }).notNull(),
+    status: projectOnboardingStatus('onboarding_status').notNull().default('in_progress'),
     step: integer('step').notNull().default(1),
     stepData: jsonb('step_data').$type<OnboardingDataType | {}>().notNull().default({}),
     ...timestamps,
   },
-  (table) => [uniqueIndex('project_onboarding_unique_idx').on(table.userId, table.name)],
+  (table) => [uniqueIndex('project_onboarding_unique_idx').on(table.userId, table.projectId)],
 );
 
 export type ProjectMember = typeof projectMembers.$inferSelect;

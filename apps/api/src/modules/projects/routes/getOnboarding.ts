@@ -1,10 +1,10 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { errorResponseSchema, onboardingStateSchema } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
-import { HttpError } from '../../../errors';
-import { getOnboarding } from '../service';
+import { OnboardingService } from '../service';
 
 export const getOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -12,7 +12,7 @@ export const getOnboardingRoute = defineOpenAPIRoute({
     path: '/onboarding',
     responses: {
       200: {
-        content: { 'application/json': { schema: onboardingStateSchema } },
+        content: { 'application/json': { schema: onboardingStateSchema.nullable() } },
         description: 'Onboarding progress retrieved',
       },
       401: {
@@ -27,8 +27,16 @@ export const getOnboardingRoute = defineOpenAPIRoute({
   }),
   handler: async (c) => {
     const user = getUser(c);
-    const onboarding = await getOnboarding(user.id);
-    if (!onboarding) throw HttpError.notFound('Onboarding not found');
+
+    const db = getDb();
+    const onboardingService = OnboardingService(db);
+
+    const onboarding = await onboardingService.getOnboarding(user.id);
+
+    if (!onboarding) {
+      return c.json(null, 200);
+    }
+
     return c.json(onboarding, 200);
   },
 });

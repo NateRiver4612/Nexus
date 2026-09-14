@@ -7,7 +7,8 @@ import {
 } from '@nexus/zod-schemas';
 
 import { getUser } from '../../../auth-middleware';
-import { saveOnboarding } from '../service';
+import { getDb } from '@nexus/db';
+import { OnboardingService } from '../service';
 
 export const saveOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -40,7 +41,11 @@ export const saveOnboardingRoute = defineOpenAPIRoute({
     const user = getUser(c);
     const body = c.req.valid('json');
 
-    const state = await saveOnboarding(user.id, body);
+    const db = getDb();
+
+    const onboardingService = OnboardingService(db);
+
+    const state = await onboardingService.saveOnboarding({ userId: user.id, input: body });
     return c.json(state, 200);
   },
 });

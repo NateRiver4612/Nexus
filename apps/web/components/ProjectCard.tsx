@@ -20,7 +20,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       <div>
-        <h3 className="text-base font-semibold">{project.name}</h3>
+        <h3 className="font-semibold">{project.name}</h3>
       </div>
 
       <div className="flex items-center gap-3">
@@ -39,7 +39,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
       <p className="mt-auto text-xs text-muted-foreground">
         14 files <span className="mx-1">·</span> 22 artifacts <span className="mx-1">·</span>{' '}
-        <span className="font-medium text-error">5 days left</span>
+        <span className="text-error">5 days left</span>
       </p>
     </Card>
   );

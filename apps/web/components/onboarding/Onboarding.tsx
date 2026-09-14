@@ -6,14 +6,14 @@ import { useIsRestoring } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useCreateProject, useGetOnboarding, useSaveOnboardingStep } from '@/hooks/useProjects';
+import { useGetOnboarding, useSaveOnboardingStep } from '@/hooks/useProjects';
 import { useOnboardingDraft } from '@/hooks/useOnboardingDraft';
 import { Step1 } from './Step1';
 import { Step2 } from './Step2';
 import { Step3 } from './Step3';
 import { Step4 } from './Step4';
 import { Step5 } from './Step5';
-import { slugify, type StepHandle } from './shared';
+import { type StepHandle } from './shared';
 import { useEffect, useRef, useState } from 'react';
 
 const steps = [
@@ -29,15 +29,20 @@ const steps = [
     title: 'Context & Resources',
     description: 'Add everything you already have.Nexus will index it for the project assistance.',
   },
-  { title: 'Plan your work', description: 'Add the tasks and deliverables to get there.' },
+  {
+    title: 'What deliverables for your need',
+    description: 'Select the output you want - Nexus will prepare them as the project progress.',
+  },
   { title: 'Review and create', description: "Everything looks good. Let's build your project." },
 ];
 
 export function Onboarding() {
   const router = useRouter();
   const { data: onboarding, isLoading } = useGetOnboarding();
+
   const { mutateAsync: saveStep, isPending } = useSaveOnboardingStep();
-  const createProject = useCreateProject();
+
+  const projectId = onboarding?.projectId;
 
   const {
     draft,
@@ -45,6 +50,7 @@ export function Onboarding() {
     setStepData: setDraftStepData,
     clear: clearDraft,
   } = useOnboardingDraft();
+
   const draftStep = draft.step;
   const draftStepData = draft.stepData;
 
@@ -54,25 +60,23 @@ export function Onboarding() {
   const stepRef = useRef<StepHandle>(null);
   const resumed = useRef(false);
 
-  // Wait for both the restored draft (persistQueryClient) and the server GET so
-  // the resolved step is deterministic — otherwise a refresh flashes Step 1, and
-  // a returning user on a fresh browser could lock in step 0 before the server
-  // step arrives.
   const isRestoring = useIsRestoring();
   const notReady = isRestoring || isLoading;
 
   useEffect(() => {
     if (notReady || resumed.current) return;
+
     resumed.current = true;
+
     if (draftStep !== null) return;
-    // First load: resume from the saved server step (1-based) if there is one.
-    setDraftStep(onboarding ? Math.min(onboarding.step, steps.length - 1) : 0);
+
+    setDraftStep(onboarding?.step ?? 0);
   }, [notReady, onboarding, draftStep, setDraftStep]);
 
   const step = draftStep ?? 0;
   const isLast = step === steps.length - 1;
   const current = steps[step]!;
-  // Draft overlays server-backed stepData so in-progress edits survive refreshes.
+
   const mergedData = { ...onboarding?.stepData, ...draftStepData };
 
   if (notReady) {
@@ -86,18 +90,10 @@ export function Onboarding() {
   }
 
   async function handleFinish() {
-    const draftStep1 = draftStepData.step1;
-    const name = draftStep1?.name ?? onboarding?.name ?? 'Untitled Project';
-    const description = draftStep1?.description ?? onboarding?.stepData?.step1?.description ?? null;
-    setCreating(true);
+    // setCreating(true);
     try {
-      const project = await createProject.mutateAsync({
-        name,
-        slug: slugify(name),
-        description,
-      });
-      clearDraft();
-      router.push(`/projects/${project.id}`);
+      // clearDraft();
+      // router.push(`/projects`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the project.');
       setCreating(false);
@@ -131,8 +127,8 @@ export function Onboarding() {
           <div
             key={index}
             className={cn(
-              'h-1.5 flex-1 rounded-full transition-colors',
-              index <= step ? 'bg-primary' : 'bg-muted',
+              'h-1 flex-1 rounded-full transition-colors',
+              index <= step ? 'bg-primary/70' : 'bg-muted',
             )}
           />
         ))}
@@ -164,19 +160,28 @@ export function Onboarding() {
             onDraftChange={(data) => setDraftStepData('step2', data)}
           />
         )}
-        {step === 2 && <Step3 />}
+        {step === 2 && (
+          <Step3
+            ref={stepRef}
+            projectId={projectId}
+            onSave={async (data) => {
+              await saveStep({ step: 3, data });
+              setDraftStepData('step3', data);
+            }}
+          />
+        )}
         {step === 3 && (
           <Step4
             ref={stepRef}
+            projectId={projectId}
             defaults={mergedData.step4}
             onSave={async (data) => {
               await saveStep({ step: 4, data });
               setDraftStepData('step4', data);
             }}
-            onDraftChange={(data) => setDraftStepData('step4', data)}
           />
         )}
-        {step === 4 && <Step5 state={onboarding} />}
+        {step === 4 && projectId && <Step5 state={onboarding} projectId={onboarding?.projectId} />}
       </div>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
@@ -196,7 +201,7 @@ export function Onboarding() {
         )}
 
         <Button type="button" onClick={handleNext} disabled={creating || isPending}>
-          {creating ? 'Creating…' : isLast ? 'Finish' : 'Continue'}
+          {creating ? 'Creating…' : isLast ? 'Generate plan' : 'Continue'}
           {!creating && <ArrowRight className="size-4" />}
         </Button>
       </div>

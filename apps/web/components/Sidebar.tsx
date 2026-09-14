@@ -49,7 +49,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Boxes className="size-5" />
         </div>
-        {!collapsed && <span className="text-base font-semibold tracking-tight">NEXUS</span>}
+        {!collapsed && <span className="font-semibold tracking-tight">NEXUS</span>}
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -65,7 +65,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               href={item.href}
               title={collapsed ? item.label : undefined}
               className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                 active
                   ? 'bg-accent text-accent-foreground'
                   : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
@@ -87,7 +87,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Avatar>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user?.name ?? 'Jordan Tran'}</p>
+              <p className="truncate text-sm">{user?.name ?? 'Jordan Tran'}</p>
               <p className="truncate text-xs text-muted-foreground">PRO plan</p>
             </div>
           )}

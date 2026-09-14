@@ -1,4 +1,5 @@
 import { getKnowledgeObject } from '../../storage';
+import { extractFromYoutube } from './youtube';
 
 export type ExtractableSource = {
   id: string;
@@ -19,7 +20,7 @@ export async function extractSourceText(source: ExtractableSource): Promise<stri
     case 'url':
       return extractFromUrl(source.sourceRef);
     case 'youtube':
-      return extractFromYoutube(source.sourceRef);
+      return (await extractFromYoutube(source.sourceRef)).content;
     case 'audio':
     case 'video':
       throw new Error('audio/video ingestion is deferred to a later pass');
@@ -100,19 +101,6 @@ async function extractFromUrl(url?: string | null): Promise<string> {
 
   const dom = new JSDOM(html, { url });
   const article = new Readability(dom.window.document).parse();
+
   return article?.textContent ?? dom.window.document.body?.textContent ?? '';
-}
-
-async function extractFromYoutube(url?: string | null): Promise<string> {
-  const videoId = youtubeVideoId(url);
-  if (!videoId) throw new Error('unable to parse a YouTube video id from the url');
-  const { YoutubeTranscript } = await import('youtube-transcript');
-  const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-  return transcript.map((line) => line.text).join(' ');
-}
-
-function youtubeVideoId(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const match = url.match(/(?:youtu\.be\/|v=|watch\?v=)([\w-]{11})/);
-  return match?.[1] ?? null;
 }

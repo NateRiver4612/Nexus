@@ -9,6 +9,7 @@ import { handleHttpError } from './errors';
 import { docConfig, registerSecuritySchemes } from './openapi';
 import { aiRoutes } from './modules/ai/routes';
 import { artifactRoutes } from './modules/artifacts/routes';
+import { deliverableRoutes } from './modules/deliverables/routes';
 import { knowledgeRoutes } from './modules/knowledge/routes';
 import { notificationRoutes } from './modules/notifications/routes';
 import { plannerRoutes } from './modules/planner/routes';
@@ -55,6 +56,7 @@ export function createApp() {
     .route('/projects', projectRoutes())
     .route('/planner', plannerRoutes())
     .route('/artifacts', artifactRoutes())
+    .route('/deliverables', deliverableRoutes())
     .route('/knowledge', knowledgeRoutes())
     .route('/notifications', notificationRoutes())
     .route('/search', searchRoutes())

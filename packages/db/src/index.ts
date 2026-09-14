@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
 import * as schema from './schema';
@@ -21,7 +21,11 @@ export function getDb() {
   return globalForDb.nexusDb;
 }
 
-export type Db = DbInstance;
+export type DbClient = PostgresJsDatabase<typeof schema>;
+export type DbTransaction = Parameters<Parameters<DbClient['transaction']>[0]>[0];
+
+export type Db = DbInstance | DbTransaction;
 
 export * from './schema';
+
 export { schema };

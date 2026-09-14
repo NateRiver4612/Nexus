@@ -22,6 +22,12 @@ export const artifactKeys = {
   detail: (id: string) => ['artifacts', id] as const,
 };
 
+export const deliverableKeys = {
+  all: ['deliverables'] as const,
+  system: ['deliverables', 'system'] as const,
+  list: (projectId: string) => ['deliverables', 'list', projectId] as const,
+};
+
 export const knowledgeKeys = {
   all: ['knowledge'] as const,
   list: (projectId: string) => ['knowledge', 'list', projectId] as const,

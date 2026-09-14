@@ -1,48 +1,171 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { ArrowLeft, ClipboardType, Link2, Play, Upload, X } from 'lucide-react';
+import { useCallback, useRef, useState, type DragEvent } from 'react';
+import { useFormContext } from 'react-hook-form';
+import {
+  faFile,
+  faFileCsv,
+  faFileExcel,
+  faFileImage,
+  faFileLines,
+  faFilePdf,
+  faFileWord,
+} from '@fortawesome/free-solid-svg-icons';
+import { faYoutube } from '@fortawesome/free-brands-svg-icons';
+import { ArrowLeft, ArrowRight, ClipboardType, Link2, Play, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
+import { FormInput } from './FormInput';
+import { FormTextArea } from './FormTextArea';
+import { createKnowledgeSourcesSchema, fileSchema } from '@nexus/zod-schemas';
+import type { CreateKnowledgeSourcesInputType, KnowledgeSourceListType } from '@nexus/types';
 import {
-  createKnowledgeSourceFileSchema,
-  createKnowledgeSourceTextSchema,
-  createKnowledgeSourceUrlSchema,
-} from '@nexus/zod-schemas';
+  useCreateKnowledgeSources,
+  useCreateKnowledgeUploadUrl,
+  useGetKnowledgeSources,
+} from '@/hooks/useKnowledge';
+import { useParams } from 'next/navigation';
+import { isYouTubeUrl } from '@/lib/youtube';
+import { SourceList } from './knowledge/SourceList';
 
-type Mode = 'idle' | 'link' | 'text';
+export type SourceFormValues = {
+  files: File[];
+  link: string;
+  textTitle: string;
+  textContent: string;
+};
 
-interface UploadKnowledgeSourceProps {
-  onFilesAdded: (files: File[]) => void;
-  onLinkAdded: (url: string) => void;
-  onTextAdded: (title: string, content: string) => void;
-}
+type Mode = 'file' | 'link' | 'text';
+
+type CreateCallback = (
+  entries: CreateKnowledgeSourcesInputType,
+) => Promise<KnowledgeSourceListType>;
 
 const ACCEPTED_EXTENSIONS = '.pdf,.docx,.xlsx,.csv,.txt,.md,.jpg,.jpeg,.png,.webp';
 
-export function UploadKnowledgeSource({
-  onFilesAdded,
-  onLinkAdded,
-  onTextAdded,
-}: UploadKnowledgeSourceProps) {
-  const [mode, setMode] = useState<Mode>('idle');
+export function formatBytes(bytes: number) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
+  const value = bytes / k ** i;
+  return `${value >= 10 || i === 0 ? Math.round(value) : value.toFixed(1)}${units[i]}`;
+}
+
+export function fileIcon(file: { name: string; type: string }) {
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  const { type } = file;
+  if (type === 'application/pdf' || ext === 'pdf')
+    return { icon: faFilePdf, color: 'text-red-600' };
+  if (type.includes('wordprocessingml') || ext === 'docx')
+    return { icon: faFileWord, color: 'text-blue-600' };
+  if (type === 'text/csv' || ext === 'csv') return { icon: faFileCsv, color: 'text-emerald-600' };
+  if (type.includes('spreadsheetml') || ext === 'xlsx')
+    return { icon: faFileExcel, color: 'text-emerald-600' };
+  if (type.startsWith('image/')) return { icon: faFileImage, color: 'text-violet-600' };
+  if (type.startsWith('youtube'))
+    return {
+      icon: faYoutube,
+      color: 'red',
+    };
+  if (ext === 'txt' || ext === 'md') return { icon: faFileLines, color: 'text-gray-600' };
+  return { icon: faFile, color: 'text-gray-500' };
+}
+
+export function UploadKnowledgeSource({ projectId: projectIdProp }: { projectId?: string }) {
+  const [mode, setMode] = useState<Mode>('file');
+
+  // Explicit prop wins; fall back to the route param (project page).
+  const { projectId: paramProjectId } = useParams<{ projectId: string }>();
+  const projectId = projectIdProp ?? paramProjectId ?? '';
+
+  const createKnowledgeSources = useCreateKnowledgeSources(projectId);
+
+  const { data: knowledgeSources } = useGetKnowledgeSources({ variables: projectId });
+
+  const onCreate: CreateCallback = (entries) => {
+    if (!projectId) throw new Error('Project not ready yet.');
+    return createKnowledgeSources.mutateAsync(entries);
+  };
+
+  const files = knowledgeSources?.filter((k) => k.sourceType === 'file');
+
+  return (
+    <div>
+      {mode === 'file' && (
+        <FileMode
+          projectId={projectId}
+          onCreate={onCreate}
+          defaultFiles={files}
+          onAddLink={() => setMode('link')}
+          onAddText={() => setMode('text')}
+        />
+      )}
+      {mode === 'link' && (
+        <LinkMode
+          onHandleSubmit={() => {
+            setMode('file');
+          }}
+          onCreate={onCreate}
+          onBack={() => setMode('file')}
+        />
+      )}
+      {mode === 'text' && <TextMode onCreate={onCreate} onBack={() => setMode('file')} />}
+    </div>
+  );
+}
+
+function FileMode({
+  projectId,
+  onCreate,
+  onAddLink,
+  onAddText,
+  defaultFiles,
+  onHandleSubmit,
+}: {
+  projectId: string;
+  onCreate: CreateCallback;
+  onAddLink: () => void;
+  onAddText: () => void;
+  defaultFiles?: KnowledgeSourceListType;
+  onHandleSubmit?: () => void;
+}) {
+  const { getValues, setValue, watch } = useFormContext<SourceFormValues>();
+  const files = watch('files');
+
   const [isDragging, setIsDragging] = useState(false);
-  const [linkValue, setLinkValue] = useState('');
-  const [textTitle, setTextTitle] = useState('');
-  const [textContent, setTextContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { mutateAsync: getUploadUrl } = useCreateKnowledgeUploadUrl(projectId);
+
+  const appendFiles = useCallback(
+    (incoming: File[]) => {
+      setValue('files', [...getValues('files'), ...incoming]);
+    },
+    [getValues, setValue],
+  );
+
   const handleFiles = useCallback(
-    (fileList: FileList | File[]) => {
-      const files = Array.from(fileList);
+    async (fileList: FileList | File[]) => {
       const validated: File[] = [];
 
-      for (const file of files) {
-        const result = createKnowledgeSourceFileSchema.safeParse(file);
+      for (const file of Array.from(fileList)) {
+        const result = fileSchema.safeParse(file);
+
+        const isFileAdded = [
+          ...files,
+          ...(defaultFiles?.map((d) => ({ ...d, type: d.mimeType })) ?? []),
+        ].some((v) => v.size === file.size && v.name === file.name && v.type === file.type);
+
+        if (isFileAdded) {
+          setError(`${file.name} already added.`);
+          return;
+        }
+
         if (!result.success) {
           setError(`${file.name}: ${result.error.issues[0]?.message}`);
           return;
@@ -50,14 +173,28 @@ export function UploadKnowledgeSource({
         validated.push(file);
       }
 
+      appendFiles(validated);
+      setSubmitting(true);
+
+      try {
+        const uploaded = await Promise.all(validated.map(uploadFile));
+        const input = createKnowledgeSourcesSchema.parse(uploaded);
+        await onCreate(input);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not add sources.');
+      } finally {
+        setValue('files', []);
+        setSubmitting(false);
+      }
+
+      onHandleSubmit?.();
       setError(null);
-      onFilesAdded(validated);
     },
-    [onFilesAdded],
+    [appendFiles, files],
   );
 
   const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
+    (e: DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       setIsDragging(false);
       if (e.dataTransfer.files.length > 0) {
@@ -67,174 +204,302 @@ export function UploadKnowledgeSource({
     [handleFiles],
   );
 
-  const handleLinkSubmit = useCallback(() => {
-    const result = createKnowledgeSourceUrlSchema.safeParse({ url: linkValue });
+  const removeFile = useCallback(
+    (index: number) => {
+      setValue(
+        'files',
+        getValues('files').filter((_, i) => i !== index),
+      );
+    },
+    [getValues, setValue],
+  );
+
+  const uploadFile = useCallback(
+    async (file: File): Promise<CreateKnowledgeSourcesInputType[number]> => {
+      const { key, url } = await getUploadUrl({
+        name: file.name,
+        mimeType: file.type,
+        size: file.size,
+      });
+      const response = await fetch(url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+      return {
+        sourceType: 'file',
+        name: file.name,
+        mimeType: file.type,
+        storageKey: key,
+        size: file.size,
+      };
+    },
+    [getUploadUrl],
+  );
+
+  return (
+    <div className="space-y-2">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        className={cn(
+          'flex flex-col mb-4 items-center justify-center bg-background/50 rounded-xl border border-dashed px-6 py-10 text-center transition-colors',
+          isDragging ? 'border-primary bg-primary/5' : 'border-border',
+        )}
+      >
+        <p className="font-semibold text-gray-900">
+          Drag and drop files here, or choose a source below
+        </p>
+        <p className="mt-1 text-sm font-semibold text-muted-foreground">
+          PDF, DOCX, XLSX, CSV, TXT, MD, or an image
+        </p>
+        <div className="flex justify-center flex-wrap gap-2 pt-6">
+          <Button
+            variant="outline"
+            className="flex border border-gray-300 rounded-full gap-2"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="size-4" color="black" />
+            <span className="text-sm text-black">Upload files</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="flex border border-gray-300 rounded-full gap-2"
+            onClick={onAddLink}
+          >
+            <Link2 className="size-4" color="black" />
+            <div className="p-1 px-2 bg-red-500 rounded-sm">
+              <Play color="white" strokeWidth={8} enableBackground={'white'} size={6} />
+            </div>
+            <span className="text-sm text-black">Add link</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="flex border border-gray-300 rounded-full gap-2"
+            onClick={onAddText}
+          >
+            <ClipboardType className="size-4" color="black" />
+            <span className="text-sm text-black">Copied text</span>
+          </Button>
+        </div>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        name="files"
+        accept={ACCEPTED_EXTENSIONS}
+        className="hidden"
+        onChange={(e) => e.target.files && handleFiles(e.target.files)}
+      />
+      <SourceList projectId={projectId} showEmptyText={false} />
+
+      {/* {files.length > 0 && submitting && (
+        <>
+          <ul className="flex flex-col gap-2">
+            {files.map((file, index) => {
+              const { icon, color } = fileIcon(file);
+
+              return (
+                <li
+                  key={`${file.name}-${index}`}
+                  className="flex items-center animate-bounce opacity-40 bg-disabled justify-between gap-3 rounded-lg border border-border px-3 py-2"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className={cn(color)}>
+                      <FontAwesomeIcon icon={icon} size="xl" />
+                    </span>
+                    <div className="min-w-0 text-start">
+                      <p className="truncate text-sm text-gray-900 font-semibold">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+                    </div>
+                  </div>
+                  <Trash2
+                    size={20}
+                    className="text-destructive rounded-full cursor-pointer"
+                    onClick={() => removeFile(index)}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )} */}
+
+      {error && <p className="flex items-center gap-1.5 text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+function LinkMode({
+  onCreate,
+  onHandleSubmit,
+  onBack,
+}: {
+  onHandleSubmit?: () => void;
+  onCreate: CreateCallback;
+  onBack: () => void;
+}) {
+  const { getValues, resetField } = useFormContext<SourceFormValues>();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    const url = getValues('link').trim();
+    if (!url) {
+      setError('Enter a valid URL.');
+      return;
+    }
+
+    const entry: CreateKnowledgeSourcesInputType[number] = isYouTubeUrl(url)
+      ? { sourceType: 'youtube', url }
+      : { sourceType: 'url', url };
+    const result = createKnowledgeSourcesSchema.safeParse([entry]);
     if (!result.success) {
       setError(result.error.issues[0]?.message ?? 'Enter a valid URL.');
       return;
     }
-    onLinkAdded(result.data.url);
-  }, [linkValue, onLinkAdded]);
 
-  const handleTextSubmit = useCallback(() => {
-    const result = createKnowledgeSourceTextSchema.safeParse({
-      title: textTitle,
-      content: textContent,
-    });
-    if (!result.success) {
-      setError(result.error.issues[0]?.message ?? 'Check the fields below.');
-      return;
+    setError(null);
+
+    try {
+      await onCreate(result.data);
+      resetField('link');
+      onHandleSubmit?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add link.');
     }
-    onTextAdded(result.data.title, result.data.content);
-  }, [textTitle, textContent, onTextAdded]);
+  };
 
   return (
-    <div>
-      {mode === 'idle' && (
-        <div className="space-y-4">
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            className={cn(
-              'flex flex-col items-center justify-center bg-background/50 rounded-xl border border-dashed px-6 py-10 text-center transition-colors',
-              isDragging ? 'border-primary bg-primary/5' : 'border-border',
-            )}
-          >
-            <p className="font-semibold text-base text-gray-700">
-              Drag and drop files here, or choose a source below
-            </p>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              PDF, DOCX, XLSX, CSV, TXT, MD, or an image
-            </p>
-            <div className="grid grid-cols-3 gap-2 pt-6">
-              <Button
-                variant="outline"
-                className="flex border border-gray-300 rounded-full gap-2"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="size-4" color="black" />
-                <span className="text-sm text-black">Upload files</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="flex border border-gray-300 rounded-full gap-2"
-                onClick={() => {
-                  setError(null);
-                  setMode('link');
-                }}
-              >
-                <Link2 className="size-4" color="black" />
-                <div className="p-1 px-2 bg-red-500 rounded-sm">
-                  <Play color="white" strokeWidth={8} enableBackground={'white'} size={6} />
-                </div>
-                <span className="text-sm text-black">Add link</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="flex border border-gray-300 rounded-full gap-2"
-                onClick={() => {
-                  setError(null);
-                  setMode('text');
-                }}
-              >
-                <ClipboardType className="size-4" color="black" />
-                <span className="text-sm text-black">Copied text</span>
-              </Button>
-            </div>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept={ACCEPTED_EXTENSIONS}
-            className="hidden"
-            onChange={(e) => e.target.files && handleFiles(e.target.files)}
-          />
-        </div>
-      )}
-
-      {mode === 'link' && (
-        <div className="space-y-4 rounded-lg shadow-sm p-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="ghost"
-                className="flex justify-between"
-                onClick={() => setMode('idle')}
-              >
-                <ArrowLeft size={18} />
-                <Label htmlFor="knowledge-link">Website or YouTube URL</Label>
-              </Button>
-              <Link2 size={20} />
-            </div>
-            <Input
-              id="knowledge-link"
-              placeholder="https://…"
-              value={linkValue}
-              onChange={(e) => setLinkValue(e.target.value)}
-              autoFocus
-            />
-            <ul className=" text-xs text-muted-foreground list-disc text-start w-full list-inside space-y-1">
-              <li>To add multiple URLs, separate with a space or new line. </li>
-              <li>Only the visible text on the website will be imported at this time.</li>
-              <li>Paid articles are not supported. Only the</li>
-              <li>text transcript in YouTube will be imported at this time.</li>
-              <li>Only public YouTube videos are supported.</li>
-              <li>Recently uploaded videos may not be available to import.</li>
-            </ul>
+    <div className="space-y-4 rounded-lg shadow-sm p-4">
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="ghost" className="flex justify-between" onClick={onBack}>
+          <ArrowLeft size={18} />
+          <Label htmlFor="knowledge-link">Website or YouTube URL</Label>
+        </Button>
+        <div className="flex items-center gap-2">
+          <Link2 size={20} />
+          <div className="p-1 px-2 bg-red-500 rounded-sm">
+            <Play color="white" strokeWidth={8} enableBackground={'white'} size={6} />
           </div>
         </div>
-      )}
+      </div>
+      <FormInput
+        name="link"
+        placeholder="https://…"
+        autoFocus
+        trailingIcon={ArrowRight}
+        onTrailingIconClick={handleSubmit}
+      />
+      <ul className=" text-xs text-muted-foreground list-disc text-start w-full list-inside space-y-1">
+        <li>To add multiple URLs, separate with a space or new line. </li>
+        <li>Only the visible text on the website will be imported at this time.</li>
+        <li>Paid articles are not supported. Only the</li>
+        <li>text transcript in YouTube will be imported at this time.</li>
+        <li>Only public YouTube videos are supported.</li>
+        <li>Recently uploaded videos may not be available to import.</li>
+      </ul>
+      {error && <p className="flex items-center gap-1.5 text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
 
-      {mode === 'text' && (
-        <div className="space-y-4 rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              className="flex justify-between"
-              onClick={() => setMode('idle')}
-            >
-              <ArrowLeft size={18} />
-              <p>Copied Text</p>
-            </Button>
-            <ClipboardType size={20} />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="knowledge-text-title">Title</Label>
-            </div>
-            <Input
-              id="knowledge-text-title"
-              placeholder="Meeting notes, snippet, etc."
-              value={textTitle}
-              onChange={(e) => setTextTitle(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="knowledge-text-content">Content</Label>
-            <Textarea
-              id="knowledge-text-content"
-              rows={8}
-              placeholder="Paste text here…"
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-            />
-          </div>
-        </div>
-      )}
+function TextMode({ onCreate, onBack }: { onCreate: CreateCallback; onBack: () => void }) {
+  const {
+    getValues,
+    resetField,
+    clearErrors,
+    setError: setFormError,
+  } = useFormContext<SourceFormValues>();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-      {error && (
-        <p className="flex items-center gap-1.5 text-sm text-destructive">
-          <X className="size-3.5" />
-          {error}
-        </p>
-      )}
+  const handleSubmit = async () => {
+    clearErrors(['textTitle', 'textContent']);
+
+    const entry: CreateKnowledgeSourcesInputType[number] = {
+      sourceType: 'copied_text',
+      textTitle: getValues('textTitle'),
+      textContent: getValues('textContent'),
+    };
+
+    const result = createKnowledgeSourcesSchema.safeParse([entry]);
+
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        const field = issue.path[1] as 'textTitle' | 'textContent';
+
+        setFormError(field, { type: 'manual', message: issue.message });
+      }
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await onCreate(result.data);
+
+      const errorMessage = res?.[0]?.errorMessage;
+
+      if (errorMessage) {
+        setError(errorMessage);
+        return;
+      }
+
+      resetField('textTitle');
+      resetField('textContent');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add text.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 rounded-lg shadow-sm p-4">
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          variant="ghost"
+          className="flex justify-between"
+          onClick={() => {
+            onBack();
+            clearErrors('textTitle');
+            clearErrors('textContent');
+            (resetField('textTitle'), resetField('textContent'));
+          }}
+        >
+          <ArrowLeft size={18} />
+          <p>Copied Text</p>
+        </Button>
+        <ClipboardType size={20} />
+      </div>
+      <div className="space-y-2">
+        <FormInput
+          name="textTitle"
+          label="Title"
+          placeholder="Meeting notes, snippet, etc."
+          autoFocus
+        />
+      </div>
+      <div className="space-y-2">
+        <FormTextArea name="textContent" label="Content" rows={8} placeholder="Paste text here…" />
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleSubmit}
+        disabled={submitting}
+      >
+        {submitting ? 'Adding…' : 'Add text'}
+      </Button>
+      {error && <p className="flex items-center gap-1.5 text-sm text-destructive">{error}</p>}
     </div>
   );
 }

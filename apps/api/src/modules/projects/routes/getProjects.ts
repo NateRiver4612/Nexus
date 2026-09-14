@@ -1,16 +1,15 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { errorResponseSchema, projectListSchema } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
-import { bearerSecurity } from '../../../openapi';
-import { list } from '../service';
+import { ProjectService } from '../service';
 
 export const getProjectsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/',
-    security: bearerSecurity,
     responses: {
       200: {
         content: {
@@ -26,7 +25,11 @@ export const getProjectsRoute = defineOpenAPIRoute({
   }),
   handler: async (c) => {
     const user = getUser(c);
-    const projects = await list(user.id);
+
+    const db = getDb();
+    const projectService = ProjectService(db);
+
+    const projects = await projectService.list(user.id);
     return c.json(projects, 200);
   },
 });

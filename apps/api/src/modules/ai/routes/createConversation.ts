@@ -9,13 +9,10 @@ import {
 
 import type { ConversationType } from '@nexus/types';
 
-import { bearerSecurity } from '../../../openapi';
-
 export const createConversationRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
     path: '/conversations/{projectId}',
-    security: bearerSecurity,
     request: {
       params: projectIdParamsSchema,
       body: {

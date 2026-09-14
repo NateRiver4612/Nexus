@@ -2,14 +2,15 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { streamSSE } from 'hono/streaming';
 
 import { requireAuth } from '../../../auth-middleware';
-import { getRedis } from '../../../redis';
 import { createKnowledgeRoute } from './createKnowledge';
 import { createKnowledgeSourcesRoute } from './createKnowledgeSources';
 import { createUploadUrlRoute } from './createUploadUrl';
 import { deleteKnowledgeRoute } from './deleteKnowledge';
+import { deleteKnowledgeSourceRoute } from './deleteKnowledgeSource';
 import { getKnowledgeRoute } from './getKnowledge';
 import { getKnowledgeSourcesRoute } from './getKnowledgeSources';
 import { updateKnowledgeRoute } from './updateKnowledge';
+import { getRedis } from '../../../redis';
 
 export function knowledgeRoutes() {
   const app = new OpenAPIHono();
@@ -51,5 +52,6 @@ export function knowledgeRoutes() {
     { route: getKnowledgeSourcesRoute.route, handler: getKnowledgeSourcesRoute.handler },
     { route: createKnowledgeSourcesRoute.route, handler: createKnowledgeSourcesRoute.handler },
     { route: createUploadUrlRoute.route, handler: createUploadUrlRoute.handler },
+    { route: deleteKnowledgeSourceRoute.route, handler: deleteKnowledgeSourceRoute.handler },
   ] as const);
 }

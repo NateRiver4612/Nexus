@@ -35,10 +35,13 @@ export function createQueryHook<TFn extends AnyQueryFn>(
   getQueryKey: (variables: InferVariables<TFn>) => readonly unknown[],
   config?: QueryHookConfig<TFn>,
 ) {
-  return function useGeneratedQuery(
-    variables: InferVariables<TFn>,
-    options?: QueryHookOptions<TFn>,
-  ) {
+  return function useGeneratedQuery(input?: {
+    variables?: InferVariables<TFn>;
+    options?: QueryHookOptions<TFn>;
+  }) {
+    const variables = input?.variables;
+    const options = input?.options;
+
     const derivedEnabled = config?.getEnabled ? config.getEnabled(variables) : true;
     const callerEnabled = options?.enabled ?? true;
 

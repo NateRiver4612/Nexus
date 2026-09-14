@@ -1,6 +1,7 @@
 export * from './ai';
 export * from './artifacts';
 export * from './common';
+export * from './deliverables';
 export * from './knowledge';
 export * from './notifications';
 export * from './planner';

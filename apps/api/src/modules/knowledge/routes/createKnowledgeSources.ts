@@ -7,15 +7,15 @@ import {
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
 
+import { getDb } from '@nexus/db';
+
 import { getUser } from '../../../auth-middleware';
-import { bearerSecurity } from '../../../openapi';
 import { KnowledgeService } from '../service';
 
 export const createKnowledgeSourcesRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
-    path: '/{projectId}/sources',
-    security: bearerSecurity,
+    path: '/:projectId/sources',
     request: {
       params: projectIdParamsSchema,
       body: {
@@ -44,7 +44,11 @@ export const createKnowledgeSourcesRoute = defineOpenAPIRoute({
     const { projectId } = c.req.valid('param');
     const inputs = c.req.valid('json');
     const user = getUser(c);
-    const items = await KnowledgeService().createSources({ projectId, userId: user.id, inputs });
+
+    const db = getDb();
+    const knowledgeService = KnowledgeService(db);
+
+    const items = await knowledgeService.createSources({ projectId, userId: user.id, inputs });
     return c.json(items, 201);
   },
 });

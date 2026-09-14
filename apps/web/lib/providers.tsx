@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { onboardingKeys } from '@/hooks/queryKeys';
 
 function shouldDehydrateQuery(query: { queryKey: readonly unknown[] }): boolean {
@@ -38,7 +38,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   if (!persister) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    );
   }
 
   return (
@@ -51,6 +56,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      <ReactQueryDevtools initialIsOpen={false} />
     </PersistQueryClientProvider>
   );
 }

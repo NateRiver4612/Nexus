@@ -27,10 +27,19 @@ export function Step2({ ref, defaults, onSave, onDraftChange }: Step2Props) {
     resolver: zodResolver(onboardingStep2Schema),
   });
 
+  const {
+    formState: { isDirty },
+  } = form;
+
   useImperativeHandle(ref, () => ({
     save: async () => {
       await form.trigger();
       const context = form.getValues('context').trim();
+
+      if (!isDirty) {
+        return true;
+      }
+
       await onSave({ context });
       return true;
     },
