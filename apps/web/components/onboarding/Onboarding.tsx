@@ -33,7 +33,10 @@ const steps = [
     title: 'What deliverables for your need',
     description: 'Select the output you want - Nexus will prepare them as the project progress.',
   },
-  { title: 'Review and create', description: "Everything looks good. Let's build your project." },
+  {
+    title: 'Review and generate',
+    description: "Everything looks good. Let's generate your plan.",
+  },
 ];
 
 export function Onboarding() {
