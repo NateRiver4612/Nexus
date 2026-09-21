@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
 
-import type { ProjectType } from '@nexus/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,16 +12,6 @@ import { useGetProjects } from '@/hooks/useProjects';
 import { ProjectCard } from './ProjectCard';
 import { useRouter } from 'next/navigation';
 
-const sampleProjects: ProjectType[] = Array.from({ length: 4 }, (i) => ({
-  id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' + i,
-  name: 'Market Research',
-  slug: 'market-research',
-  description: 'Review Executive Summary',
-  status: 'active',
-  createdAt: '2026-08-12T00:00:00.000Z',
-  updatedAt: '2026-08-12T00:00:00.000Z',
-}));
-
 const tabs = [
   { value: 'active', label: 'Active' },
   { value: 'shared', label: 'Shared' },
@@ -30,11 +19,10 @@ const tabs = [
 ];
 
 export function ProjectsView() {
-  useGetProjects();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState('active');
 
-  const projects = sampleProjects;
+  const { data: projects } = useGetProjects();
 
   const router = useRouter();
 
@@ -65,7 +53,7 @@ export function ProjectsView() {
         </TabsList>
         <TabsContent value="active">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {projects.map((project, index) => (
+            {projects?.map((project, index) => (
               <ProjectCard key={project.id + index} project={project} />
             ))}
           </div>

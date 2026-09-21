@@ -37,7 +37,7 @@
     "ioredis": "^6.0.0",
     "jsdom": "^26.0.0",
     "mammoth": "^1.8.0",
-    "openai": "^5.0.0",
+    "openai": "^7.15.0",
     "pdf-parse": "^1.1.1",
     "tesseract.js": "^6.0.0",
     "xlsx": "^0.18.5",

@@ -107,19 +107,22 @@ export function SourceList({
                   )}
                 </div>
               </div>
-              {!onlyView &&
-                (isCompleted ? (
-                  <Trash2
-                    onClick={() => {
-                      setError(null);
-                      setTarget(file);
-                    }}
-                    strokeWidth={2}
-                    className="size-5 cursor-pointer! text-destructive"
-                  />
-                ) : (
-                  <Spinner></Spinner>
-                ))}
+              <div>
+                {!onlyView &&
+                  (isCompleted ? (
+                    <Trash2
+                      onClick={() => {
+                        setError(null);
+                        setTarget(file);
+                      }}
+                      strokeWidth={2}
+                      className="size-5 cursor-pointer! text-destructive"
+                    />
+                  ) : (
+                    <Spinner></Spinner>
+                  ))}
+              </div>
+
               <DeleteConfirmDialog
                 open={file.id === target?.id}
                 close={() => setTarget(null)}

@@ -1,6 +1,6 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, idParamsSchema, projectSchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, idParamsSchema, projectDetailSchema } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { HttpError } from '../../../errors';
@@ -15,7 +15,7 @@ export const getProjectRoute = defineOpenAPIRoute({
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: projectSchema } },
+        content: { 'application/json': { schema: projectDetailSchema } },
         description: 'Project retrieved',
       },
       401: {

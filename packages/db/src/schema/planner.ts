@@ -33,7 +33,6 @@ export const milestones = pgTable(
     description: text('description'),
     position: integer('position').notNull().default(0),
     status: milestoneStatus('status').notNull().default('planned'),
-    dueDate: timestamp('due_date', { withTimezone: true, mode: 'date' }),
     ...timestamps,
   },
   (table) => [index('milestones_project_idx').on(table.projectId, table.position)],
@@ -55,7 +54,6 @@ export const tasks = pgTable(
     status: taskStatus('status').notNull().default('todo'),
     priority: taskPriority('priority').notNull().default('medium'),
     position: integer('position').notNull().default(0),
-    dueDate: timestamp('due_date', { withTimezone: true, mode: 'date' }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdBy: uuid('created_by')
       .notNull()
@@ -66,7 +64,6 @@ export const tasks = pgTable(
     index('tasks_project_idx').on(table.projectId),
     index('tasks_milestone_idx').on(table.milestoneId),
     index('tasks_status_idx').on(table.status),
-    index('tasks_due_date_idx').on(table.dueDate),
   ],
 );
 
@@ -84,7 +81,7 @@ export const projectProgress = pgTable('project_progress', {
     .references(() => projects.id, { onDelete: 'cascade' }),
   currentTaskId: uuid('current_task_id').references(() => tasks.id, { onDelete: 'set null' }),
   lastOpenedAt: timestamp('last_opened_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps,
 });
 
 export type ProjectProgress = typeof projectProgress.$inferSelect;

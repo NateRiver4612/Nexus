@@ -6,23 +6,34 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { onboardingStep3Schema } from '@nexus/zod-schemas';
 import type { OnboardingStep3InputType } from '@nexus/types';
 
-import { UploadKnowledgeSource, type SourceFormValues } from '../UploadKnowledgeSource';
+import {
+  UploadKnowledgeSource,
+  type SourceFileMeta,
+  type SourceFormValues,
+} from '../UploadKnowledgeSource';
 import { useGetKnowledgeSources } from '@/hooks/useKnowledge';
 
 import type { StepHandle } from './shared';
 
 type Step3Props = {
   ref?: React.Ref<StepHandle>;
-  projectId?: string | null;
+  projectId?: string;
   onSave: (data: OnboardingStep3InputType) => Promise<unknown>;
 };
 
 export function Step3({ ref, projectId, onSave }: Step3Props) {
-  const { data: sources } = useGetKnowledgeSources({ variables: projectId ?? '' });
+  const { data: sources } = useGetKnowledgeSources({
+    variables: projectId,
+  });
   const [error, setError] = React.useState<string | null>(null);
 
+  const serverFiles: SourceFileMeta[] = (sources ?? [])
+    .filter((row) => row.sourceType === 'file')
+    .map((row) => ({ name: row.name, size: row.size, mimeType: row.mimeType ?? null }));
+
   const form = useForm<SourceFormValues>({
-    defaultValues: { files: [], link: '', textTitle: '', textContent: '' },
+    values: { files: serverFiles, link: '', textTitle: '', textContent: '' },
+    resetOptions: { keepDirtyValues: true },
   });
 
   const {
@@ -67,6 +78,10 @@ export function Step3({ ref, projectId, onSave }: Step3Props) {
       }
 
       await onSave(parsed.data);
+      // Mark the form clean so `isDirty` reflects only changes made since the
+      // last save — otherwise the skip-if-no-changes branch above never fires
+      // again after the first upload (files are retained in the form state).
+      form.reset();
       return true;
     },
   }));

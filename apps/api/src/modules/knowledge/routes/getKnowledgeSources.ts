@@ -12,7 +12,7 @@ import { KnowledgeService } from '../service';
 export const getKnowledgeSourcesRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/{projectId}/sources',
+    path: '/:projectId/sources',
     request: {
       params: projectIdParamsSchema,
     },

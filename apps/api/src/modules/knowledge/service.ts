@@ -1,5 +1,5 @@
 import { presignKnowledgePutUrl } from '../../storage';
-import { embedTexts } from '../../embeddings';
+import { generateEmbeddings } from '../../embeddings';
 import { env } from '../../env';
 import { chunkText } from './chunk';
 import { extractSourceText } from './extract';
@@ -13,7 +13,7 @@ import type {
   KnowledgeSourceType,
 } from '@nexus/types';
 import { mapInputToRow, publishStatus, sanitizeExtractedText, toSourceView } from './helpers';
-import { enqueueIngest, KNOWLEDGE_QUEUE_PROCESS, KNOWLEDGE_QUEUE_REMOVE } from '../../queues';
+import { enqueueKnowledge, KNOWLEDGE_QUEUE_PROCESS, KNOWLEDGE_QUEUE_REMOVE } from './queues';
 
 type CreateSourceInput = {
   projectId: string;
@@ -32,7 +32,7 @@ export function KnowledgeService(db: Db) {
       const rows = await repository.insertSource(sourceRow);
 
       for (const row of rows) {
-        await enqueueIngest({
+        await enqueueKnowledge({
           name: KNOWLEDGE_QUEUE_PROCESS,
           jobId: `ingest-${row.id}`,
           data: {
@@ -60,7 +60,7 @@ export function KnowledgeService(db: Db) {
 
     const storageKey = deleted.storageKey;
     if (storageKey) {
-      await enqueueIngest({
+      await enqueueKnowledge({
         name: KNOWLEDGE_QUEUE_REMOVE,
         jobId: `ingest-${sourceId}-cleanup`,
         data: {
@@ -100,7 +100,7 @@ export function KnowledgeService(db: Db) {
       if (chunks.length === 0) throw new Error('no text could be extracted');
 
       const canEmbed = Boolean(env.OPENAI_API_KEY);
-      const vectors = canEmbed ? await embedTexts(chunks) : [];
+      const vectors = canEmbed ? await generateEmbeddings(chunks) : [];
 
       const rows = chunks.map((content, index) => ({
         knowledgeSourceId: source.id,
@@ -114,9 +114,11 @@ export function KnowledgeService(db: Db) {
       await db.transaction(async (tx) => {
         const txRepository = KnowledgeRepository(tx);
         await txRepository.deleteChunksForSource(sourceId);
+
         if (rows.length > 0) {
           await txRepository.insertChunks(rows);
         }
+
         await txRepository.updateSource(sourceId, {
           status: 'ready',
           errorMessage: null,

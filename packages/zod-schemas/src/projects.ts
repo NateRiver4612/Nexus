@@ -37,12 +37,14 @@ export const projectSchema = z
       .string()
       .nullable()
       .openapi({ example: 'Modular monolith for planning and collaboration' }),
-    status: z.enum(['active', 'archived', 'draft', 'completed']).default('draft'),
+    status: z.enum(['draft', 'active', 'paused', 'archived']).default('draft'),
     ...timestampSchema,
   })
   .openapi('Project');
 
-export const onboardingStatusSchema = z.enum(['in_progress', 'completed']).default('in_progress');
+export const onboardingStatusSchema = z
+  .enum(['in_progress', 'submitted', 'completed'])
+  .default('in_progress');
 
 export const onboardingStep1Schema = z.object({
   name: z
@@ -145,6 +147,7 @@ export const onboardingStateSchema = z
     status: onboardingStatusSchema,
     step: z.number().int().min(1).max(5).default(1),
     projectId: idSchema,
+    aiRunId: idSchema.nullish(),
     stepData: onboardingDataSchema.partial().default({}),
     ...timestampSchema,
   })
@@ -175,6 +178,24 @@ export const updateOnboardingSchema = z
     }),
   ])
   .openapi('UpdateOnboarding');
+
+export const onboardingIdQuerySchema = z.object({
+  onboardingId: idSchema.openapi({
+    param: { name: 'onboardingId', in: 'query' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
+
+export const projectOnboardingParamsSchema = z.object({
+  projectId: idSchema.openapi({
+    param: { name: 'projectId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+  onboardingId: idSchema.openapi({
+    param: { name: 'onboardingId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
 
 export const createProjectSchema = projectSchema.pick({
   name: true,

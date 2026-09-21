@@ -29,8 +29,16 @@ import { useParams } from 'next/navigation';
 import { isYouTubeUrl } from '@/lib/youtube';
 import { SourceList } from './knowledge/SourceList';
 
+/** Server-persisted file metadata — the form's `files` field can hold these
+ * (seeded from existing sources) alongside real `File` objects added this session. */
+export type SourceFileMeta = {
+  name: string;
+  size: number;
+  mimeType: string | null;
+};
+
 export type SourceFormValues = {
-  files: File[];
+  files: Array<File | SourceFileMeta>;
   link: string;
   textTitle: string;
   textContent: string;
@@ -116,6 +124,18 @@ export function UploadKnowledgeSource({ projectId: projectIdProp }: { projectId?
   );
 }
 
+/**
+ * Normalizes either a real `File`, a form `SourceFileMeta`, or a server source
+ * row to the shape the "already added" check compares against.
+ */
+function getFormatFile(entry: File | SourceFileMeta | KnowledgeSourceListType[number]) {
+  return {
+    name: entry.name,
+    size: entry.size,
+    type: entry instanceof File ? entry.type : (entry.mimeType ?? ''),
+  };
+}
+
 function FileMode({
   projectId,
   onCreate,
@@ -156,10 +176,10 @@ function FileMode({
       for (const file of Array.from(fileList)) {
         const result = fileSchema.safeParse(file);
 
-        const isFileAdded = [
-          ...files,
-          ...(defaultFiles?.map((d) => ({ ...d, type: d.mimeType })) ?? []),
-        ].some((v) => v.size === file.size && v.name === file.name && v.type === file.type);
+        const isFileAdded = [...files, ...(defaultFiles ?? [])].some((v) => {
+          const added = getFormatFile(v);
+          return added.name === file.name && added.size === file.size && added.type === file.type;
+        });
 
         if (isFileAdded) {
           setError(`${file.name} already added.`);
@@ -183,14 +203,13 @@ function FileMode({
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not add sources.');
       } finally {
-        setValue('files', []);
         setSubmitting(false);
       }
 
       onHandleSubmit?.();
       setError(null);
     },
-    [appendFiles, files],
+    [appendFiles, defaultFiles, files],
   );
 
   const handleDrop = useCallback(
@@ -296,7 +315,10 @@ function FileMode({
         name="files"
         accept={ACCEPTED_EXTENSIONS}
         className="hidden"
-        onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        onChange={(e) => {
+          if (e.target.files) handleFiles(e.target.files);
+          e.target.value = '';
+        }}
       />
       <SourceList projectId={projectId} showEmptyText={false} />
 

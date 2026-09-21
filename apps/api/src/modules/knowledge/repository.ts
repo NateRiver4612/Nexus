@@ -2,13 +2,11 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { knowledgeSourceChunks, knowledgeSources, type Db } from '@nexus/db';
 
-type KnowledgeDb = Db | Parameters<Parameters<Db['transaction']>[0]>[0];
-
 export type SourceRow = typeof knowledgeSources.$inferSelect;
 export type NewSourceRow = typeof knowledgeSources.$inferInsert;
 export type NewChunkRow = typeof knowledgeSourceChunks.$inferInsert;
 
-export const KnowledgeRepository = (db: KnowledgeDb) => ({
+export const KnowledgeRepository = (db: Db) => ({
   insertSource(values: NewSourceRow) {
     return db.insert(knowledgeSources).values(values).returning();
   },
@@ -39,8 +37,10 @@ export const KnowledgeRepository = (db: KnowledgeDb) => ({
     )[0];
   },
 
-  updateSource(id: string, patch: Partial<NewSourceRow>) {
-    return db.update(knowledgeSources).set(patch).where(eq(knowledgeSources.id, id)).returning();
+  async updateSource(id: string, patch: Partial<NewSourceRow>) {
+    return (
+      await db.update(knowledgeSources).set(patch).where(eq(knowledgeSources.id, id)).returning()
+    )[0];
   },
 
   async deleteChunksForSource(sourceId: string) {
@@ -49,7 +49,7 @@ export const KnowledgeRepository = (db: KnowledgeDb) => ({
       .where(eq(knowledgeSourceChunks.knowledgeSourceId, sourceId));
   },
 
-  insertChunks(rows: NewChunkRow[]) {
-    return db.insert(knowledgeSourceChunks).values(rows);
+  async insertChunks(rows: NewChunkRow[]) {
+    return await db.insert(knowledgeSourceChunks).values(rows);
   },
 });

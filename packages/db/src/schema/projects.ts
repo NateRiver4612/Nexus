@@ -15,17 +15,13 @@ import { idColumn, timestamps } from './columns';
 import { users } from './users';
 import { workspaces } from './workspaces';
 import { type OnboardingDataType } from '@nexus/types';
+import { aiRuns } from './ai';
 
-export const projectStatus = pgEnum('project_status', [
-  'draft',
-  'active',
-  'paused',
-  'completed',
-  'archived',
-]);
+export const projectStatus = pgEnum('project_status', ['draft', 'active', 'paused', 'archived']);
 
 export const projectOnboardingStatus = pgEnum('project_onboarding_status', [
   'in_progress',
+  'submitted',
   'completed',
 ]);
 
@@ -94,6 +90,9 @@ export const projectOnboarding = pgTable(
       .notNull(),
     status: projectOnboardingStatus('onboarding_status').notNull().default('in_progress'),
     step: integer('step').notNull().default(1),
+    aiRun: uuid('ai_run').references(() => aiRuns.id, {
+      onDelete: 'set null',
+    }),
     stepData: jsonb('step_data').$type<OnboardingDataType | {}>().notNull().default({}),
     ...timestamps,
   },

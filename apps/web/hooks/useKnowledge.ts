@@ -2,6 +2,7 @@ import type {
   CreateKnowledgeItemInputType,
   CreateKnowledgeSourcesInputType,
   CreateUploadUrlInputType,
+  KnowledgeSourceListType,
   UpdateKnowledgeItemInputType,
 } from '@nexus/types';
 
@@ -29,8 +30,8 @@ export const useGetKnowledgeSources = createDetailQueryHook(
   (projectId) => knowledgeKeys.sources(projectId),
   {
     refetchInterval(query) {
-      if (query.state.data?.some((d) => d.status === 'processing')) {
-        return 2000;
+      if (query.state.data?.some((d) => d.status === 'processing' || d.status === 'pending')) {
+        return 3000;
       }
       return false;
     },
@@ -80,9 +81,12 @@ export const useDeleteKnowledgeSource = createMutationHook(
   ({ projectId, sourceId }: { projectId: string; sourceId: string }) =>
     deleteKnowledgeSource(projectId, sourceId),
   (queryClient) => ({
-    onSuccess(_, variables) {
+    onSuccess(_, { projectId, sourceId }) {
+      queryClient.setQueryData<KnowledgeSourceListType>(knowledgeKeys.sources(projectId), (old) =>
+        old?.filter((source) => source.id !== sourceId),
+      );
       queryClient.invalidateQueries({
-        queryKey: knowledgeKeys.sources(variables.projectId),
+        queryKey: knowledgeKeys.sources(projectId),
       });
     },
   }),

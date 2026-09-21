@@ -2,8 +2,8 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
   deliverableListSchema,
+  deliverablesQuerySchema,
   errorResponseSchema,
-  projectIdParamsSchema,
 } from '@nexus/zod-schemas';
 
 import { getDb } from '@nexus/db';
@@ -13,9 +13,9 @@ import { DeliverableService } from '../service';
 export const getDeliverablesRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/:projectId',
+    path: '/',
     request: {
-      params: projectIdParamsSchema,
+      query: deliverablesQuerySchema,
     },
     responses: {
       200: {
@@ -29,7 +29,7 @@ export const getDeliverablesRoute = defineOpenAPIRoute({
     },
   }),
   handler: async (c) => {
-    const { projectId } = c.req.valid('param');
+    const { projectId } = c.req.valid('query');
 
     const db = getDb();
     const service = DeliverableService(db);

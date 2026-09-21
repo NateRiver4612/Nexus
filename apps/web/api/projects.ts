@@ -1,23 +1,28 @@
 import type {
+  CompleteOnboardingType,
   CreateProjectInputType,
+  KickoffPlanType,
   OkType,
+  OnboardingIdQueryType,
   OnboardingStateType,
+  ProjectDetailListType,
+  ProjectDetailType,
   ProjectType,
-  ProjectListType,
   UpdateOnboardingInputType,
   UpdateProjectInputType,
+  SubmitOnboardingOutputType,
 } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function getProjects(): Promise<ProjectListType> {
-  return (await handleResponse(await apiClient.api.v1.projects.$get())) as ProjectListType;
+export async function getProjects(): Promise<ProjectDetailListType> {
+  return (await handleResponse(await apiClient.api.v1.projects.$get())) as ProjectDetailListType;
 }
 
-export async function getProject(id: string): Promise<ProjectType> {
+export async function getProject(id: string): Promise<ProjectDetailType> {
   return (await handleResponse(
     await apiClient.api.v1.projects[':id'].$get({ param: { id } }),
-  )) as ProjectType;
+  )) as ProjectDetailType;
 }
 
 export async function createProject(input: CreateProjectInputType): Promise<ProjectType> {
@@ -53,4 +58,28 @@ export async function saveOnboarding(
   return (await handleResponse(
     await apiClient.api.v1.projects.onboarding.$patch({ json: input }),
   )) as OnboardingStateType;
+}
+
+export async function submitProjectOnboarding(input: {
+  projectId: string;
+  onboardingId: OnboardingIdQueryType['onboardingId'];
+}): Promise<SubmitOnboardingOutputType> {
+  return (await handleResponse(
+    await apiClient.api.v1.projects[':projectId'].onboarding[':onboardingId'].submit.$post({
+      param: { projectId: input.projectId, onboardingId: input.onboardingId },
+    }),
+  )) as SubmitOnboardingOutputType;
+}
+
+export async function completeProjectOnboarding(input: {
+  projectId: string;
+  onboardingId: string;
+  plan: KickoffPlanType;
+}): Promise<CompleteOnboardingType> {
+  return (await handleResponse(
+    await apiClient.api.v1.projects[':projectId'].onboarding[':onboardingId'].complete.$post({
+      param: { projectId: input.projectId, onboardingId: input.onboardingId },
+      json: input.plan,
+    }),
+  )) as CompleteOnboardingType;
 }

@@ -16,9 +16,11 @@ export const projectIdParamsSchema = z.object({
   }),
 });
 
+export const errorType = z.enum(['AuthError', 'ValidationError', 'NotFoundError', 'ServerError']);
+
 export const errorSchema = z
   .object({
-    type: z.enum(['AuthError', 'ValidationError', 'NotFoundError', 'ServerError']),
+    type: errorType,
     message: z.string(),
     issues: z.record(z.string(), z.unknown()).optional(),
   })

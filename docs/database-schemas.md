@@ -267,8 +267,6 @@ export const milestones = pgTable(
 
     status: milestoneStatus('status').notNull().default('pending'),
 
-    dueDate: timestamp('due_date'),
-
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
@@ -307,7 +305,6 @@ export const tasks = pgTable(
 
     position: integer('position').notNull(),
 
-    dueDate: timestamp('due_date'),
     completedAt: timestamp('completed_at'),
 
     createdBy: uuid('created_by')
@@ -321,7 +318,6 @@ export const tasks = pgTable(
     index('tasks_project_idx').on(table.projectId),
     index('tasks_milestone_idx').on(table.milestoneId),
     index('tasks_status_idx').on(table.status),
-    index('tasks_due_date_idx').on(table.dueDate),
   ],
 );
 ```

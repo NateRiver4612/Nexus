@@ -1,6 +1,37 @@
 import { z } from '@hono/zod-openapi';
 
 import { idSchema, timestampSchema } from './common';
+import { kickoffPlanSchema } from './planner';
+
+export const aiTaskEnum = z.enum([
+  'rewrite',
+  'summarize',
+  'classify',
+  'project-chat',
+  'kickoff',
+  'research',
+  'artifact-generation',
+  'project-health',
+]);
+
+/**
+ * Per-task result schemas — the zod-side twin of `AITaskResultMap` in
+ * @nexus/types. Adding a task means adding a member here; both
+ * `aiTaskDataSchema` (type-level map) and `aiRunDataSchema` (the
+ * `aiRun.data` shape) pick it up.
+ */
+const aiTaskResultSchemas = {
+  kickoff: kickoffPlanSchema.nullable(),
+};
+
+export const aiTaskDataSchema = z.discriminatedUnion('aiTask', [
+  z.object({ aiTask: z.literal('kickoff'), data: aiTaskResultSchemas.kickoff }),
+]);
+
+/** Union of every task's result shape — what `aiRun.data` holds. */
+export const aiRunDataSchema: z.ZodType<z.output<typeof aiTaskDataSchema>['data']> = z.union([
+  aiTaskResultSchemas.kickoff,
+]);
 
 export const aiSuggestionSchema = z
   .object({
@@ -37,7 +68,8 @@ export const aiRunSchema = z
     id: idSchema,
     projectId: idSchema,
     userId: z.string().openapi({ example: 'seed@nexus.local' }),
-    type: z.string().min(1).max(64).openapi({ example: 'suggest' }),
+    aiTask: aiTaskEnum,
+    data: aiRunDataSchema,
     status: z.enum(['queued', 'processing', 'completed', 'failed']).default('queued'),
     model: z.string().nullable().openapi({ example: 'claude-sonnet-4' }),
     inputTokens: z.number().int().nonnegative().default(0),

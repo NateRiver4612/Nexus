@@ -11,18 +11,14 @@ import {
   type CardCheckboxOption,
   type CardCheckboxValue,
 } from '@/components/CardCheckboxGroup';
-import {
-  useCreateDeliverable,
-  useGetDeliverables,
-  useGetSystemDeliverables,
-} from '@/hooks/useDeliverables';
+import { useCreateDeliverable, useGetDeliverables } from '@/hooks/useDeliverables';
 
 import type { StepHandle } from './shared';
 import { DELIVERABLE_KIND_ICONS } from '@nexus/zod-schemas/constants';
 
 type Step4Props = {
   ref?: React.Ref<StepHandle>;
-  projectId?: string | null;
+  projectId?: string;
   defaults?: Partial<OnboardingStep4InputType>;
   onSave: (data: OnboardingStep4InputType) => Promise<unknown>;
 };
@@ -31,8 +27,9 @@ type Step4Props = {
 type Step4Form = { deliverables: CardCheckboxValue[] };
 
 export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
-  const { data: system } = useGetSystemDeliverables();
-  const { data: customs, isLoading } = useGetDeliverables({ variables: projectId ?? '' });
+  const { data: deliverables, isLoading } = useGetDeliverables({
+    variables: projectId,
+  });
   const createDeliverable = useCreateDeliverable();
 
   const form = useForm<Step4Form>({
@@ -97,21 +94,12 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
   }
 
   const options: CardCheckboxOption[] = [
-    // Global system catalog (no projectId) — presets with icons.
-    ...(system ?? []).map((row) => ({
+    ...(deliverables ?? []).map((row) => ({
       value: row.id,
       label: row.name,
       icon: DELIVERABLE_KIND_ICONS[row.kind],
-      isCustom: false,
+      isCustom: row.isCustom,
     })),
-    // This project's user-created deliverables.
-    ...(customs ?? [])
-      .filter((row) => row.isCustom)
-      .map((row) => ({
-        value: row.id,
-        label: row.name,
-        isCustom: true,
-      })),
   ];
 
   return (

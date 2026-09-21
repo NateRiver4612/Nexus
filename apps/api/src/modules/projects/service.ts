@@ -2,12 +2,18 @@ import { projectOnboarding, projects, type Db } from '@nexus/db';
 import type {
   CreateProjectInputType,
   OnboardingStateType,
+  ProjectDetailType,
   ProjectType,
   UpdateOnboardingInputType,
 } from '@nexus/types';
 
 import { HttpError } from '../../errors';
-import { OnboardingRepository, ProjectsRepository, type NewProjectRow } from './repository';
+import {
+  OnboardingRepository,
+  ProjectsRepository,
+  type NewProjectRow,
+  type ProjectDetailsRow,
+} from './repository';
 
 type ProjectRow = typeof projects.$inferSelect;
 type OnboardingRow = typeof projectOnboarding.$inferSelect;
@@ -41,15 +47,16 @@ export function ProjectService(db: Db) {
     return toProjectView(project);
   }
 
-  async function get(id: string): Promise<ProjectType | null> {
-    const row = await projectsRepository.getById(id);
-    return row ? toProjectView(row) : null;
+  async function get(id: string): Promise<ProjectDetailType | null> {
+    const row = await projectsRepository.getByIdWithDetails(id);
+    return row ? toProjectDetailView(row) : null;
   }
 
-  async function list(userId: string): Promise<ProjectType[]> {
+  async function list(userId: string): Promise<ProjectDetailType[]> {
     const workspace = await ensureWorkspace(db, userId);
+
     const rows = await projectsRepository.listByWorkspace(workspace.id);
-    return rows.map(toProjectView);
+    return rows.map(toProjectDetailView);
   }
 
   async function update(id: string, patch: Partial<NewProjectRow>) {
@@ -92,6 +99,7 @@ export const OnboardingService = (db: Db) => {
       const updatedOnboarding = await onboardingRepository.update(existing.id, {
         step: input.step,
         projectId,
+        status: 'in_progress',
         stepData: { ...prev, [key]: input.data },
       });
       return toOnboardingView(updatedOnboarding!);
@@ -121,6 +129,7 @@ export const OnboardingService = (db: Db) => {
         workspaceId: workspace.id,
         projectId: project.id,
         step: input.step,
+        status: 'in_progress',
         stepData: { [key]: input.data },
       });
 
@@ -142,6 +151,7 @@ function toOnboardingView(row: OnboardingRow): OnboardingStateType {
     status: row.status,
     step: row.step,
     projectId: row.projectId,
+    aiRunId: row.aiRun,
     stepData: (row.stepData ?? {}) as OnboardingStateType['stepData'],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -205,5 +215,25 @@ function toProjectView(row: ProjectRow): ProjectType {
     status: row.status === 'archived' ? 'archived' : 'active',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function toProjectDetailView(row: ProjectDetailsRow): ProjectDetailType {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    description: row.description,
+    status: row.status === 'archived' ? 'archived' : 'active',
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    lastOpenedAt: row.lastOpenedAt ? row.lastOpenedAt.toISOString() : null,
+    currentTask: row.currentTask,
+    numOfTasks: row.numOfTasks,
+    numOfCompletedTasks: row.numOfCompletedTasks,
+    numOfMilestones: row.numOfMilestones,
+    numOfArtifacts: row.numOfArtifacts,
+    numOfDeliverables: row.numOfDeliverables,
+    numOfKnowledgeSources: row.numOfKnowledgeSources,
   };
 }
