@@ -71,8 +71,7 @@ export const submitProjectOnboardingRoute = defineOpenAPIRoute({
       await tx
         .update(projectOnboarding)
         .set({
-          aiRun: aiRun?.id!,
-          status: 'submitted',
+          aiRun: aiRun.id,
           updatedAt: new Date(),
         })
         .where(eq(projectOnboarding.id, onboardingId));
@@ -81,7 +80,8 @@ export const submitProjectOnboardingRoute = defineOpenAPIRoute({
         name: AI_QUEUE_KICKOFF,
         data: stepData,
         projectId,
-        jobId: aiRun?.id!,
+        onboardingId,
+        jobId: aiRun.id,
       });
 
       return aiRun;

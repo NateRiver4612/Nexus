@@ -5,7 +5,7 @@ import { projectSchema } from './projects';
 
 export const milestoneStatusSchema = z.enum(['planned', 'active', 'paused', 'completed']);
 export const taskStatusSchema = z.enum(['todo', 'in_progress', 'completed', 'cancelled']);
-export const taskPrioritySchema = z.enum(['low', 'medium', 'high', 'urgent']);
+export const taskDifficultySchema = z.enum(['low', 'medium', 'high']);
 
 export const milestoneSchema = z
   .object({
@@ -26,8 +26,27 @@ export const taskSchema = z
     milestoneId: idSchema.nullable(),
     title: z.string().min(1).max(255).openapi({ example: 'Set up Postgres' }),
     description: z.string().nullable().openapi({ example: 'Provision the database' }),
+    instructions: z
+      .array(z.string().min(50).max(500))
+      .min(2)
+      .max(6)
+      .describe(
+        'Detailed, step-by-step instructions specific to what the source material actually shows — ' +
+          'concrete enough that the user could complete this task without going back to the original ' +
+          'video or docs. Name specific APIs, commands, or concepts to use, not just what to accomplish.',
+      ),
     status: taskStatusSchema.default('todo'),
-    priority: taskPrioritySchema.default('medium'),
+    difficulty: taskDifficultySchema.default('medium'),
+    estimatedTime: z.coerce
+      .number()
+      .int()
+      .nullish()
+      .openapi({ description: 'Estimated time in minutes' }),
+    actualTime: z.coerce
+      .number()
+      .int()
+      .nullish()
+      .openapi({ description: 'Actual time spent, in minutes' }),
     position: z.number().int().default(0),
     completedAt: z.string().nullish(),
     createdBy: idSchema,
@@ -39,6 +58,7 @@ export const projectProgressSchema = z
   .object({
     id: idSchema,
     projectId: idSchema,
+    progressPercentage: z.number().int().min(0).max(100).default(0),
     currentTaskId: idSchema.nullable(),
     lastOpenedAt: z.string().openapi({ example: '2026-09-12T10:00:00.000Z' }),
     ...timestampSchema,
@@ -105,7 +125,7 @@ export const plannerItemSchema = z
     title: z.string().min(1).max(255).openapi({ example: 'Ship the planner MVP' }),
     description: z.string().nullable().openapi({ example: 'Break down the initial milestone' }),
     status: z.enum(['todo', 'in_progress', 'done']).default('todo'),
-    priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
+    difficulty: z.enum(['low', 'medium', 'high']).default('medium'),
     sortOrder: z.number().int().default(0),
     metadata: z.record(z.string(), z.unknown()).nullable(),
     ...timestampSchema,
@@ -117,7 +137,7 @@ export const createPlannerItemSchema = plannerItemSchema.pick({
   title: true,
   description: true,
   status: true,
-  priority: true,
+  difficulty: true,
   sortOrder: true,
 });
 export const updatePlannerItemSchema = createPlannerItemSchema.partial();

@@ -20,6 +20,7 @@ export function Step5({ state, projectId }: { state?: OnboardingStateType; proje
       <Row label="Project name" value={stepData?.step1?.name} />
       <Row label="Category" value={stepData?.step1?.category} />
       <Row label="Goal" value={stepData?.step2?.context} />
+      <Row label="Level" value={stepData?.step2?.level} />
       <div className="flex flex-col gap-1">
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Deliverables</dt>
         <dd className=" text-foreground">

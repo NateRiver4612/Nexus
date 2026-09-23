@@ -58,11 +58,11 @@ export const knowledgeSources = pgTable(
     collectionId: uuid('collection_id').references(() => knowledgeCollections.id, {
       onDelete: 'set null',
     }),
-    sourceType: sourceType('source_type').notNull().default('file'),
     name: varchar('name', { length: 255 }).notNull(),
     mimeType: varchar('mime_type', { length: 128 }),
     sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull().default(0),
     sourceRef: text('source_ref'),
+    sourceType: sourceType('source_type').notNull().default('file'),
     storageKey: text('storage_key'),
     content: text('content'),
     errorMessage: text('error_message'),

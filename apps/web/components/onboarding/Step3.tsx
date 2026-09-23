@@ -18,12 +18,13 @@ import type { StepHandle } from './shared';
 type Step3Props = {
   ref?: React.Ref<StepHandle>;
   projectId?: string;
+  defaults?: Partial<OnboardingStep3InputType> | null;
   onSave: (data: OnboardingStep3InputType) => Promise<unknown>;
 };
 
-export function Step3({ ref, projectId, onSave }: Step3Props) {
+export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
   const { data: sources } = useGetKnowledgeSources({
-    variables: projectId,
+    variables: projectId ?? '',
   });
   const [error, setError] = React.useState<string | null>(null);
 
@@ -35,10 +36,6 @@ export function Step3({ ref, projectId, onSave }: Step3Props) {
     values: { files: serverFiles, link: '', textTitle: '', textContent: '' },
     resetOptions: { keepDirtyValues: true },
   });
-
-  const {
-    formState: { isDirty },
-  } = form;
 
   React.useImperativeHandle(ref, () => ({
     save: async () => {
@@ -73,14 +70,17 @@ export function Step3({ ref, projectId, onSave }: Step3Props) {
 
       setError(null);
 
-      if (!isDirty) {
+      // Skip the save when nothing changed since the last one — compare the
+      // freshly-built payload (from the server's sources) against the last
+      // saved snapshot instead of the form's dirty flag, which LinkMode and
+      // TextMode intentionally clear after each successful add.
+      if (defaults && step3Equals(defaults, parsed.data)) {
         return true;
       }
 
       await onSave(parsed.data);
-      // Mark the form clean so `isDirty` reflects only changes made since the
-      // last save — otherwise the skip-if-no-changes branch above never fires
-      // again after the first upload (files are retained in the form state).
+      // Reset the form back to the server-derived baseline so the next save
+      // comparison starts from a clean slate.
       form.reset();
       return true;
     },
@@ -101,5 +101,28 @@ export function Step3({ ref, projectId, onSave }: Step3Props) {
         {error && <p className="flex items-center gap-1.5 text-sm text-destructive">{error}</p>}
       </div>
     </FormProvider>
+  );
+}
+
+/** Deep-equality for the step 3 payload, treating null/undefined as equal.
+ * Both arguments are allowed to be partial (e.g. a merged draft snapshot). */
+function step3Equals(a: Partial<OnboardingStep3InputType>, b: Partial<OnboardingStep3InputType>) {
+  if (
+    (a.link ?? null) !== (b.link ?? null) ||
+    (a.textTitle ?? null) !== (b.textTitle ?? null) ||
+    (a.textContent ?? null) !== (b.textContent ?? null)
+  ) {
+    return false;
+  }
+
+  const aFiles = a.files ?? [];
+  const bFiles = b.files ?? [];
+  if (aFiles.length !== bFiles.length) return false;
+
+  return aFiles.every(
+    (file, index) =>
+      file.name === bFiles[index]?.name &&
+      file.size === bFiles[index]?.size &&
+      (file.mimeType ?? null) === (bFiles[index]?.mimeType ?? null),
   );
 }

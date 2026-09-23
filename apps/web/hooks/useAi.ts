@@ -23,6 +23,7 @@ import {
 } from '@/api/ai';
 
 import { aiRunKeys, aiSuggestionKeys, conversationKeys, messageKeys } from './queryKeys';
+import { createDetailQueryHook } from './createQuery';
 
 export function useGetAiSuggestions(projectId: string) {
   return useQuery({
@@ -68,13 +69,16 @@ export function useGetAiRuns(projectId: string) {
   });
 }
 
-export function useAiRun(id: string) {
-  return useQuery({
-    queryKey: aiRunKeys.detail(id),
-    queryFn: () => getAiRun(id),
-    enabled: Boolean(id),
-  });
-}
+export const useGetAiRun = createDetailQueryHook(getAiRun, (id) => aiRunKeys.detail(id), {
+  refetchInterval(query) {
+    const status = query.state.data?.status;
+
+    if (status === 'processing' || status === 'queued') {
+      return 3000;
+    }
+    return false;
+  },
+});
 
 export function useGetConversations(projectId: string) {
   return useQuery({

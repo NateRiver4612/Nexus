@@ -1,12 +1,12 @@
 import { Worker } from 'bullmq';
 
 import { getRedis } from '../../redis';
-import { onComplete } from '../../startWorkers';
 import { AI_QUEUE, AI_QUEUE_KICKOFF, type AIKickoffJob } from './queues';
-import { aiRuns, getDb } from '@nexus/db';
+import { aiRuns, getDb, projectOnboarding } from '@nexus/db';
 import { buildKnowledgeContext } from '../kickoff/context';
-import { generateKickoffPlan } from '../kickoff/generate';
+import { generateKickoffPlan, type GeneratedKickoffPlan } from '../kickoff/generate';
 import { eq } from 'drizzle-orm';
+import { onComplete } from '../../startWorkers';
 
 const AIWorker = () => {
   const db = getDb();
@@ -41,6 +41,7 @@ const AIWorker = () => {
               outputTokens: plan.usage?.completion_tokens,
             })
             .where(eq(aiRuns.id, runId));
+
           return plan;
         default:
           throw new Error(`Unknonw job type: ${job.name}`);
@@ -53,7 +54,23 @@ const AIWorker = () => {
     },
   );
 
-  worker.on('completed', onComplete);
+  worker.on('completed', async (job, result: GeneratedKickoffPlan) => {
+    const db = getDb();
+
+    const aiRun = job.data.jobId;
+    const onboardingId = job.data.onboardingId;
+
+    await db
+      .update(projectOnboarding)
+      .set({
+        aiRun,
+        status: 'submitted',
+        updatedAt: new Date(),
+      })
+      .where(eq(projectOnboarding.id, onboardingId));
+
+    onComplete(job);
+  });
   worker.on('failed', async (job, err) => {
     if (!job) return;
 

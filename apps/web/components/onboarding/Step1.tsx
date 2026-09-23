@@ -39,9 +39,10 @@ export function Step1({ ref, defaults, onSave, onDraftChange }: Step1Props) {
 
   useImperativeHandle(ref, () => ({
     save: async () => {
-      if (!isDirty) return true;
+      const valid = await trigger();
+      if (!valid) return false;
 
-      await trigger();
+      if (!isDirty) return true;
 
       const name = getValues('name').trim();
       const description = getValues('description') ?? null;

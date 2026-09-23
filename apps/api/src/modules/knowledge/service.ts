@@ -39,7 +39,7 @@ export function KnowledgeService(db: Db) {
             sourceId: row.id,
           },
           options: {
-            attempts: 5,
+            attempts: 3,
           },
         });
         created.push(toSourceView(row));

@@ -14,13 +14,12 @@ import { projects } from './projects';
 import { users } from './users';
 
 export const taskStatus = pgEnum('task_status', ['todo', 'in_progress', 'completed', 'cancelled']);
-export const milestoneStatus = pgEnum('milestone_status', [
-  'planned',
-  'active',
-  'paused',
-  'completed',
-]);
-export const taskPriority = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
+export const milestoneStatus = pgEnum('milestone_status', ['planned', 'active', 'completed']);
+export const taskDifficulty = pgEnum('task_difficulty', ['low', 'medium', 'high']);
+
+export type TaskStatus = (typeof taskStatus.enumValues)[number];
+export type MilestoneStatus = (typeof milestoneStatus.enumValues)[number];
+export type TaskDifficulty = (typeof taskDifficulty.enumValues)[number];
 
 export const milestones = pgTable(
   'milestones',
@@ -52,7 +51,10 @@ export const tasks = pgTable(
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
     status: taskStatus('status').notNull().default('todo'),
-    priority: taskPriority('priority').notNull().default('medium'),
+    difficulty: taskDifficulty('difficulty').notNull().default('medium'),
+    estimatedTimeMinutes: integer('estimated_time_minutes'),
+    actualTimeMinutes: integer('actual_time_minutes'), // @todo: Later when support the task Timer (https://trello.com/c/lUBU0lO0/53-add-timer-for-task)
+    instructions: text('instructions').array().notNull().default([]),
     position: integer('position').notNull().default(0),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdBy: uuid('created_by')
@@ -79,6 +81,7 @@ export const projectProgress = pgTable('project_progress', {
     .notNull()
     .unique()
     .references(() => projects.id, { onDelete: 'cascade' }),
+  progressPercentage: integer('progress_percentage').notNull().default(0),
   currentTaskId: uuid('current_task_id').references(() => tasks.id, { onDelete: 'set null' }),
   lastOpenedAt: timestamp('last_opened_at', { withTimezone: true }).notNull().defaultNow(),
   ...timestamps,

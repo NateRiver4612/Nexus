@@ -20,6 +20,7 @@ import {
 import { requireOnboardingForProject } from '../middlewares';
 import { getUser } from '../../../auth-middleware';
 import { getOnboarding, getProject } from '../../../lib/hono-context';
+import { calculateProjectProgress } from '../../planner/progress';
 
 export const completeProjectOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -85,8 +86,11 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
                   milestoneId: createdMilestone.id,
                   title: task.title,
                   description: task.description,
+                  instructions: task.instructions,
                   status: task.status,
-                  priority: task.priority,
+                  difficulty: task.difficulty,
+                  estimatedTimeMinutes: task.estimatedTime ?? null,
+                  actualTimeMinutes: task.actualTime ?? null,
                   position: task.position,
                   createdBy: user.id,
                 })),
@@ -98,7 +102,12 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
 
       await tx
         .update(projectOnboarding)
-        .set({ status: 'completed', step: 5, updatedAt: new Date() })
+        .set({
+          status: 'completed',
+          completedAt: new Date(),
+          step: 5,
+          updatedAt: new Date(),
+        })
         .where(eq(projectOnboarding.id, onboardingId));
 
       await tx
@@ -110,6 +119,7 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
         await tx.insert(projectProgress).values({
           projectId,
           currentTaskId: newTasks[0].id,
+          progressPercentage: calculateProjectProgress(newTasks),
         });
       }
 

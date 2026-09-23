@@ -55,7 +55,6 @@ export const useSubmitProjectOnboarding = createMutationHook(
   (input: { projectId: string; onboardingId: string }) => submitProjectOnboarding(input),
   (queryClient) => ({
     onSuccess: (_, variables) => {
-      // The onboarding row gains aiRun (the kickoff run) — refetch so the preview page sees it.
       queryClient.invalidateQueries({ queryKey: onboardingKeys.all });
       queryClient.invalidateQueries({ queryKey: plannerKeys.list(variables.projectId) });
     },

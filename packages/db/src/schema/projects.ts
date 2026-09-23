@@ -38,6 +38,7 @@ export const projects = pgTable(
     slug: varchar('slug', { length: 120 }).notNull(),
     description: text('description'),
     readme: text('readme'),
+    summary: text('summary'), //@todo: https://trello.com/c/RlAvErPX/56-ai-generate-project-summary
     status: projectStatus('status').notNull().default('draft'),
     startDate: timestamp('start_date', { withTimezone: true, mode: 'date' }),
     targetDate: timestamp('target_date', { withTimezone: true, mode: 'date' }),
@@ -93,6 +94,7 @@ export const projectOnboarding = pgTable(
     aiRun: uuid('ai_run').references(() => aiRuns.id, {
       onDelete: 'set null',
     }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     stepData: jsonb('step_data').$type<OnboardingDataType | {}>().notNull().default({}),
     ...timestamps,
   },

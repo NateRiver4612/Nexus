@@ -7,14 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { useGetProjects } from '@/hooks/useProjects';
+import { useGetOnboarding, useGetProjects } from '@/hooks/useProjects';
 
 import { ProjectCard } from './ProjectCard';
 import { useRouter } from 'next/navigation';
 
 const tabs = [
   { value: 'active', label: 'Active' },
-  { value: 'shared', label: 'Shared' },
   { value: 'archived', label: 'Archived' },
 ];
 
@@ -24,13 +23,24 @@ export function ProjectsView() {
 
   const { data: projects } = useGetProjects();
 
+  const { data: onboarding } = useGetOnboarding();
+
   const router = useRouter();
+
+  const handleCreateNewProject = () => {
+    if (onboarding?.status === 'submitted' && onboarding?.aiRunId) {
+      router.push(`/new-project/preview`);
+      return;
+    }
+
+    router.push('/new-project');
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Projects</h1>
-        <Button onClick={() => router.push('/new-project')}>Create New</Button>
+        <Button onClick={handleCreateNewProject}>Create New</Button>
       </div>
 
       <div className="relative w-full max-w-xs">

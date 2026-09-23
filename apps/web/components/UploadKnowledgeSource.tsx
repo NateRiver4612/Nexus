@@ -119,7 +119,15 @@ export function UploadKnowledgeSource({ projectId: projectIdProp }: { projectId?
           onBack={() => setMode('file')}
         />
       )}
-      {mode === 'text' && <TextMode onCreate={onCreate} onBack={() => setMode('file')} />}
+      {mode === 'text' && (
+        <TextMode
+          onHandleSubmit={() => {
+            setMode('file');
+          }}
+          onCreate={onCreate}
+          onBack={() => setMode('file')}
+        />
+      )}
     </div>
   );
 }
@@ -322,38 +330,6 @@ function FileMode({
       />
       <SourceList projectId={projectId} showEmptyText={false} />
 
-      {/* {files.length > 0 && submitting && (
-        <>
-          <ul className="flex flex-col gap-2">
-            {files.map((file, index) => {
-              const { icon, color } = fileIcon(file);
-
-              return (
-                <li
-                  key={`${file.name}-${index}`}
-                  className="flex items-center animate-bounce opacity-40 bg-disabled justify-between gap-3 rounded-lg border border-border px-3 py-2"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className={cn(color)}>
-                      <FontAwesomeIcon icon={icon} size="xl" />
-                    </span>
-                    <div className="min-w-0 text-start">
-                      <p className="truncate text-sm text-gray-900 font-semibold">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
-                    </div>
-                  </div>
-                  <Trash2
-                    size={20}
-                    className="text-destructive rounded-full cursor-pointer"
-                    onClick={() => removeFile(index)}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )} */}
-
       {error && <p className="flex items-center gap-1.5 text-sm text-destructive">{error}</p>}
     </div>
   );
@@ -432,7 +408,15 @@ function LinkMode({
   );
 }
 
-function TextMode({ onCreate, onBack }: { onCreate: CreateCallback; onBack: () => void }) {
+function TextMode({
+  onCreate,
+  onBack,
+  onHandleSubmit,
+}: {
+  onCreate: CreateCallback;
+  onHandleSubmit?: () => void;
+  onBack: () => void;
+}) {
   const {
     getValues,
     resetField,
@@ -474,8 +458,12 @@ function TextMode({ onCreate, onBack }: { onCreate: CreateCallback; onBack: () =
         return;
       }
 
-      resetField('textTitle');
-      resetField('textContent');
+      onHandleSubmit?.();
+
+      setTimeout(() => {
+        resetField('textTitle');
+        resetField('textContent');
+      }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add text.');
     } finally {

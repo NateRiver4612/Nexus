@@ -125,7 +125,7 @@ async function main() {
     milestoneId: milestone.id,
     title: 'Wire Better Auth',
     status: 'todo',
-    priority: 'high',
+    difficulty: 'high',
     createdBy: authorId,
   });
 

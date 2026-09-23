@@ -9,6 +9,7 @@ export const AI_QUEUE_KICKOFF = 'kickoff';
 export type AIKickoffJob = {
   jobId: string;
   projectId: string;
+  onboardingId: string;
   data: OnboardingDataType;
 };
 
@@ -23,6 +24,7 @@ export async function enqueueAI({
   name,
   jobId,
   projectId,
+  onboardingId,
   data,
   options,
 }: AIKickoffJob & {
@@ -39,13 +41,14 @@ export async function enqueueAI({
       projectId,
       data,
       jobId,
+      onboardingId,
     },
     {
       removeOnComplete: true,
       removeOnFail: {
         count: 5000,
       },
-      attempts: 1,
+      attempts: 2,
       backoff: {
         type: 'exponential',
         delay: 2000,

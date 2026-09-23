@@ -1,0 +1,1 @@
+ALTER TABLE "project_onboarding" ADD COLUMN "completed_at" timestamp with time zone;

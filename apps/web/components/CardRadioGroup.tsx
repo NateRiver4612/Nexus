@@ -29,6 +29,8 @@ interface CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> {
   customOptionIcon?: LucideIcon;
   label?: string;
   onCreateOption?: (option: CardRadioOption) => void;
+  layout?: 'row' | 'column';
+  gridClassName?: string;
 }
 
 /**
@@ -46,6 +48,8 @@ export const CardRadioGroup = ({
   otherValue = 'other',
   customOptionIcon,
   onCreateOption,
+  layout = 'row',
+  gridClassName,
 }: CardRadioGroupProps) => {
   const {
     control,
@@ -128,7 +132,7 @@ export const CardRadioGroup = ({
               role="radiogroup"
               aria-invalid={!!fieldError}
               onKeyDown={handleKeyDown}
-              className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+              className={cn('grid grid-cols-1 gap-2 sm:grid-cols-2', gridClassName)}
             >
               {allOptions.map((option) => {
                 const isSelected = field.value === option.value;
@@ -187,37 +191,73 @@ export const CardRadioGroup = ({
                     }}
                     onBlur={field.onBlur}
                     className={cn(
-                      'flex w-full group min-h-[50px] items-center cursor-pointer gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
+                      'group relative flex w-full cursor-pointer items-center rounded-lg border transition-colors',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
                       disabled && 'cursor-not-allowed opacity-50',
                       isSelected
                         ? 'border-blue-600 bg-blue-50'
                         : 'border-gray-200 bg-white hover:border-gray-300',
+                      layout === 'column'
+                        ? 'min-h-[140px] flex-col rounded-xl justify-center gap-2 px-4 py-6 text-center'
+                        : 'min-h-[50px] gap-3 px-4 py-3 text-left',
                     )}
                   >
-                    <div className="flex flex-1 items-center gap-3">
-                      {Icon && (
-                        <Icon
-                          size={20}
-                          className={cn('shrink-0', isSelected ? 'text-blue-600' : 'text-gray-500')}
-                        />
-                      )}
-                      <span className="flex flex-col">
-                        <span
-                          className={cn('text-sm', isSelected ? 'text-blue-600' : 'text-gray-900')}
-                        >
-                          {option.label}
-                        </span>
-                        {option.description && (
-                          <span className="text-xs text-gray-500">{option.description}</span>
+                    {layout === 'column' ? (
+                      <div className="flex flex-col items-center gap-2">
+                        {Icon && (
+                          <Icon
+                            size={24}
+                            className={cn(isSelected ? 'text-blue-600' : 'text-gray-500')}
+                          />
                         )}
-                      </span>
-                    </div>
+                        <span className="flex flex-col items-center gap-0.5">
+                          <span
+                            className={cn(
+                              'text-sm font-medium',
+                              isSelected ? 'text-blue-600' : 'text-gray-900',
+                            )}
+                          >
+                            {option.label}
+                          </span>
+                          {option.description && (
+                            <span className="text-xs text-gray-500">{option.description}</span>
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-1 items-center gap-3">
+                        {Icon && (
+                          <Icon
+                            size={20}
+                            className={cn(
+                              'shrink-0',
+                              isSelected ? 'text-blue-600' : 'text-gray-500',
+                            )}
+                          />
+                        )}
+                        <span className="flex flex-col">
+                          <span
+                            className={cn(
+                              'text-sm',
+                              isSelected ? 'text-blue-600' : 'text-gray-900',
+                            )}
+                          >
+                            {option.label}
+                          </span>
+                          {option.description && (
+                            <span className="text-xs text-gray-500">{option.description}</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
 
                     {option.isCustom && (
                       <div
                         onClick={() => handleRemoveCustomOption(option)}
-                        className="opacity-0 rounded-full p-1 hover:bg-gray-200 transition group-hover:opacity-100 text-end"
+                        className={cn(
+                          'rounded-full p-1 opacity-0 transition hover:bg-gray-200 group-hover:opacity-100',
+                          layout === 'column' ? 'absolute right-2 top-2' : 'text-end',
+                        )}
                       >
                         <X size={18} />
                       </div>

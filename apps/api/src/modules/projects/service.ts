@@ -32,7 +32,7 @@ export function ProjectService(db: Db) {
       name: input.name,
       slug: input.slug,
       description: input.description ?? null,
-      status: 'active',
+      status: input.status ?? 'draft',
       createdBy: userId,
     });
 

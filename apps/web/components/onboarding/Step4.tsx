@@ -69,8 +69,18 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
         return true;
       }
 
+      const rowById = new Map((deliverables ?? []).map((row) => [row.id, row]));
+
       await onSave({
-        deliverables: values.map((v) => ({ id: v.value, name: v.label })),
+        deliverables: values.map((v) => {
+          const row = rowById.get(v.value);
+          return {
+            id: v.value,
+            name: v.label,
+            kind: row?.kind ?? 'custom',
+            isCustom: row?.isCustom ?? false,
+          };
+        }),
       });
       return true;
     },

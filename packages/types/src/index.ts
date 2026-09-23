@@ -59,6 +59,7 @@ import {
   conversationListSchema,
   conversationSchema,
   onboardingStatusSchema,
+  onboardingLevelEnum,
   onboardingStep1Schema,
   onboardingStep2Schema,
   onboardingStep3Schema,
@@ -82,6 +83,7 @@ import {
 } from '@nexus/zod-schemas';
 
 export type OnboardingStatusType = z.infer<typeof onboardingStatusSchema>;
+export type OnboardingLevelType = z.infer<typeof onboardingLevelEnum>;
 export type OnboardingStep1InputType = z.infer<typeof onboardingStep1Schema>;
 export type OnboardingStep2InputType = z.infer<typeof onboardingStep2Schema>;
 export type OnboardingStep3InputType = z.infer<typeof onboardingStep3Schema>;

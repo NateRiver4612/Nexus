@@ -27,7 +27,8 @@ const steps = [
   },
   {
     title: 'What are you trying to accomplish?',
-    description: 'Describe your goal in your own words.',
+    description:
+      "Describe your goal in your own words — a little about your background helps Nexus tailor the plan to where you're actually starting from.",
   },
   {
     title: 'Context & Resources',
@@ -187,6 +188,7 @@ export function Onboarding() {
           <Step3
             ref={stepRef}
             projectId={projectId}
+            defaults={mergedData.step3}
             onSave={async (data) => {
               await saveStep({ step: 3, data });
               setDraftStepData('step3', data);

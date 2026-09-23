@@ -1,5 +1,5 @@
 // modules/kickoff/generatePlan.ts
-import { buildKickoffPrompt, type KickoffContext } from './prompt';
+import { buildKickoffPrompt, buildKickoffSystemPrompt, type KickoffContext } from './prompt';
 import { env } from '../../env';
 import { getDeepSeekClient } from '../../lib/client';
 import z from 'zod';
@@ -7,6 +7,7 @@ import type { KickoffPlanType } from '@nexus/types';
 import { kickoffPlanSchema } from '@nexus/zod-schemas';
 import type OpenAI from 'openai';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
+import { jsonrepair } from 'jsonrepair';
 
 const PLAN_TOOL_NAME = 'generate_project_plan';
 
@@ -17,19 +18,21 @@ interface DeepSeekChatCompletionParams extends OpenAI.Chat.ChatCompletionCreateP
   };
 }
 
-export async function generateKickoffPlan(context: KickoffContext): Promise<{
+export type GeneratedKickoffPlan = {
   data: KickoffPlanType;
   usage?: CompletionUsage;
-}> {
+};
+
+export async function generateKickoffPlan(context: KickoffContext): Promise<GeneratedKickoffPlan> {
   const client = getDeepSeekClient();
 
   const response = await client.chat.completions.create({
     model: env.AI_KICKOFF_MODEL,
     messages: [
-      { role: 'system', content: KICKOFF_SYSTEM_PROMPT },
+      { role: 'system', content: buildKickoffSystemPrompt(context.stepData) },
       { role: 'user', content: buildKickoffPrompt(context) },
     ],
-    max_completion_tokens: 4096,
+    max_completion_tokens: 6000,
     thinking: { type: 'disabled' },
     tools: [
       {
@@ -52,7 +55,19 @@ export async function generateKickoffPlan(context: KickoffContext): Promise<{
     );
   }
 
-  const parsedArgs = JSON.parse(toolCall.function.arguments);
+  let parsedArgs;
+
+  try {
+    parsedArgs = JSON.parse(toolCall.function.arguments);
+  } catch {
+    try {
+      parsedArgs = JSON.parse(jsonrepair(toolCall.function.arguments));
+    } catch {
+      throw new Error(
+        `DeepSeek returned malformed JSON in tool call arguments for: ${PLAN_TOOL_NAME}`,
+      );
+    }
+  }
 
   // Validate before trusting it — the tool schema constrains shape loosely (JSON Schema),
   // Zod is the real gate (string length caps, milestone count bounds, enum values).
@@ -66,9 +81,3 @@ export async function generateKickoffPlan(context: KickoffContext): Promise<{
 
   return { data: result.data, usage: response.usage };
 }
-
-const KICKOFF_SYSTEM_PROMPT = `You are Nexus's project kickoff planner. Given a user's project goal, \
-category, context, and any uploaded resources, generate a realistic execution plan: milestones broken \
-into concrete tasks, plus deliverables worth producing along the way. Keep milestone counts reasonable \
-(3-6 typically) and each milestone's tasks actionable and specific to what the user described — never \
-generic placeholders. Call the generate_project_plan tool with your result.`;
