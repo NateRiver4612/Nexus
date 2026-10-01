@@ -17,7 +17,21 @@ import { workspaces } from './workspaces';
 import { type OnboardingDataType } from '@nexus/types';
 import { aiRuns } from './ai';
 
-export const projectStatus = pgEnum('project_status', ['draft', 'active', 'paused', 'archived']);
+export const projectStatus = pgEnum('project_status', [
+  'draft',
+  'active',
+  'paused',
+  'archived',
+  'completed',
+]);
+
+export const projectCategory = pgEnum('project_category', [
+  'marketing',
+  'finance',
+  'research',
+  'engineering',
+  'personal',
+]);
 
 export const projectOnboardingStatus = pgEnum('project_onboarding_status', [
   'in_progress',
@@ -38,7 +52,10 @@ export const projects = pgTable(
     slug: varchar('slug', { length: 120 }).notNull(),
     description: text('description'),
     readme: text('readme'),
-    summary: text('summary'), //@todo: https://trello.com/c/RlAvErPX/56-ai-generate-project-summary
+    category: projectCategory('project_category').notNull(),
+    // validation happens at the read boundary (kickoffSummarySchema.safeParse),
+    // same as everywhere else AI output becomes application state.
+    summary: jsonb('summary').$type<Record<string, unknown> | null>(),
     status: projectStatus('status').notNull().default('draft'),
     startDate: timestamp('start_date', { withTimezone: true, mode: 'date' }),
     targetDate: timestamp('target_date', { withTimezone: true, mode: 'date' }),

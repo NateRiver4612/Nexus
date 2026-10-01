@@ -1,6 +1,6 @@
 // lib/hono-context.ts
 import type { Context } from 'hono';
-import type { deliverables, projects } from '@nexus/db';
+import type { deliverables, projects, tasks } from '@nexus/db';
 import type { OnboardingDataType } from '@nexus/types';
 import type { AuthenticatedUser } from '../auth-middleware';
 import { HttpError } from '../errors';
@@ -11,6 +11,7 @@ declare module 'hono' {
     onboarding: OnboardingDataType;
     project: typeof projects.$inferSelect;
     deliverable: typeof deliverables.$inferSelect;
+    task: typeof tasks.$inferSelect;
   }
 }
 
@@ -30,3 +31,4 @@ export const getUser = createContextGetter('user');
 export const getOnboarding = createContextGetter('onboarding');
 export const getProject = createContextGetter('project');
 export const getDeliverable = createContextGetter('deliverable');
+export const getTask = createContextGetter('task');

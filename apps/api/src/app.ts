@@ -15,6 +15,7 @@ import { notificationRoutes } from './modules/notifications/routes';
 import { plannerRoutes } from './modules/planner/routes';
 import { projectRoutes } from './modules/projects/routes';
 import { searchRoutes } from './modules/search/routes';
+import { taskRoutes } from './modules/tasks/routes';
 import { userRoutes } from './modules/users/routes';
 
 export function createApp() {
@@ -60,6 +61,7 @@ export function createApp() {
     .route('/knowledge', knowledgeRoutes())
     .route('/notifications', notificationRoutes())
     .route('/search', searchRoutes())
+    .route('/tasks', taskRoutes())
     .route('/users', userRoutes());
 
   return app.route('/api/v1', v1);

@@ -16,6 +16,13 @@ export const projectIdParamsSchema = z.object({
   }),
 });
 
+export const taskIdParamsSchema = z.object({
+  taskId: idSchema.openapi({
+    param: { name: 'taskId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
+
 export const errorType = z.enum(['AuthError', 'ValidationError', 'NotFoundError', 'ServerError']);
 
 export const errorSchema = z

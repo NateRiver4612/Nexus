@@ -1,6 +1,7 @@
 'use client';
 
 import { KickoffPlanList } from '@/components/KickoffPlanList';
+import AISummary from '@/components/project/AISummary';
 import { Button } from '@/components/ui/button';
 import { useGetAiRun } from '@/hooks/useAi';
 import { useOnboardingDraft } from '@/hooks/useOnboardingDraft';
@@ -43,8 +44,7 @@ export default function Page() {
 
   const kickoffPlanData = aiRun?.data;
 
-  const disabled =
-    !projectId || !onboardingId || !kickoffPlanData || isCompletingOnboarding || isGenerating;
+  const disabled = !projectId || !onboardingId || isCompletingOnboarding || isGenerating;
 
   const handleGoBack = () => {
     router.replace('/new-project');
@@ -62,7 +62,7 @@ export default function Page() {
   };
 
   const handleCompleteOnboarding = () => {
-    if (disabled) {
+    if (disabled || !kickoffPlanData) {
       return;
     }
 
@@ -73,10 +73,10 @@ export default function Page() {
     });
   };
 
-  if (isAiRunLoading || aiRun?.status === 'processing') {
+  if (isAiRunLoading || aiRun?.status === 'processing' || aiRun?.status === 'queued') {
     return (
       <div className="w-full flex justify-center h-[80vh]">
-        <div className="flex h-[35%] w-[50%] rounded-2xl shadow-xl flex-col items-center justify-center gap-4 text-center">
+        <div className="flex h-[32%] w-130 rounded-2xl shadow-xl flex-col items-center justify-center gap-4 text-center">
           <LoaderCircle className="size-16 animate-spin text-primary" strokeWidth={1.5} />
           <div className="space-y-1">
             <p className="text-base font-semibold text-gray-900">Building your project plan</p>
@@ -90,7 +90,7 @@ export default function Page() {
   if (!isAiRunLoading && aiRun?.status === 'failed') {
     return (
       <div className="w-full flex justify-center h-[80vh]">
-        <div className="flex h-[30%] w-[50%] rounded-2xl shadow-xl flex-col items-center justify-center gap-4 text-center">
+        <div className="flex h-[32%] w-130 rounded-2xl shadow-xl flex-col items-center justify-center gap-4 text-center">
           <div className="flex size-16 items-center justify-center rounded-full bg-red-50">
             <TriangleAlert className="size-7 text-red-400" strokeWidth={2} />
           </div>
@@ -118,7 +118,16 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-4">
-      {kickoffPlanData && <KickoffPlanList plan={kickoffPlanData}></KickoffPlanList>}
+      <div className="flex flex-col gap-3">
+        <h2 className="font-semibold text-gray-400">Summary</h2>
+        {kickoffPlanData?.summary && <AISummary summary={kickoffPlanData.summary}></AISummary>}
+      </div>
+      <div className="flex flex-col gap-3">
+        <h2 className="font-semibold text-gray-400">Milestones & Tasks</h2>
+        {kickoffPlanData && (
+          <KickoffPlanList milestones={kickoffPlanData.milestones}></KickoffPlanList>
+        )}
+      </div>
       <div className="w-full flex justify-between">
         <Button variant="outline" disabled={disabled} onClick={handleGoBack} className="border">
           <ArrowLeft size={18}></ArrowLeft>

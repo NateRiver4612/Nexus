@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ALTER COLUMN "summary" SET DATA TYPE jsonb USING summary::jsonb;

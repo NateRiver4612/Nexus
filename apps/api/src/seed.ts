@@ -14,6 +14,8 @@ import {
   notifications,
   projectMembers,
   projects,
+  taskDods,
+  taskSteps,
   tasks,
   users,
   workspaceMembers,
@@ -38,6 +40,8 @@ async function main() {
     knowledgeSources,
     knowledgeCollections,
     deliverables,
+    taskDods,
+    taskSteps,
     tasks,
     milestones,
     projectMembers,
@@ -74,6 +78,7 @@ async function main() {
         name: 'Nexus',
         slug: 'nexus',
         description: 'Modular monolith for planning and collaboration',
+        category: 'engineering',
         status: 'active',
         createdBy: authorId,
       })
@@ -120,14 +125,103 @@ async function main() {
       .returning()
   )[0]!;
 
-  await db.insert(tasks).values({
-    projectId: project.id,
-    milestoneId: milestone.id,
-    title: 'Wire Better Auth',
-    status: 'todo',
-    difficulty: 'high',
-    createdBy: authorId,
-  });
+  await db.insert(taskSteps).values([
+    {
+      taskId: task.id,
+      value: 'Install Postgres and verify the server starts',
+      position: 0,
+      status: 'completed',
+    },
+    {
+      taskId: task.id,
+      value: 'Create the application database and a dedicated user',
+      position: 1,
+      status: 'completed',
+    },
+    {
+      taskId: task.id,
+      value: 'Run the initial schema migration',
+      position: 2,
+      status: 'completed',
+    },
+  ]);
+
+  await db.insert(taskDods).values([
+    {
+      taskId: task.id,
+      value: 'A fresh database can be created and migrated from an empty state',
+      position: 0,
+      status: 'completed',
+    },
+    {
+      taskId: task.id,
+      value: 'The app connects to Postgres and queries succeed',
+      position: 1,
+      status: 'completed',
+    },
+    {
+      taskId: task.id,
+      value: 'Migrations apply cleanly with no manual SQL',
+      position: 2,
+      status: 'completed',
+    },
+  ]);
+
+  const secondTask = (
+    await db
+      .insert(tasks)
+      .values({
+        projectId: project.id,
+        milestoneId: milestone.id,
+        title: 'Wire Better Auth',
+        status: 'todo',
+        difficulty: 'high',
+        createdBy: authorId,
+      })
+      .returning()
+  )[0]!;
+
+  await db.insert(taskSteps).values([
+    {
+      taskId: secondTask.id,
+      value: 'Install Better Auth and its Drizzle adapter',
+      position: 0,
+      status: 'todo',
+    },
+    {
+      taskId: secondTask.id,
+      value: 'Configure session cookies and the auth routes',
+      position: 1,
+      status: 'todo',
+    },
+    {
+      taskId: secondTask.id,
+      value: 'Test sign-up and sign-in flows end to end',
+      position: 2,
+      status: 'todo',
+    },
+  ]);
+
+  await db.insert(taskDods).values([
+    {
+      taskId: secondTask.id,
+      value: 'Sign-up creates a user session that persists across reloads',
+      position: 0,
+      status: 'todo',
+    },
+    {
+      taskId: secondTask.id,
+      value: 'Protected routes reject unauthenticated requests',
+      position: 1,
+      status: 'todo',
+    },
+    {
+      taskId: secondTask.id,
+      value: 'Sign-out clears the session cookie',
+      position: 2,
+      status: 'todo',
+    },
+  ]);
 
   const collection = (
     await db
