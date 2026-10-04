@@ -164,7 +164,6 @@ export const SuggestionMenu: React.FC<SuggestionMenuProps> = ({
       >
         {/* Scrollable menu content area */}
         <div className="pt-2 pb-1.5 px-1 max-h-90 overflow-y-auto">
-          as
           <DropdownMenuLabel className="px-2 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Basic blocks
           </DropdownMenuLabel>
