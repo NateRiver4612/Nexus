@@ -1,6 +1,7 @@
 import {
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -117,6 +118,29 @@ export const taskDods = pgTable(
 
 export type TaskDod = typeof taskDods.$inferSelect;
 export type NewTaskDod = typeof taskDods.$inferInsert;
+
+/**
+ * A note attached to a task. `content` is the structured document (e.g. the
+ * Tiptap JSON tree) the editor works with; `contentText` is its plain-text
+ * render for search/listing/AI. Multiple notes per task, newest first.
+ */
+export const taskNotes = pgTable(
+  'task_notes',
+  {
+    id: idColumn(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 255 }).notNull().default('Untitled'),
+    content: jsonb('content').$type<Record<string, unknown>>().notNull(),
+    contentText: text('content_text'),
+    ...timestamps,
+  },
+  (table) => [index('task_notes_task_idx').on(table.taskId, table.createdAt)],
+);
+
+export type TaskNote = typeof taskNotes.$inferSelect;
+export type NewTaskNote = typeof taskNotes.$inferInsert;
 
 /**
  * "Resume working" — points back at where the user left off inside a project.

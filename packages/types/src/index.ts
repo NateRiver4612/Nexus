@@ -39,6 +39,9 @@ import {
   taskSchema,
   taskStepSchema,
   taskDodSchema,
+  taskNoteSchema,
+  createTaskNoteSchema,
+  updateTaskNoteSchema,
   taskDetailSchema,
   updateTaskSchema,
   milestoneWithTasksSchema,
@@ -142,6 +145,10 @@ export type MilestoneType = z.infer<typeof milestoneSchema>;
 export type TaskType = z.infer<typeof taskSchema>;
 export type TaskStepType = z.infer<typeof taskStepSchema>;
 export type TaskDodType = z.infer<typeof taskDodSchema>;
+export type TaskNoteType = z.infer<typeof taskNoteSchema>;
+export type TaskNoteListType = TaskNoteType[];
+export type CreateTaskNoteInputType = z.infer<typeof createTaskNoteSchema>;
+export type UpdateTaskNoteInputType = z.infer<typeof updateTaskNoteSchema>;
 export type TaskStatusEnum = z.infer<typeof taskStatusSchema>;
 export type TaskStepStatusType = z.infer<typeof taskStepStatusSchema>;
 export type TaskDetailType = z.infer<typeof taskDetailSchema>;

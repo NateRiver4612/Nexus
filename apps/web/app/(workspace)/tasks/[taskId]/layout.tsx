@@ -42,7 +42,7 @@ const layout = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 h-full">
       <div className="flex text-sm flex-wrap items-center text-gray-400 gap-1">
         <Link
           href={`/projects/${project.id}`}

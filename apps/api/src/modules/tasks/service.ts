@@ -1,5 +1,11 @@
-import type { Db, TaskStepStatus } from '@nexus/db';
-import type { TaskDetailType, UpdateTaskInputType } from '@nexus/types';
+import type { Db, TaskStepStatus, TaskNote } from '@nexus/db';
+import type {
+  TaskDetailType,
+  TaskNoteType,
+  UpdateTaskInputType,
+  CreateTaskNoteInputType,
+  UpdateTaskNoteInputType,
+} from '@nexus/types';
 
 import { TaskRepository, type TaskDetailRow } from './repository';
 
@@ -35,7 +41,61 @@ export function TaskService(db: Db) {
     return getDetail(id);
   }
 
-  return { getDetail, update };
+  async function listNotes(taskId: string): Promise<TaskNoteType[]> {
+    const rows = await repository.listNotes(taskId);
+    return rows.map(toNoteView);
+  }
+
+  async function getNote(taskId: string, noteId: string): Promise<TaskNoteType | undefined> {
+    const row = await repository.getNote(taskId, noteId);
+    return row ? toNoteView(row) : undefined;
+  }
+
+  async function createNote(
+    taskId: string,
+    input: CreateTaskNoteInputType,
+  ): Promise<TaskNoteType | undefined> {
+    const row = await repository.createNote(taskId, {
+      title: input.title,
+      content: input.content,
+      contentText: input.contentText ?? null,
+    });
+    return row ? toNoteView(row) : undefined;
+  }
+
+  async function updateNote(
+    taskId: string,
+    noteId: string,
+    input: UpdateTaskNoteInputType,
+  ): Promise<TaskNoteType | undefined> {
+    const rows = await repository.updateNote(taskId, noteId, {
+      ...(input.title != null ? { title: input.title } : {}),
+      ...(input.content != null ? { content: input.content } : {}),
+      ...(input.contentText != null ? { contentText: input.contentText } : {}),
+    });
+    const row = rows[0];
+    return row ? toNoteView(row) : undefined;
+  }
+
+  async function deleteNote(taskId: string, noteId: string): Promise<TaskNoteType | undefined> {
+    const rows = await repository.deleteNote(taskId, noteId);
+    const row = rows[0];
+    return row ? toNoteView(row) : undefined;
+  }
+
+  return { getDetail, update, listNotes, getNote, createNote, updateNote, deleteNote };
+}
+
+function toNoteView(row: TaskNote): TaskNoteType {
+  return {
+    id: row.id,
+    taskId: row.taskId,
+    title: row.title,
+    content: row.content,
+    contentText: row.contentText,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 /**

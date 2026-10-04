@@ -1,4 +1,12 @@
-import type { TaskDetailType, TaskStepStatusType, UpdateTaskInputType } from '@nexus/types';
+import type {
+  CreateTaskNoteInputType,
+  TaskDetailType,
+  TaskNoteListType,
+  TaskNoteType,
+  TaskStepStatusType,
+  UpdateTaskInputType,
+  UpdateTaskNoteInputType,
+} from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
@@ -58,4 +66,55 @@ export async function completeTask(taskId: string) {
   return handleResponse(
     await apiClient.api.v1.tasks[':taskId'].complete.$patch({ param: { taskId } }),
   );
+}
+
+export async function getTaskNotes(taskId: string) {
+  return (await handleResponse(
+    await apiClient.api.v1.tasks[':taskId'].notes.$get({ param: { taskId } }),
+  )) as TaskNoteListType;
+}
+
+export async function getTaskNote({ taskId, noteId }: { taskId: string; noteId: string }) {
+  return (await handleResponse(
+    await apiClient.api.v1.tasks[':taskId'].notes[':noteId'].$get({
+      param: { taskId, noteId },
+    }),
+  )) as TaskNoteType;
+}
+
+export async function createTaskNote({
+  taskId,
+  input,
+}: {
+  taskId: string;
+  input: CreateTaskNoteInputType;
+}) {
+  return (await handleResponse(
+    await apiClient.api.v1.tasks[':taskId'].notes.$post({ param: { taskId }, json: input }),
+  )) as TaskNoteType;
+}
+
+export async function updateTaskNote({
+  taskId,
+  noteId,
+  input,
+}: {
+  taskId: string;
+  noteId: string;
+  input: UpdateTaskNoteInputType;
+}) {
+  return (await handleResponse(
+    await apiClient.api.v1.tasks[':taskId'].notes[':noteId'].$patch({
+      param: { taskId, noteId },
+      json: input,
+    }),
+  )) as TaskNoteType;
+}
+
+export async function deleteTaskNote({ taskId, noteId }: { taskId: string; noteId: string }) {
+  return (await handleResponse(
+    await apiClient.api.v1.tasks[':taskId'].notes[':noteId'].$delete({
+      param: { taskId, noteId },
+    }),
+  )) as TaskNoteType;
 }

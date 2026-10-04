@@ -5,11 +5,14 @@ import {
   projectProgress,
   projects,
   taskDods,
+  taskNotes,
   taskSteps,
   tasks,
   users,
   type Db,
   type TaskStepStatus,
+  type NewTaskNote,
+  type TaskNote,
 } from '@nexus/db';
 import type {
   MilestoneType,
@@ -185,6 +188,55 @@ export const TaskRepository = (db: Db) => ({
       .update(tasks)
       .set({ status: 'completed', completedAt: new Date(), updatedAt: new Date() })
       .where(eq(tasks.id, taskId))
+      .returning();
+  },
+
+  /** A task's notes, newest first. */
+  listNotes(taskId: string) {
+    return db
+      .select()
+      .from(taskNotes)
+      .where(eq(taskNotes.taskId, taskId))
+      .orderBy(taskNotes.createdAt);
+  },
+
+  /** A single note — scoped to the task so foreign note ids are a no-op. */
+  async getNote(taskId: string, noteId: string): Promise<TaskNote | undefined> {
+    const rows = await db
+      .select()
+      .from(taskNotes)
+      .where(and(eq(taskNotes.id, noteId), eq(taskNotes.taskId, taskId)))
+      .limit(1);
+    return rows[0];
+  },
+
+  /** Creates a note for the task. */
+  async createNote(taskId: string, values: Omit<NewTaskNote, 'taskId'>): Promise<TaskNote> {
+    const rows = await db
+      .insert(taskNotes)
+      .values({ ...values, taskId })
+      .returning();
+    return rows[0]!;
+  },
+
+  /** Rewrites a note — scoped to the task so foreign note ids are a no-op. */
+  updateNote(
+    taskId: string,
+    noteId: string,
+    patch: Partial<Omit<NewTaskNote, 'taskId' | 'id' | 'createdAt'>>,
+  ) {
+    return db
+      .update(taskNotes)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(taskNotes.id, noteId), eq(taskNotes.taskId, taskId)))
+      .returning();
+  },
+
+  /** Deletes a note — scoped to the task so foreign note ids are a no-op. */
+  deleteNote(taskId: string, noteId: string) {
+    return db
+      .delete(taskNotes)
+      .where(and(eq(taskNotes.id, noteId), eq(taskNotes.taskId, taskId)))
       .returning();
   },
 });

@@ -1,8 +1,13 @@
 import {
   completeTask,
+  createTaskNote,
+  deleteTaskNote,
   getTask,
+  getTaskNote,
+  getTaskNotes,
   updateTask,
   updateTaskDodStatus,
+  updateTaskNote,
   updateTaskStepStatus,
 } from '@/api/tasks';
 
@@ -35,4 +40,33 @@ export const useUpdateTaskDodStatus = createMutationHook(updateTaskDodStatus, (q
 
 export const useCompleteTask = createMutationHook(completeTask, (queryClient) => ({
   onSuccess: (_, taskId) => queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) }),
+}));
+
+export const useGetTaskNotes = createDetailQueryHook(getTaskNotes, (taskId) =>
+  taskKeys.notes(taskId),
+);
+
+export const useGetTaskNote = createDetailQueryHook(getTaskNote, ({ taskId, noteId }) =>
+  taskKeys.note(taskId, noteId),
+);
+
+export const useCreateTaskNote = createMutationHook(createTaskNote, (queryClient) => ({
+  onSuccess: (_, variables) => {
+    queryClient.invalidateQueries({ queryKey: taskKeys.notes(variables.taskId) });
+    queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId) });
+  },
+}));
+
+export const useUpdateTaskNote = createMutationHook(updateTaskNote, (queryClient) => ({
+  onSuccess: (_, variables) => {
+    queryClient.invalidateQueries({ queryKey: taskKeys.notes(variables.taskId) });
+    queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId) });
+  },
+}));
+
+export const useDeleteTaskNote = createMutationHook(deleteTaskNote, (queryClient) => ({
+  onSuccess: (_, variables) => {
+    queryClient.invalidateQueries({ queryKey: taskKeys.notes(variables.taskId) });
+    queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId) });
+  },
 }));
