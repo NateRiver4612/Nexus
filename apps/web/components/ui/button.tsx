@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
+import { Spinner } from './spinner';
 
 export const buttonVariants = cva(
   'inline-flex items-center cursor-pointer justify-center transition gap-2 rounded-lg text-sm',
@@ -22,15 +23,19 @@ export const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  isLoading?: boolean;
+}
 
 export function Button({ className, variant = 'default', size, ...props }: ButtonProps) {
   return (
     <button
       className={cn(buttonVariants({ variant, size }), className, {
-        'bg-gray-300': props.disabled,
+        'bg-gray-300': props.disabled || props.isLoading,
       })}
       {...props}
-    />
+    >
+      {props.isLoading ? <Spinner className="text-gray-50  size-5 animate-spin" /> : props.children}
+    </button>
   );
 }

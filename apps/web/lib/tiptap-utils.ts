@@ -1,6 +1,5 @@
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
-import { clsx, type ClassValue } from 'clsx';
 import { AllSelection, NodeSelection, Selection, TextSelection } from '@tiptap/pm/state';
 import { cellAround, CellSelection } from '@tiptap/pm/tables';
 import { findParentNodeClosestToPos, type Editor, type NodeWithPos } from '@tiptap/react';
@@ -34,10 +33,6 @@ export const SR_ONLY = {
   whiteSpace: 'nowrap',
   borderWidth: 0,
 } as const;
-
-export function cn(...inputs: ClassValue[]): string {
-  return clsx(inputs);
-}
 
 /**
  * Determines if the current platform is macOS

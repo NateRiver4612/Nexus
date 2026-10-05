@@ -9,8 +9,8 @@
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --config ../../packages/config/oxlint.json app components features hooks lib api next.config.ts",
-    "format": "prettier --write --config ../../packages/config/prettier.json .",
-    "format:check": "prettier --check --config ../../packages/config/prettier.json ."
+    "format": "prettier --write --ignore-path ../../.prettierignore --config ../../packages/config/prettier.json .",
+    "format:check": "prettier --check --ignore-path ../../.prettierignore --config ../../packages/config/prettier.json ."
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.0",

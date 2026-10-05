@@ -20,12 +20,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onClick, onDelete }) => {
   return (
     <div
       onClick={onClick}
-      className={`group relative w-57 flex flex-col justify-between p-5 rounded-2xl border transition-all duration-200 cursor-pointer min-h-40 bg-[#FAF9F6]/80 border-gray-200/90 text-gray-800 hover:border-gray-300 hover:shadow-sm`}
+      className={`group relative w-57 flex flex-col justify-between p-5 rounded-2xl border transition-all duration-200 cursor-pointer h-40 bg-[#FAF9F6]/80 border-gray-200/90 text-gray-800 hover:border-gray-300 hover:shadow-sm`}
     >
       <div className="space-y-2.5">
         {/* Title row */}
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-semibold text-[15px] text-gray-900 leading-snug tracking-tight">
+          <h3 className="font-semibold line-clamp-2 text-[15px] text-gray-900 leading-snug tracking-tight">
             {note.title}
           </h3>
           <div className="flex transition opacity-0 group-hover:opacity-100 items-center">
@@ -51,14 +51,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onClick, onDelete }) => {
 
         {/* Content text preview */}
         {note.contentText && (
-          <p className={`text-sm line-clamp-3 text-gray-400`}>
+          <p className={`text-sm line-clamp-2 text-gray-400`}>
             {note.contentText.split('\n').splice(1).join('\n')}
           </p>
         )}
       </div>
 
       {/* Card footer timestamp */}
-      <div className="mt-4 pt-1">
+      <div>
         <span className={`text-xs text-gray-400 font-normal `}>
           Edited {formatDistanceToNowStrict(new Date(note.updatedAt), { addSuffix: true })}
         </span>

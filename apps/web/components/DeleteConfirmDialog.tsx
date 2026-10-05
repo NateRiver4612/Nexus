@@ -81,7 +81,7 @@ const DeleteConfirmDialog = ({
           <AlertDialogAction
             onClick={confirmDelete}
             disabled={isDeleting || !canConfirm}
-            className="w-21.25"
+            className="w-21.25 bg-destructive"
           >
             {isDeleting ? <Spinner></Spinner> : 'Delete'}
           </AlertDialogAction>

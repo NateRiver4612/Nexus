@@ -1,10 +1,6 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import {
-  errorResponseSchema,
-  taskNoteParamsSchema,
-  taskNoteSchema,
-} from '@nexus/zod-schemas';
+import { errorResponseSchema, taskNoteParamsSchema, taskNoteSchema } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';

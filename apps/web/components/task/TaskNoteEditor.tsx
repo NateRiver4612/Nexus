@@ -10,25 +10,25 @@ import {
 } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import { Placeholder } from '@tiptap/extensions';
+import { Placeholder, Dropcursor } from '@tiptap/extensions';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
 import { BubbleMenu } from '@tiptap/react/menus';
 import Document from '@tiptap/extension-document';
-import { all, createLowlight } from 'lowlight';
+import { createLowlight } from 'lowlight';
 import css from 'highlight.js/lib/languages/css';
 import js from 'highlight.js/lib/languages/javascript';
 import ts from 'highlight.js/lib/languages/typescript';
 import html from 'highlight.js/lib/languages/xml';
 import CodeBlockComponent from '@/components/CodeBlockComponent';
 import { TaskList, TaskItem } from '@tiptap/extension-list';
-
 import '@/styles/styles.scss';
 import EditorPopupMenu from '@/components/EditorPopupMenu';
 import {
   useCreateTaskNote,
   useDeleteTaskNote,
   useGetTaskNote,
+  useGetTaskNotes,
   useUpdateTaskNote,
 } from '@/hooks/useTasks';
 import { Button } from '@/components/ui/button';
@@ -37,12 +37,19 @@ import { useEffect, useRef, useState } from 'react';
 import type { TaskNoteType } from '@nexus/types';
 import DragHandle from '@tiptap/extension-drag-handle-react';
 import SuggestionMenu from './SuggestionMenu';
-import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { CircleEllipsis, FileText, GripVertical, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { TooltipContent, TooltipTrigger, Tooltip } from '../ui/tooltip';
+import { Kbd, KbdGroup } from '../ui/kbd';
 
-const lowlight = createLowlight(all);
+const lowlight = createLowlight();
 
-// This is only an example, all supported languages are already loaded above
-// but you can also register only specific languages to reduce bundle-size
 lowlight.register('html', html);
 lowlight.register('css', css);
 lowlight.register('js', js);
@@ -90,6 +97,7 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
   const [isSuggestionOpen, setIsSuggestionOpen] = useState<boolean>(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<boolean>(false);
 
   const taskNoteRef = useRef<TaskNoteType | undefined>(undefined);
 
@@ -101,6 +109,10 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
     options: {
       enabled: !!noteId?.length,
     },
+  });
+
+  const { data: notes } = useGetTaskNotes({
+    variables: taskId,
   });
 
   const { mutate: createTaskNote, isPending: isCreatingTaskNote } = useCreateTaskNote({
@@ -161,6 +173,7 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
         },
       }).configure({ lowlight }),
       Image,
+      Dropcursor,
     ],
     content: taskNote?.content,
     editorProps: {
@@ -184,9 +197,20 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
         isEditable: editor.isEditable,
         currentSelection: editor.state.selection,
         currentContent: editor.getJSON(),
+        currentContentText: editor.getText(),
       };
     },
   });
+
+  const currentContentText = editorState?.currentContent.content
+    ?.map((c: any) => {
+      if (c.type === 'image') {
+        return c.attrs.src;
+      }
+      return c.content?.[0].text;
+    })
+    .join('')
+    .replaceAll('\n', '');
 
   useEffect(() => {
     if (!editor || !taskNote) {
@@ -203,7 +227,7 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
   const handleSave = (editor?: Editor, taskNote?: TaskNoteType) => {
     const content = editor?.getJSON();
 
-    if (!taskId || !content || !taskNote) {
+    if (!taskId || !content) {
       return;
     }
 
@@ -214,7 +238,9 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
 
     const contentText = editor?.getText();
 
-    const isDirty = contentText !== taskNote.contentText;
+    const isDirty =
+      contentText?.trim().replaceAll('\n', '') !==
+      taskNote?.contentText?.trim().replaceAll('\n', '');
 
     if (!isDirty) {
       return;
@@ -250,14 +276,44 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="h-full rounded-2xl border border-gray-300 p-6 w-full bg-white">
+      <div className="h-full relative rounded-2xl border border-gray-300 p-6 pt-3! pr-3! w-full bg-white">
+        <div className="flex justify-end">
+          <DropdownMenu open={openMenu} onOpenChange={setOpenMenu}>
+            <DropdownMenuTrigger asChild>
+              <CircleEllipsis
+                size={20}
+                strokeWidth={1.5}
+                className="cursor-pointer text-gray-400"
+              ></CircleEllipsis>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className={` p-0 bg-white shadow-xl text-sm rounded-lg overflow-hidden`}
+            >
+              <DropdownMenuItem
+                onSelect={() => {
+                  setDeleteError(null);
+                  setDeleteOpen(true);
+                }}
+                className="flex items-center justify-between px-2 border-none! cursor-pointer rounded text-foreground"
+              >
+                {noteId && taskNote && (
+                  <div className="text-destructive flex items-center gap-2">
+                    <Trash2 size={16} />
+                    Delete
+                  </div>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         {editor && (
           <BubbleMenu className="bubble-menu" editor={editor} draggable>
             <EditorPopupMenu editor={editor}></EditorPopupMenu>
           </BubbleMenu>
         )}
         <EditorContent editor={editor} className="h-full" />
-        <DragHandle editor={editor} className="pt-0 pr-2">
+        <DragHandle editor={editor} className="pb-2 pr-2">
           <div className="flex items-center mb-1 mr-1 gap-0.5">
             <SuggestionMenu
               editor={editor}
@@ -284,24 +340,46 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
             </Button>
           </div>
         </DragHandle>
+        {!currentContentText?.length && (
+          <div className="flex text-sm gap-3 absolute w-full bottom-4 items-start flex-col">
+            <div className="text-start">
+              <span className="text-[#d6d4d2]">Recents</span>
+            </div>
+            <div className="flex flex-wrap gap-3 text-xs">
+              {notes?.map((n) => {
+                return (
+                  <Link
+                    href={`/tasks/${taskId}/note/${n.id}`}
+                    className="flex gap-1 items-center hover:opacity-70 transition cursor-pointer text-[#737371]  bg-[#f2f1ef] rounded-full pl-3 pr-4 py-2"
+                  >
+                    <FileText size={15} />
+                    <p className="truncate max-w-30">{n.title}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
       <div className="flex justify-end items-center gap-2 mt-4">
-        {noteId && taskNote && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setDeleteError(null);
-              setDeleteOpen(true);
-            }}
-            className="text-destructive"
-          >
-            <Trash2 size={16} />
-            Delete
-          </Button>
-        )}
-        <Button onClick={() => handleSave(editor, taskNote)} disabled={isSaving}>
-          Save
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() => handleSave(editor, taskNote)}
+              isLoading={isSaving}
+              disabled={isSaving}
+            >
+              Save
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <KbdGroup>
+              <Kbd>⌘</Kbd>
+              <span>+</span>
+              <Kbd>s</Kbd>
+            </KbdGroup>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {noteId && (
