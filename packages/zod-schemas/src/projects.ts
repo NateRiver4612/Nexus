@@ -17,6 +17,18 @@ export const fileSchema = z
     description: 'An uploaded source file.',
   });
 
+export const projectStatusEnum = z
+  .enum(['draft', 'active', 'paused', 'archived', 'completed'])
+  .default('draft');
+
+export const projectCategoryEnum = z.enum([
+  'marketing',
+  'finance',
+  'research',
+  'engineering',
+  'personal',
+]);
+
 export const projectSchema = z
   .object({
     id: idSchema,
@@ -37,7 +49,8 @@ export const projectSchema = z
       .string()
       .nullable()
       .openapi({ example: 'Modular monolith for planning and collaboration' }),
-    status: z.enum(['draft', 'active', 'paused', 'archived']).default('draft'),
+    category: projectCategoryEnum.openapi({ example: 'engineering' }),
+    status: projectStatusEnum,
     ...timestampSchema,
   })
   .openapi('Project');
@@ -220,6 +233,7 @@ export const createProjectSchema = projectSchema.pick({
   slug: true,
   status: true,
   description: true,
+  category: true,
 });
 
 export const updateProjectSchema = createProjectSchema.partial();

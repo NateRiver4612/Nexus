@@ -51,6 +51,7 @@ export const updateProjectRoute = defineOpenAPIRoute({
       slug: body.slug,
       status: body.status,
       description: body.description,
+      category: body.category,
     });
     if (!project) throw HttpError.notFound('Project not found');
     return c.json(project, 200);

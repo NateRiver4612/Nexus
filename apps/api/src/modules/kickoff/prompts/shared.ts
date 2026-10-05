@@ -1,12 +1,13 @@
 import type { OnboardingDataType } from '@nexus/types';
-import type { KnowledgeChunkGroup } from './context';
+import type { KnowledgeChunkGroup } from '../context';
 
 export type KickoffContext = {
   stepData: OnboardingDataType;
   knowledgeChunks: KnowledgeChunkGroup[];
 };
 
-export function buildKickoffPrompt({ stepData, knowledgeChunks }: KickoffContext): string {
+/** The goal context blocks both calls share: project facts + knowledge excerpts. */
+export function buildContextSections({ stepData, knowledgeChunks }: KickoffContext): string {
   const { step1, step2, step4 } = stepData;
 
   const sections = [
@@ -30,54 +31,22 @@ export function buildKickoffPrompt({ stepData, knowledgeChunks }: KickoffContext
   return `${sections.join('\n')}\n${knowledgeSection}`;
 }
 
-export function buildKickoffSystemPrompt(stepData: OnboardingDataType): string {
-  const category = stepData.step1.category.toLowerCase();
-  const deliverables = stepData.step4.deliverables;
-  const level = stepData.step2.level;
-
-  const deliverablesGuidance = buildDeliverableGuidance(deliverables);
-  const categoryGuidance = CATEGORY_GUIDANCE[category];
-  const levelGuidance = LEVEL_GUIDANCE[level];
-
-  return [KICKOFF_SYSTEM_PROMPT, categoryGuidance, deliverablesGuidance, levelGuidance]
-    .filter(Boolean)
-    .join('\n\n');
-}
-
-function buildDeliverableGuidance(
-  selected: { name: string; kind: string; isCustom: boolean }[],
+/**
+ * Compact rendering of the generated plan, fed back to the summary call so the
+ * summary is grounded in the actual milestones rather than re-invented.
+ * Milestone + task titles, one line each — small enough to keep call-2 input cheap.
+ */
+export function buildCompactPlan(
+  plan: Array<{ title: string; tasks: Array<{ title: string }> }>,
 ): string {
-  const lines = selected
-    .map((d) =>
-      d.isCustom
-        ? `Custom deliverable requested: "${d.name}" — infer what this should contain from its name \
-and the user's goal description, and make sure at least one milestone produces it.`
-        : (DELIVERABLE_KIND_GUIDANCE[d.kind] ?? ''),
+  return plan
+    .map(
+      (milestone, index) =>
+        `Milestone ${index + 1}: ${milestone.title}\n` +
+        milestone.tasks.map((task) => `  - ${task.title}`).join('\n'),
     )
-    .filter(Boolean);
-
-  if (lines.length === 0) return '';
-  return `The user wants the following deliverables produced by the end of this project:\n${lines.join('\n')}`;
+    .join('\n');
 }
-
-export const KICKOFF_SYSTEM_PROMPT = `You are Nexus's project kickoff planner. Given a user's project goal, \
-category, deliverable intent, context, and any uploaded resources, generate a realistic execution plan.
-
-Infer the user's actual starting point from their goal description — don't assume they're a beginner by \
-default, and don't impose introductory milestones on someone whose goal implies existing familiarity. \
-Structure milestones the way this work would genuinely get built or learned, with complexity increasing \
-naturally toward a real, working result — not a fixed template of phases.
-
-Scale the number of milestones to the actual scope of the goal, typically 3-8. Never pad a small goal to \
-hit a target count, and never compress a broad goal into too few milestones to be concrete. Each \
-milestone's tasks must be actionable and specific to what the user described — never generic placeholders \
-or "learn about X" tasks with no output.
-
-Where a level covers multiple stages (e.g. advanced covering fundamentals through advanced), \
-earlier stages should be represented but brief — the plan's size and depth should scale with how \
-much of it is genuinely at the target difficulty, not spread evenly across every stage it touches.
-
-Call the generate_project_plan tool with your result.`;
 
 export const CATEGORY_GUIDANCE: Record<string, string> = {
   engineering: `Approach this like a senior engineer mentoring a self-taught developer. Favor \
@@ -139,6 +108,22 @@ dedicated milestone for it unless the user's goal clearly involves running/docum
 defining what's being tracked/calculated before populating it.`,
 };
 
+export function buildDeliverableGuidance(
+  selected: { name: string; kind: string; isCustom: boolean }[],
+): string {
+  const lines = selected
+    .map((d) =>
+      d.isCustom
+        ? `Custom deliverable requested: "${d.name}" — infer what this should contain from its name \
+and the user's goal description, and make sure at least one milestone produces it.`
+        : (DELIVERABLE_KIND_GUIDANCE[d.kind] ?? ''),
+    )
+    .filter(Boolean);
+
+  if (lines.length === 0) return '';
+  return `The user wants the following deliverables produced by the end of this project:\n${lines.join('\n')}`;
+}
+
 const LEVEL_GUIDANCE: Record<string, string> = {
   beginner: `Scope the plan to a simple, achievable outcome: cover the fundamentals of this goal \
 and produce something basic but complete. This is the lightest of the three levels — keep the \
@@ -157,5 +142,10 @@ and efficiently (a small milestone or two, not full treatment), while the majori
 tasks, and depth belong in the advanced portion. Advanced is the actual point of choosing this \
 level; don't spend equal effort across all three stages — the earlier stages exist only to set up \
 the advanced work, not to be developed in their own right. This should be the largest, most \
-demanding plan of the three, with its hardest tasks concentrated at the end.`,
+demanding plan of the three, with its hardest tasks concentrated at the end. Be thorough in coverage \
+but economical in wording — favor more milestones/tasks over longer individual steps if you're running long.`,
 };
+
+export function buildLevelGuidance(level: OnboardingDataType['step2']['level']): string {
+  return LEVEL_GUIDANCE[level] ?? '';
+}

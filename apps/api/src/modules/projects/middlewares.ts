@@ -73,3 +73,23 @@ export const requireOnboardingForProject: MiddlewareHandler = async (c, next) =>
   c.set('project', project);
   await next();
 };
+
+export const requireProjectAccess: MiddlewareHandler = async (c, next) => {
+  const user = getUser(c);
+  const db = getDb();
+
+  const projectId = c.req.param('projectId')!;
+
+  const project = await ProjectsRepository(db).getByIdRaw(projectId);
+  if (!project) {
+    throw HttpError.notFound('Project not found.');
+  }
+
+  const isMember = await ProjectsRepository(db).isWorkspaceMember(user.id, project.workspaceId);
+  if (!isMember) {
+    throw HttpError.notFound('Project not found.');
+  }
+
+  c.set('project', project);
+  await next();
+};

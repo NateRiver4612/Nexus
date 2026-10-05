@@ -16,10 +16,12 @@ import { users } from './users';
 export const taskStatus = pgEnum('task_status', ['todo', 'in_progress', 'completed', 'cancelled']);
 export const milestoneStatus = pgEnum('milestone_status', ['planned', 'active', 'completed']);
 export const taskDifficulty = pgEnum('task_difficulty', ['low', 'medium', 'high']);
+export const taskStepStatus = pgEnum('task_step_status', ['todo', 'completed']);
 
 export type TaskStatus = (typeof taskStatus.enumValues)[number];
 export type MilestoneStatus = (typeof milestoneStatus.enumValues)[number];
 export type TaskDifficulty = (typeof taskDifficulty.enumValues)[number];
+export type TaskStepStatus = (typeof taskStepStatus.enumValues)[number];
 
 export const milestones = pgTable(
   'milestones',
@@ -53,8 +55,6 @@ export const tasks = pgTable(
     status: taskStatus('status').notNull().default('todo'),
     difficulty: taskDifficulty('difficulty').notNull().default('medium'),
     estimatedTimeMinutes: integer('estimated_time_minutes'),
-    actualTimeMinutes: integer('actual_time_minutes'), // @todo: Later when support the task Timer (https://trello.com/c/lUBU0lO0/53-add-timer-for-task)
-    instructions: text('instructions').array().notNull().default([]),
     position: integer('position').notNull().default(0),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdBy: uuid('created_by')
@@ -71,6 +71,52 @@ export const tasks = pgTable(
 
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+
+/**
+ * A single instruction step of a task — replaces the old `tasks.instructions`
+ * text[] column with per-step rows so each step can be tracked/completed
+ * independently (status `todo` → `completed`).
+ */
+export const taskSteps = pgTable(
+  'task_steps',
+  {
+    id: idColumn(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    value: text('value').notNull(),
+    position: integer('position').notNull().default(0),
+    status: taskStepStatus('status').notNull().default('todo'),
+    ...timestamps,
+  },
+  (table) => [index('task_steps_task_idx').on(table.taskId, table.position)],
+);
+
+export type TaskStep = typeof taskSteps.$inferSelect;
+export type NewTaskStep = typeof taskSteps.$inferInsert;
+
+/**
+ * A task's "definition of done" item — how the user knows the task is actually
+ * finished. Mirrors `taskSteps` (value, position, status) but gates completion:
+ * a task may only be completed when every DoD item is `completed`.
+ */
+export const taskDods = pgTable(
+  'task_dods',
+  {
+    id: idColumn(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    value: text('value').notNull(),
+    position: integer('position').notNull().default(0),
+    status: taskStepStatus('status').notNull().default('todo'),
+    ...timestamps,
+  },
+  (table) => [index('task_dods_task_idx').on(table.taskId, table.position)],
+);
+
+export type TaskDod = typeof taskDods.$inferSelect;
+export type NewTaskDod = typeof taskDods.$inferInsert;
 
 /**
  * "Resume working" — points back at where the user left off inside a project.

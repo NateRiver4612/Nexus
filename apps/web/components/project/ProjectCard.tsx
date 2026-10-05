@@ -5,6 +5,7 @@ import { Boxes } from 'lucide-react';
 import type { ProjectDetailType } from '@nexus/types';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { useRouter } from 'next/navigation';
 
 interface ProjectCardProps {
   project: ProjectDetailType;
@@ -15,8 +16,17 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const completed = project.numOfCompletedTasks ?? 0;
   const percent = tasks > 0 ? Math.round((completed / tasks) * 100) : 0;
 
+  const router = useRouter();
+
+  const handleOnClick = () => {
+    router.push(`/projects/${project.id}`);
+  };
+
   return (
-    <Card className="flex flex-col gap-4 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow">
+    <Card
+      onClick={handleOnClick}
+      className="flex flex-col gap-4 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow"
+    >
       <div>
         <div className="flex size-9 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
           <Boxes className="size-5" />

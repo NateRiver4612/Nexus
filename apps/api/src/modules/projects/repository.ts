@@ -26,12 +26,15 @@ const projectDetailsFields = {
   name: projects.name,
   slug: projects.slug,
   description: projects.description,
+  summary: projects.summary,
+  category: projects.category,
   status: projects.status,
   createdAt: projects.createdAt,
   updatedAt: projects.updatedAt,
 
   // progress
   lastOpenedAt: projectProgress.lastOpenedAt,
+  progressPercentage: projectProgress.progressPercentage,
 
   // full current task as a nested object, not flattened columns
   currentTask: sql<TaskType | null>`(
@@ -101,6 +104,18 @@ export const ProjectsRepository = (db: Db) => ({
       .where(eq(workspaceMembers.userId, userId))
       .limit(1);
     return rows[0];
+  },
+
+  /** Strict ownership check: is the user a member of this workspace? */
+  async isWorkspaceMember(userId: string, workspaceId: string) {
+    const rows = await db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(
+        and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.workspaceId, workspaceId)),
+      )
+      .limit(1);
+    return rows.length > 0;
   },
 
   createWorkspace(values: typeof workspaces.$inferInsert) {

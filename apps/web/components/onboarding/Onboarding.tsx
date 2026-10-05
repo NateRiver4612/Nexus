@@ -54,18 +54,13 @@ export function Onboarding() {
 
   const projectId = onboarding?.projectId;
 
-  const {
-    draft,
-    setStep: setDraftStep,
-    setStepData: setDraftStepData,
-    clear: clearDraft,
-  } = useOnboardingDraft();
+  const { draft, setStep: setDraftStep, setStepData: setDraftStepData } = useOnboardingDraft();
 
   const draftStep = draft.step;
   const draftStepData = draft.stepData;
 
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const stepRef = useRef<StepHandle>(null);
   const resumed = useRef(false);
@@ -100,7 +95,7 @@ export function Onboarding() {
   }
 
   async function handleFinish() {
-    // setCreating(true);
+    setIsSubmitting(true);
     try {
       if (!projectId || !onboarding.id) {
         return;
@@ -117,10 +112,11 @@ export function Onboarding() {
 
       if (runId) {
         router.push('/new-project/preview');
+
+        setIsSubmitting(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the project.');
-      setCreating(false);
     }
   }
 
@@ -136,6 +132,8 @@ export function Onboarding() {
     }
     setDraftStep(step + 1);
   }
+
+  const isDisabled = isSubmitting || isGenerating || isSaving;
 
   return (
     <form
@@ -216,6 +214,7 @@ export function Onboarding() {
           <Button
             type="button"
             variant="outline"
+            disabled={isDisabled}
             onClick={() => setDraftStep(Math.max(0, step - 1))}
           >
             <ArrowLeft className="size-4" />
@@ -225,9 +224,9 @@ export function Onboarding() {
           <span />
         )}
 
-        <Button type="button" onClick={handleNext} disabled={creating || isSaving || isGenerating}>
-          {creating ? 'Creating…' : isLast ? 'Generate plan' : 'Continue'}
-          {!creating && <ArrowRight className="size-4" />}
+        <Button type="button" onClick={handleNext} disabled={isDisabled}>
+          {isGenerating ? 'Submiting…' : isLast ? 'Generate plan' : 'Continue'}
+          {!isGenerating && <ArrowRight className="size-4" />}
         </Button>
       </div>
     </form>

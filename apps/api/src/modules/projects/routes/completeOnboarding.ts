@@ -14,13 +14,16 @@ import {
   projectOnboarding,
   projectProgress,
   projects,
+  taskDods,
+  taskSteps,
   tasks,
 } from '@nexus/db';
 
 import { requireOnboardingForProject } from '../middlewares';
 import { getUser } from '../../../auth-middleware';
 import { getOnboarding, getProject } from '../../../lib/hono-context';
-import { calculateProjectProgress } from '../../planner/progress';
+import { toProjectCategory } from '../service';
+import { calculateProjectProgress } from '../../milestones/progress';
 
 export const completeProjectOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -78,7 +81,7 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
 
             if (!milestone.tasks.length || !createdMilestone) return [];
 
-            return tx
+            const createdTasks = await tx
               .insert(tasks)
               .values(
                 milestone.tasks.map((task) => ({
@@ -86,16 +89,44 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
                   milestoneId: createdMilestone.id,
                   title: task.title,
                   description: task.description,
-                  instructions: task.instructions,
                   status: task.status,
                   difficulty: task.difficulty,
-                  estimatedTimeMinutes: task.estimatedTime ?? null,
-                  actualTimeMinutes: task.actualTime ?? null,
+                  estimatedTimeMinutes: task.estimatedTimeMinutes ?? null,
                   position: task.position,
                   createdBy: user.id,
                 })),
               )
               .returning();
+
+            // Each task's draft steps become task_step rows (position = array order).
+            const stepRows = createdTasks.flatMap((task, taskIndex) =>
+              (milestone.tasks[taskIndex]?.steps ?? []).map((step, stepIndex) => ({
+                taskId: task.id,
+                value: step.value,
+                position: stepIndex,
+                status: step.status,
+              })),
+            );
+
+            if (stepRows.length) {
+              await tx.insert(taskSteps).values(stepRows);
+            }
+
+            // Each task's draft DoD criteria become task_dod rows (position = array order).
+            const dodRows = createdTasks.flatMap((task, taskIndex) =>
+              (milestone.tasks[taskIndex]?.dods ?? []).map((dod, dodIndex) => ({
+                taskId: task.id,
+                value: dod.value,
+                position: dodIndex,
+                status: dod.status,
+              })),
+            );
+
+            if (dodRows.length) {
+              await tx.insert(taskDods).values(dodRows);
+            }
+
+            return createdTasks;
           }),
         )
       ).flat();
@@ -112,7 +143,14 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
 
       await tx
         .update(projects)
-        .set({ status: 'active', updatedAt: new Date() })
+        .set({
+          name: stepData.step1.name,
+          description: stepData.step1.description,
+          category: toProjectCategory(stepData.step1.category),
+          summary: plan.summary,
+          status: 'active',
+          updatedAt: new Date(),
+        })
         .where(eq(projects.id, projectId));
 
       if (newTasks[0]) {
@@ -151,10 +189,12 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
           name: onboardingProject.name,
           slug: onboardingProject.slug,
           description: onboardingProject.description,
+          category: onboardingProject.category,
           status: 'active' as const,
           createdAt: onboardingProject.createdAt.toISOString(),
           updatedAt: new Date().toISOString(),
         },
+        summary: plan.summary,
         milestones: plan.milestones,
       },
       200,

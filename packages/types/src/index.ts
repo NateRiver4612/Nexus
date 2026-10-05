@@ -37,8 +37,16 @@ import {
   plannerItemSchema,
   milestoneSchema,
   taskSchema,
+  taskStepSchema,
+  taskDodSchema,
+  taskDetailSchema,
+  updateTaskSchema,
+  milestoneWithTasksSchema,
+  milestonesWithTasksSchema,
+  projectMilestonesTasksSchema,
   projectProgressSchema,
   kickoffPlanSchema,
+  kickoffSummarySchema,
   completeOnboardingSchema,
   onboardingIdQuerySchema,
   projectIdParamsSchema,
@@ -80,6 +88,10 @@ import {
   deliverableKindSchema,
   aiTaskEnum,
   submitOnboardingOutputSchema,
+  projectStatusEnum,
+  projectCategoryEnum,
+  taskStatusSchema,
+  taskStepStatusSchema,
 } from '@nexus/zod-schemas';
 
 export type OnboardingStatusType = z.infer<typeof onboardingStatusSchema>;
@@ -116,6 +128,8 @@ export type MessageListType = z.infer<typeof messageListSchema>;
 export type CreateMessageInputType = z.infer<typeof createMessageSchema>;
 
 export type ProjectType = z.infer<typeof projectSchema>;
+export type ProjectStatusType = z.infer<typeof projectStatusEnum>;
+export type ProjectCategoryType = z.infer<typeof projectCategoryEnum>;
 export type ProjectListType = z.infer<typeof projectListSchema>;
 export type ProjectDetailType = z.infer<typeof projectDetailSchema>;
 export type ProjectDetailListType = z.infer<typeof projectDetailListSchema>;
@@ -126,6 +140,15 @@ export type PlannerItemType = z.infer<typeof plannerItemSchema>;
 export type PlannerItemListType = z.infer<typeof plannerItemListSchema>;
 export type MilestoneType = z.infer<typeof milestoneSchema>;
 export type TaskType = z.infer<typeof taskSchema>;
+export type TaskStepType = z.infer<typeof taskStepSchema>;
+export type TaskDodType = z.infer<typeof taskDodSchema>;
+export type TaskStatusEnum = z.infer<typeof taskStatusSchema>;
+export type TaskStepStatusType = z.infer<typeof taskStepStatusSchema>;
+export type TaskDetailType = z.infer<typeof taskDetailSchema>;
+export type UpdateTaskInputType = z.infer<typeof updateTaskSchema>;
+export type MilestoneWithTasksType = z.infer<typeof milestoneWithTasksSchema>;
+export type MilestoneWithTasksListType = z.infer<typeof milestonesWithTasksSchema>;
+export type ProjectMilestonesTasksInputType = z.infer<typeof projectMilestonesTasksSchema>;
 export type ProjectProgressType = z.infer<typeof projectProgressSchema>;
 export type CompleteOnboardingType = z.infer<typeof completeOnboardingSchema>;
 export type SubmitOnboardingOutputType = z.infer<typeof submitOnboardingOutputSchema>;
@@ -169,6 +192,7 @@ export type SearchResultType = z.infer<typeof searchResultSchema>;
 export type SearchResultsType = z.infer<typeof searchResultsSchema>;
 
 export type KickoffPlanType = z.infer<typeof kickoffPlanSchema>;
+export type KickoffSummaryType = z.infer<typeof kickoffSummarySchema>;
 
 export type AITaskType = z.infer<typeof aiTaskEnum>;
 

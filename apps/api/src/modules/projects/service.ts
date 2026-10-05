@@ -2,10 +2,12 @@ import { projectOnboarding, projects, type Db } from '@nexus/db';
 import type {
   CreateProjectInputType,
   OnboardingStateType,
+  ProjectCategoryType,
   ProjectDetailType,
   ProjectType,
   UpdateOnboardingInputType,
 } from '@nexus/types';
+import { projectCategoryEnum, kickoffSummarySchema } from '@nexus/zod-schemas';
 
 import { HttpError } from '../../errors';
 import {
@@ -23,7 +25,7 @@ export function ProjectService(db: Db) {
 
   async function create(
     userId: string,
-    input: Pick<CreateProjectInputType, 'name' | 'slug' | 'description' | 'status'>,
+    input: Pick<CreateProjectInputType, 'name' | 'slug' | 'description' | 'status' | 'category'>,
   ): Promise<ProjectType> {
     const workspace = await ensureWorkspace(db, userId);
 
@@ -31,6 +33,7 @@ export function ProjectService(db: Db) {
       workspaceId: workspace.id,
       name: input.name,
       slug: input.slug,
+      category: input.category,
       description: input.description ?? null,
       status: input.status ?? 'draft',
       createdBy: userId,
@@ -86,26 +89,9 @@ export const OnboardingService = (db: Db) => {
     userId: string;
     input: UpdateOnboardingInputType;
   }): Promise<OnboardingStateType> {
-    const key = `step${input.step}`;
+    const step = input.step;
 
-    const existing = await onboardingRepository.getByUserId(userId);
-
-    if (existing) {
-      assertOnboardingOrder(existing, input.step);
-      let projectId = existing.projectId;
-
-      const prev = (existing.stepData ?? {}) as Record<string, unknown>;
-
-      const updatedOnboarding = await onboardingRepository.update(existing.id, {
-        step: input.step,
-        projectId,
-        status: 'in_progress',
-        stepData: { ...prev, [key]: input.data },
-      });
-      return toOnboardingView(updatedOnboarding!);
-    }
-
-    const workspace = await ensureWorkspace(db, userId);
+    const key = `step${step}`;
 
     const step1Data = input.data as {
       name: string;
@@ -117,10 +103,41 @@ export const OnboardingService = (db: Db) => {
       const txProjectService = ProjectService(tx);
       const txOnboardingRepository = OnboardingRepository(tx);
 
+      const workspace = await ensureWorkspace(tx, userId);
+
+      const existing = await onboardingRepository.getByUserId(userId);
+
+      if (existing) {
+        assertOnboardingOrder(existing, input.step);
+
+        let projectId = existing.projectId;
+
+        if (step === 1) {
+          await txProjectService.update(projectId, {
+            name: step1Data.name,
+            slug: slugify(step1Data.name),
+            description: step1Data.description ?? null,
+            category: toProjectCategory(step1Data.category),
+          });
+        }
+
+        const prev = (existing.stepData ?? {}) as Record<string, unknown>;
+
+        const updatedOnboarding = await txOnboardingRepository.update(existing.id, {
+          step: input.step,
+          projectId,
+          status: 'in_progress',
+          stepData: { ...prev, [key]: input.data },
+        });
+
+        return updatedOnboarding!;
+      }
+
       const project = await txProjectService.create(userId, {
         name: step1Data.name,
         slug: slugify(step1Data.name),
         description: step1Data.description ?? null,
+        category: toProjectCategory(step1Data.category),
         status: 'draft',
       });
 
@@ -168,6 +185,18 @@ function slugify(input: string) {
   );
 }
 
+/** Resolve a step-1 category to the strict projects.category enum. "Other"/custom
+ * values aren't supported yet (AI category support comes later) — reject them. */
+export function toProjectCategory(value: string): ProjectCategoryType {
+  const parsed = projectCategoryEnum.safeParse(value);
+  if (!parsed.success) {
+    throw HttpError.validation(
+      `Category "${value}" is not supported yet. Pick one of: ${projectCategoryEnum.options.join(', ')}.`,
+    );
+  }
+  return parsed.data;
+}
+
 /** A step may only be saved once every earlier step's data exists in stepData. */
 const stepPrerequisites: Record<number, number[]> = {
   2: [1],
@@ -212,6 +241,7 @@ function toProjectView(row: ProjectRow): ProjectType {
     name: row.name,
     slug: row.slug,
     description: row.description,
+    category: row.category,
     status: row.status === 'archived' ? 'archived' : 'active',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -219,14 +249,18 @@ function toProjectView(row: ProjectRow): ProjectType {
 }
 
 function toProjectDetailView(row: ProjectDetailsRow): ProjectDetailType {
+  // AI output is validated at the read boundary — summary is jsonb from the LLM.
+  const summary = row.summary ? kickoffSummarySchema.safeParse(row.summary) : null;
+
   return {
     id: row.id,
     name: row.name,
     slug: row.slug,
     description: row.description,
+    summary: summary?.success ? summary.data : null,
+    category: row.category,
     status: row.status === 'archived' ? 'archived' : 'active',
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    progressPercentage: row.progressPercentage,
     lastOpenedAt: row.lastOpenedAt ? row.lastOpenedAt.toISOString() : null,
     currentTask: row.currentTask,
     numOfTasks: row.numOfTasks,
@@ -235,5 +269,7 @@ function toProjectDetailView(row: ProjectDetailsRow): ProjectDetailType {
     numOfArtifacts: row.numOfArtifacts,
     numOfDeliverables: row.numOfDeliverables,
     numOfKnowledgeSources: row.numOfKnowledgeSources,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }

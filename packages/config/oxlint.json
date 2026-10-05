@@ -11,6 +11,7 @@
     "no-eval": "error",
     "eqeqeq": "error",
     "no-implicit-coercion": "warn",
-    "prefer-const": "warn"
+    "prefer-const": "warn",
+    "react/self-closing-comp": "error"
   }
 }

@@ -2,12 +2,6 @@ import type { CreatePlannerItemInputType, UpdatePlannerItemInputType } from '@ne
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function getPlanner(projectId: string) {
-  return handleResponse(
-    await apiClient.api.v1.planner[':projectId'].$get({ param: { projectId } }),
-  );
-}
-
 export async function createPlannerItem(projectId: string, input: CreatePlannerItemInputType) {
   return handleResponse(
     await apiClient.api.v1.planner[':projectId'].$post({ param: { projectId }, json: input }),

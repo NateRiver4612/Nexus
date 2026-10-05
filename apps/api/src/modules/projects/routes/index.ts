@@ -8,16 +8,23 @@ import { deleteProjectRoute } from './deleteProject';
 import { getOnboardingRoute } from './getOnboarding';
 import { getProjectRoute } from './getProject';
 import { getProjectDeliverablesRoute } from './getProjectDeliverables';
+import { getProjectMilestonesRoute } from '../../milestones/routes/getMilestones';
+import { updateProjectMilestonePositionsRoute } from '../../milestones/routes/updateMilestonePositions';
 import { getProjectsRoute } from './getProjects';
 import { removeDeliverableRoute } from './removeDeliverable';
 import { submitProjectOnboardingRoute } from './submitOnboarding';
 import { saveOnboardingRoute } from './saveOnboarding';
 import { updateProjectRoute } from './updateProject';
 import { requireAuth } from '../../../auth-middleware';
+import { requireProjectAccess } from '../middlewares';
 
 export function projectRoutes() {
   const app = new OpenAPIHono();
+
   app.use('*', requireAuth);
+
+  app.use('/projects/:projectId/*', requireProjectAccess);
+  app.use('/projects/:projectId', requireProjectAccess);
 
   return app.openapiRoutes([
     { route: getOnboardingRoute.route, handler: getOnboardingRoute.handler },
@@ -31,6 +38,11 @@ export function projectRoutes() {
       handler: completeProjectOnboardingRoute.handler,
     },
     { route: getProjectDeliverablesRoute.route, handler: getProjectDeliverablesRoute.handler },
+    { route: getProjectMilestonesRoute.route, handler: getProjectMilestonesRoute.handler },
+    {
+      route: updateProjectMilestonePositionsRoute.route,
+      handler: updateProjectMilestonePositionsRoute.handler,
+    },
     { route: assignDeliverablesRoute.route, handler: assignDeliverablesRoute.handler },
     { route: removeDeliverableRoute.route, handler: removeDeliverableRoute.handler },
     { route: deleteDeliverableRoute.route, handler: deleteDeliverableRoute.handler },

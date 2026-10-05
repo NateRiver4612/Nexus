@@ -29,7 +29,6 @@ export function Step1({ ref, defaults, onSave, onDraftChange }: Step1Props) {
       description: defaults?.description ?? '',
       category: defaults?.category ?? '',
     },
-    mode: 'onTouched',
     resolver: zodResolver(onboardingStep1Schema),
   });
 

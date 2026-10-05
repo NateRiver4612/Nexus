@@ -2,45 +2,18 @@
 
 import { Circle, CircleCheck } from 'lucide-react';
 
-import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 
 import type { KickoffPlanType } from '@nexus/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import DifficultyIndicator from './DifficultyIndicator';
 
 type Milestone = KickoffPlanType['milestones'][number];
 type Task = Milestone['tasks'][number];
 
 interface KickoffPlanListProps {
-  plan: KickoffPlanType;
+  milestones: KickoffPlanType['milestones'];
   className?: string;
-}
-
-const DIFFICULTY_BADGE_STYLES: Record<string, string> = {
-  high: 'bg-red-100 text-red-700 hover:bg-red-100',
-  medium: 'bg-amber-50 text-amber-700 hover:bg-amber-50',
-};
-
-/**
- * High-difficulty tasks render as a colored pill; medium renders lightly;
- * low renders as plain muted text — only the difficulties that need
- * attention get visual weight.
- */
-function DifficultyIndicator({ difficulty }: { difficulty?: string | null }) {
-  if (!difficulty) return null;
-
-  const badgeStyle = DIFFICULTY_BADGE_STYLES[difficulty];
-  const label = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
-
-  if (badgeStyle) {
-    return (
-      <Badge variant="secondary" className={cn('shrink-0 text-xs font-medium', badgeStyle)}>
-        {label}
-      </Badge>
-    );
-  }
-
-  return <span className="shrink-0 text-xs text-gray-400">{label}</span>;
 }
 
 /** Estimated time is stored in minutes → "2h", "1h 30m", "45m". */
@@ -58,7 +31,7 @@ function formatEstimatedTime(minutes?: number | null): string | null {
 function TaskRow({ task }: { task: Task }) {
   const isCompleted = task.status === 'completed';
   const StatusIcon = isCompleted ? CircleCheck : Circle;
-  const estimated = formatEstimatedTime(task.estimatedTime);
+  const estimated = formatEstimatedTime(task.estimatedTimeMinutes);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3">
@@ -83,12 +56,12 @@ function TaskRow({ task }: { task: Task }) {
             </div>
           </div>
 
-          {task.instructions.length > 0 && (
+          {task.steps.length > 0 && (
             <ul className="mt-1.5 space-y-1">
-              {task.instructions.map((instruction, index) => (
+              {task.steps.map((step, index) => (
                 <li key={index} className="flex gap-2 text-xs text-gray-500">
                   <span className="select-none text-gray-300">–</span>
-                  <span className="min-w-0 flex-1">{instruction}</span>
+                  <span className="min-w-0 flex-1">{step.value}</span>
                 </li>
               ))}
             </ul>
@@ -120,18 +93,18 @@ function MilestoneHeader({ index, milestone }: { index: number; milestone: Miles
   );
 }
 
-export function KickoffPlanList({ plan, className }: KickoffPlanListProps) {
+export function KickoffPlanList({ milestones, className }: KickoffPlanListProps) {
   return (
     <Accordion
       type="multiple"
       defaultValue={['milestone-0']}
       className={cn('rounded-xl border border-gray-200 bg-white shadow-sm', className)}
     >
-      {plan.milestones.map((milestone, index) => (
+      {milestones.map((milestone, index) => (
         <AccordionItem
           key={`${milestone.title}-${index}`}
           value={`milestone-${index}`}
-          className={cn(index === plan.milestones.length - 1 && 'border-b-0')}
+          className={cn(index === milestones.length - 1 && 'border-b-0')}
         >
           <AccordionTrigger className="px-4 py-3 hover:no-underline">
             <MilestoneHeader index={index} milestone={milestone} />

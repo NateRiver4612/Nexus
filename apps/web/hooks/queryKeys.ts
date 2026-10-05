@@ -16,6 +16,16 @@ export const plannerKeys = {
   detail: (id: string) => ['planner', id] as const,
 };
 
+export const milestoneKeys = {
+  all: ['milestones'] as const,
+  list: (projectId: string) => ['milestones', 'list', projectId] as const,
+};
+
+export const taskKeys = {
+  all: ['tasks'] as const,
+  detail: (id: string) => ['tasks', id] as const,
+};
+
 export const artifactKeys = {
   all: ['artifacts'] as const,
   list: (projectId: string) => ['artifacts', 'list', projectId] as const,

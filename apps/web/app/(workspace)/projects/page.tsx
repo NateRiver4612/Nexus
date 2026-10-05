@@ -1,4 +1,4 @@
-import { ProjectsView } from '@/components/ProjectsView';
+import { ProjectsView } from '@/components/project/ProjectsView';
 
 export default function Page() {
   return <ProjectsView />;
