@@ -95,4 +95,5 @@ The product/architecture docs live in `docs/` and are the source of truth for in
 - Route files are self-contained: keep params, request/response schemas, and error responses written inline where they are used inside `createRoute`. Do not extract them into module-level `const`s or a `shared.ts` unless they are genuinely reused across different modules.
 - Handlers build their response object inline; do not extract placeholder/response helpers.
 - Only separate code into a shared location when it is reused in more than one place.
+- Name id fields for their entity, never a generic `ids`: use `projectId`, `deliverableIds`, `sourceId`, `milestoneId`, etc. (applies to schemas, request payloads, and variables).
 - **User-facing copy:** API route `description` fields and any error/notification message surfaced in the app are user-facing. Write them as plain, human-readable English (e.g. `'Conversation created'`, `'Project not found'`) — never internal type/tech names (e.g. `'ConversationType created'`) or `Type`-suffixed identifiers. Automated refactors (type renames, renames) must not rewrite these strings.

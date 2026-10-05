@@ -1,6 +1,6 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, projectListSchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, projectDetailListSchema } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
@@ -13,7 +13,7 @@ export const getProjectsRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: {
-          'application/json': { schema: projectListSchema },
+          'application/json': { schema: projectDetailListSchema },
         },
         description: 'List projects',
       },

@@ -1,4 +1,13 @@
-import { boolean, index, pgEnum, pgTable, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  pgEnum,
+  pgTable,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
 import { idColumn, timestamps } from './columns';
 import { projects } from './projects';
@@ -36,3 +45,27 @@ export const deliverables = pgTable(
 
 export type Deliverable = typeof deliverables.$inferSelect;
 export type NewDeliverable = typeof deliverables.$inferInsert;
+
+export const deliverablesProjectsAssignment = pgTable(
+  'deliverables_projects_assignment',
+  {
+    id: idColumn(),
+    deliverableId: uuid('deliverable_id')
+      .notNull()
+      .references(() => deliverables.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('deliverables_projects_assignment_unique_idx').on(
+      table.deliverableId,
+      table.projectId,
+    ),
+    index('deliverables_projects_assignment_project_idx').on(table.projectId),
+  ],
+);
+
+export type DeliverablesProjectAssignment = typeof deliverablesProjectsAssignment.$inferSelect;
+export type NewDeliverablesProjectAssignment = typeof deliverablesProjectsAssignment.$inferInsert;

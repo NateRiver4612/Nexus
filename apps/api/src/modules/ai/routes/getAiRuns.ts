@@ -7,7 +7,7 @@ import { bearerSecurity } from '../../../openapi';
 export const getAiRunsRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/runs/{projectId}',
+    path: '/runs',
     security: bearerSecurity,
     request: {
       params: projectIdParamsSchema,

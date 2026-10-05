@@ -9,9 +9,12 @@ import {
   Megaphone,
   NotebookPen,
   Presentation,
+  Rocket,
   ScrollText,
+  Sprout,
   Table,
   UserStar,
+  Wrench,
 } from 'lucide-react';
 
 export const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — bigger than your avatar upload limit, docs are larger
@@ -59,6 +62,28 @@ export const DEFAULT_ONBOARDING_CATEGORIES = [
     icon: Ellipsis,
   },
 ];
+
+/** Experience level picked in onboarding step 2 — scopes the generated kickoff plan. */
+export const ONBOARDING_LEVELS = [
+  {
+    value: 'beginner',
+    label: 'Foundations',
+    description: 'Learn the basics, build something simple',
+    icon: Sprout,
+  },
+  {
+    value: 'intermediate',
+    label: 'Solid Build',
+    description: 'Move past the basics, build something real',
+    icon: Wrench,
+  },
+  {
+    value: 'advanced',
+    label: 'Full Mastery',
+    description: 'The full arc — light on fundamentals, real depth once you get to advanced',
+    icon: Rocket,
+  },
+] as const;
 
 /** Preset deliverable options shown in onboarding step 4 (custom is added by the user). */
 /* Deliverable presets split in two:

@@ -39,6 +39,16 @@ export const updateDeliverableSchema = createDeliverableSchema.partial();
 
 export const deliverableListSchema = z.array(deliverableSchema).openapi('Deliverables');
 
+/** Attach a set of deliverables (from the shared catalog) to a project. */
+export const assignDeliverablesSchema = z.object({
+  deliverableIds: z.array(idSchema).min(1),
+});
+
+/** Optional project scoping for the catalog listing. */
+export const deliverablesQuerySchema = z.object({
+  projectId: idSchema.optional(),
+});
+
 export const deliverableParamsSchema = z.object({
   projectId: idSchema.openapi({
     param: { name: 'projectId', in: 'path' },

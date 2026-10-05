@@ -1,13 +1,13 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
+import { getDb } from '@nexus/db';
 
 import { aiRunSchema, errorResponseSchema, idParamsSchema } from '@nexus/zod-schemas';
-
-import type { AiRunType } from '@nexus/types';
+import { AIService } from '../service';
 
 export const getAiRunRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/runs/items/{id}',
+    path: '/runs/:id',
     request: {
       params: idParamsSchema,
     },
@@ -26,23 +26,15 @@ export const getAiRunRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
+  handler: async (c) => {
     const { id } = c.req.valid('param');
-    return c.json(
-      {
-        id,
-        projectId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        userId: 'seed@nexus.local',
-        type: 'suggest',
-        status: 'completed',
-        model: null,
-        inputTokens: 0,
-        outputTokens: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        completedAt: null,
-      } satisfies AiRunType,
-      200,
-    );
+
+    const db = getDb();
+
+    const aiService = AIService(db);
+
+    const aiRun = await aiService.get(id)!;
+
+    return c.json(aiRun, 200);
   },
 });

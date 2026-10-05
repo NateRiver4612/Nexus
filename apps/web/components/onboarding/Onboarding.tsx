@@ -6,7 +6,11 @@ import { useIsRestoring } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useGetOnboarding, useSaveOnboardingStep } from '@/hooks/useProjects';
+import {
+  useSubmitProjectOnboarding,
+  useGetOnboarding,
+  useSaveOnboardingStep,
+} from '@/hooks/useProjects';
 import { useOnboardingDraft } from '@/hooks/useOnboardingDraft';
 import { Step1 } from './Step1';
 import { Step2 } from './Step2';
@@ -23,7 +27,8 @@ const steps = [
   },
   {
     title: 'What are you trying to accomplish?',
-    description: 'Describe your goal in your own words.',
+    description:
+      "Describe your goal in your own words — a little about your background helps Nexus tailor the plan to where you're actually starting from.",
   },
   {
     title: 'Context & Resources',
@@ -43,7 +48,9 @@ export function Onboarding() {
   const router = useRouter();
   const { data: onboarding, isLoading } = useGetOnboarding();
 
-  const { mutateAsync: saveStep, isPending } = useSaveOnboardingStep();
+  const { mutateAsync: saveStep, isPending: isSaving } = useSaveOnboardingStep();
+
+  const { mutateAsync: submitOnboarding, isPending: isGenerating } = useSubmitProjectOnboarding();
 
   const projectId = onboarding?.projectId;
 
@@ -95,8 +102,22 @@ export function Onboarding() {
   async function handleFinish() {
     // setCreating(true);
     try {
-      // clearDraft();
-      // router.push(`/projects`);
+      if (!projectId || !onboarding.id) {
+        return;
+      }
+
+      if (onboarding.status === 'submitted') {
+        return router.push('/new-project/preview');
+      }
+
+      const { runId } = await submitOnboarding({
+        projectId,
+        onboardingId: onboarding.id,
+      });
+
+      if (runId) {
+        router.push('/new-project/preview');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the project.');
       setCreating(false);
@@ -167,6 +188,7 @@ export function Onboarding() {
           <Step3
             ref={stepRef}
             projectId={projectId}
+            defaults={mergedData.step3}
             onSave={async (data) => {
               await saveStep({ step: 3, data });
               setDraftStepData('step3', data);
@@ -203,7 +225,7 @@ export function Onboarding() {
           <span />
         )}
 
-        <Button type="button" onClick={handleNext} disabled={creating || isPending}>
+        <Button type="button" onClick={handleNext} disabled={creating || isSaving || isGenerating}>
           {creating ? 'Creating…' : isLast ? 'Generate plan' : 'Continue'}
           {!creating && <ArrowRight className="size-4" />}
         </Button>

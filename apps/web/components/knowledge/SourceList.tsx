@@ -90,7 +90,7 @@ export function SourceList({
               className={cn(
                 'flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2',
                 {
-                  'bg-gray-200 opacity-50 animate-bounce': isPending,
+                  'bg-gray-100 animate-pulse': isPending,
                 },
               )}
             >
@@ -107,19 +107,22 @@ export function SourceList({
                   )}
                 </div>
               </div>
-              {!onlyView &&
-                (isCompleted ? (
-                  <Trash2
-                    onClick={() => {
-                      setError(null);
-                      setTarget(file);
-                    }}
-                    strokeWidth={2}
-                    className="size-5 cursor-pointer! text-destructive"
-                  />
-                ) : (
-                  <Spinner></Spinner>
-                ))}
+              <div>
+                {!onlyView &&
+                  (isCompleted ? (
+                    <Trash2
+                      onClick={() => {
+                        setError(null);
+                        setTarget(file);
+                      }}
+                      strokeWidth={2}
+                      className="size-5 cursor-pointer! text-destructive"
+                    />
+                  ) : (
+                    <Spinner></Spinner>
+                  ))}
+              </div>
+
               <DeleteConfirmDialog
                 open={file.id === target?.id}
                 close={() => setTarget(null)}

@@ -1,5 +1,10 @@
-import CreateProjectView from '@/components/CreateProjectView';
+'use client';
+import { Onboarding } from '@/components/onboarding/Onboarding';
 
 export default function Page() {
-  return <CreateProjectView />;
+  return (
+    <div>
+      <Onboarding />
+    </div>
+  );
 }

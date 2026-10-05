@@ -37,12 +37,17 @@ export const projectSchema = z
       .string()
       .nullable()
       .openapi({ example: 'Modular monolith for planning and collaboration' }),
-    status: z.enum(['active', 'archived', 'draft', 'completed']).default('draft'),
+    status: z.enum(['draft', 'active', 'paused', 'archived']).default('draft'),
     ...timestampSchema,
   })
   .openapi('Project');
 
-export const onboardingStatusSchema = z.enum(['in_progress', 'completed']).default('in_progress');
+export const onboardingStatusSchema = z
+  .enum(['in_progress', 'submitted', 'completed'])
+  .default('in_progress');
+
+/** How much the user wants to cover — scopes the generated kickoff plan. */
+export const onboardingLevelEnum = z.enum(['beginner', 'intermediate', 'advanced']);
 
 export const onboardingStep1Schema = z.object({
   name: z
@@ -67,9 +72,15 @@ export const onboardingStep1Schema = z.object({
 });
 
 export const onboardingStep2Schema = z.object({
-  context: z.string().openapi({
-    example: `I need to research the the competitors, identify pricing strategies, and analyze the market trends to create a comprehensive report that will help us make informed decisions for our new product launch.`,
-  }),
+  context: z
+    .string()
+    .min(1, {
+      error: 'Please describe your goal',
+    })
+    .openapi({
+      example: `I need to research the competitors, identify pricing strategies, and analyze the market trends to create a comprehensive report that will help us make informed decisions for our new product launch.`,
+    }),
+  level: onboardingLevelEnum,
 });
 
 /** Serialized file metadata (a real `File` can't cross the wire or live in stepData jsonb). */
@@ -95,11 +106,20 @@ export const onboardingStep4Schema = z.object({
     .object({
       id: z.uuid(),
       name: z.string(),
+      kind: z.string(),
+      isCustom: z.boolean(),
     })
     .array()
     .min(1)
     .openapi({
-      example: ['World Report', 'Spreadsheet', 'Timeline'],
+      example: [
+        {
+          id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+          name: 'Word report',
+          kind: 'word_report',
+          isCustom: false,
+        },
+      ],
     }),
 });
 
@@ -145,6 +165,7 @@ export const onboardingStateSchema = z
     status: onboardingStatusSchema,
     step: z.number().int().min(1).max(5).default(1),
     projectId: idSchema,
+    aiRunId: idSchema.nullish(),
     stepData: onboardingDataSchema.partial().default({}),
     ...timestampSchema,
   })
@@ -175,6 +196,24 @@ export const updateOnboardingSchema = z
     }),
   ])
   .openapi('UpdateOnboarding');
+
+export const onboardingIdQuerySchema = z.object({
+  onboardingId: idSchema.openapi({
+    param: { name: 'onboardingId', in: 'query' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
+
+export const projectOnboardingParamsSchema = z.object({
+  projectId: idSchema.openapi({
+    param: { name: 'projectId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+  onboardingId: idSchema.openapi({
+    param: { name: 'onboardingId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
 
 export const createProjectSchema = projectSchema.pick({
   name: true,

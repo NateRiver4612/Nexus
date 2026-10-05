@@ -1,22 +1,26 @@
+'use client';
+
 import { Boxes } from 'lucide-react';
 
-import type { ProjectType } from '@nexus/types';
-import { Badge } from '@/components/ui/badge';
+import type { ProjectDetailType } from '@nexus/types';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 interface ProjectCardProps {
-  project: ProjectType;
+  project: ProjectDetailType;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
+  const tasks = project.numOfTasks ?? 0;
+  const completed = project.numOfCompletedTasks ?? 0;
+  const percent = tasks > 0 ? Math.round((completed / tasks) * 100) : 0;
+
   return (
     <Card className="flex flex-col gap-4 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
+      <div>
         <div className="flex size-9 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
           <Boxes className="size-5" />
         </div>
-        <Badge variant="danger">At risk</Badge>
       </div>
 
       <div>
@@ -24,8 +28,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <Progress value={50} />
-        <span className="text-xs text-muted-foreground">50%</span>
+        <Progress value={percent} />
+        <span className="text-xs text-muted-foreground">{percent}%</span>
       </div>
 
       <div className="space-y-1">
@@ -33,13 +37,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
           Continue
         </p>
         <p className="text-sm text-foreground">
-          {project.description ?? 'Review Executive Summary'}
+          {project.currentTask?.title ?? project.description ?? 'No active tasks yet'}
         </p>
       </div>
 
       <p className="mt-auto text-xs text-muted-foreground">
-        14 files <span className="mx-1">·</span> 22 artifacts <span className="mx-1">·</span>{' '}
-        <span className="text-error">5 days left</span>
+        {project.numOfKnowledgeSources ?? 0} files <span className="mx-1">·</span>{' '}
+        {project.numOfArtifacts ?? 0} artifacts <span className="mx-1">·</span>{' '}
+        {project.numOfDeliverables ?? 0} deliverables
       </p>
     </Card>
   );

@@ -14,13 +14,12 @@ import { projects } from './projects';
 import { users } from './users';
 
 export const taskStatus = pgEnum('task_status', ['todo', 'in_progress', 'completed', 'cancelled']);
-export const milestoneStatus = pgEnum('milestone_status', [
-  'planned',
-  'active',
-  'paused',
-  'completed',
-]);
-export const taskPriority = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
+export const milestoneStatus = pgEnum('milestone_status', ['planned', 'active', 'completed']);
+export const taskDifficulty = pgEnum('task_difficulty', ['low', 'medium', 'high']);
+
+export type TaskStatus = (typeof taskStatus.enumValues)[number];
+export type MilestoneStatus = (typeof milestoneStatus.enumValues)[number];
+export type TaskDifficulty = (typeof taskDifficulty.enumValues)[number];
 
 export const milestones = pgTable(
   'milestones',
@@ -33,7 +32,6 @@ export const milestones = pgTable(
     description: text('description'),
     position: integer('position').notNull().default(0),
     status: milestoneStatus('status').notNull().default('planned'),
-    dueDate: timestamp('due_date', { withTimezone: true, mode: 'date' }),
     ...timestamps,
   },
   (table) => [index('milestones_project_idx').on(table.projectId, table.position)],
@@ -53,9 +51,11 @@ export const tasks = pgTable(
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
     status: taskStatus('status').notNull().default('todo'),
-    priority: taskPriority('priority').notNull().default('medium'),
+    difficulty: taskDifficulty('difficulty').notNull().default('medium'),
+    estimatedTimeMinutes: integer('estimated_time_minutes'),
+    actualTimeMinutes: integer('actual_time_minutes'), // @todo: Later when support the task Timer (https://trello.com/c/lUBU0lO0/53-add-timer-for-task)
+    instructions: text('instructions').array().notNull().default([]),
     position: integer('position').notNull().default(0),
-    dueDate: timestamp('due_date', { withTimezone: true, mode: 'date' }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdBy: uuid('created_by')
       .notNull()
@@ -66,7 +66,6 @@ export const tasks = pgTable(
     index('tasks_project_idx').on(table.projectId),
     index('tasks_milestone_idx').on(table.milestoneId),
     index('tasks_status_idx').on(table.status),
-    index('tasks_due_date_idx').on(table.dueDate),
   ],
 );
 
@@ -82,9 +81,10 @@ export const projectProgress = pgTable('project_progress', {
     .notNull()
     .unique()
     .references(() => projects.id, { onDelete: 'cascade' }),
+  progressPercentage: integer('progress_percentage').notNull().default(0),
   currentTaskId: uuid('current_task_id').references(() => tasks.id, { onDelete: 'set null' }),
   lastOpenedAt: timestamp('last_opened_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps,
 });
 
 export type ProjectProgress = typeof projectProgress.$inferSelect;

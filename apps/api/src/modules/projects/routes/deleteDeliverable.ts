@@ -8,21 +8,26 @@ import {
 
 import { getDb } from '@nexus/db';
 
-import { getUser } from '../../../auth-middleware';
+import { requireCustomDeliverable } from '../../deliverables/middlewares';
+import { DeliverableService } from '../../deliverables/service';
 import { HttpError } from '../../../errors';
-import { DeliverableService } from '../service';
 
 export const deleteDeliverableRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'delete',
-    path: '/:projectId/:deliverableId',
+    path: '/:projectId/deliverables/:deliverableId/delete',
     request: {
       params: deliverableParamsSchema,
     },
+    middleware: [requireCustomDeliverable],
     responses: {
       200: {
         content: { 'application/json': { schema: deliverableSchema } },
-        description: 'Deliverable deleted',
+        description: 'Custom deliverable deleted',
+      },
+      400: {
+        content: { 'application/json': { schema: errorResponseSchema } },
+        description: 'Only custom deliverables can be deleted',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },
@@ -36,13 +41,12 @@ export const deleteDeliverableRoute = defineOpenAPIRoute({
   }),
   handler: async (c) => {
     const { projectId, deliverableId } = c.req.valid('param');
-    getUser(c);
 
     const db = getDb();
     const service = DeliverableService(db);
 
-    const deleted = await service.remove(projectId, deliverableId);
-    if (!deleted) throw HttpError.notFound('Deliverable not found');
+    const deleted = await service.removeCustom(projectId, deliverableId);
+    if (!deleted) throw HttpError.internal('Deliverable could not be deleted');
 
     return c.json(deleted, 200);
   },

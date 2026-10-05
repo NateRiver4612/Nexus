@@ -1,29 +1,41 @@
 import {
+  assignDeliverables,
   createDeliverable,
   deleteDeliverable,
+  removeDeliverable,
   getDeliverables,
-  getSystemDeliverables,
+  getProjectDeliverables,
 } from '@/api/deliverables';
 
 import { createMutationHook } from '@/hooks/createMutation';
-import { createDetailQueryHook, createQueryHook } from '@/hooks/createQuery';
+import { createDetailQueryHook } from '@/hooks/createQuery';
 import { deliverableKeys } from './queryKeys';
 
+/** Available catalog — optional project scoping includes that project's own deliverables. */
 export const useGetDeliverables = createDetailQueryHook(getDeliverables, (projectId) =>
-  deliverableKeys.list(projectId),
+  deliverableKeys.list(projectId ?? 'all'),
 );
 
-export const useGetSystemDeliverables = createQueryHook(
-  getSystemDeliverables,
-  () => deliverableKeys.system,
+/** A project's selected deliverables. */
+export const useGetProjectDeliverables = createDetailQueryHook(
+  getProjectDeliverables,
+  (projectId) => deliverableKeys.assigned(projectId),
 );
 
 export const useCreateDeliverable = createMutationHook(createDeliverable, (queryClient) => ({
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: deliverableKeys.all }),
+}));
+
+export const useAssignDeliverables = createMutationHook(assignDeliverables, (queryClient) => ({
   onSuccess: (_, variables) =>
-    queryClient.invalidateQueries({ queryKey: deliverableKeys.list(variables.projectId) }),
+    queryClient.invalidateQueries({ queryKey: deliverableKeys.assigned(variables.projectId) }),
 }));
 
 export const useDeleteDeliverable = createMutationHook(deleteDeliverable, (queryClient) => ({
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: deliverableKeys.all }),
+}));
+
+export const useRemoveDeliverable = createMutationHook(removeDeliverable, (queryClient) => ({
   onSuccess: (_, variables) =>
-    queryClient.invalidateQueries({ queryKey: deliverableKeys.list(variables.projectId) }),
+    queryClient.invalidateQueries({ queryKey: deliverableKeys.assigned(variables.projectId) }),
 }));

@@ -1,4 +1,5 @@
 import type {
+  AiRunType,
   CreateAiSuggestionInputType,
   CreateConversationInputType,
   CreateMessageInputType,
@@ -41,8 +42,10 @@ export async function getAiRuns(projectId: string) {
   );
 }
 
-export async function getAiRun(id: string) {
-  return handleResponse(await apiClient.api.v1.ai.runs.items[':id'].$get({ param: { id } }));
+export async function getAiRun(id: string): Promise<AiRunType> {
+  return (await handleResponse(
+    await apiClient.api.v1.ai.runs[':id'].$get({ param: { id } }),
+  )) as AiRunType;
 }
 
 export async function getConversations(projectId: string) {

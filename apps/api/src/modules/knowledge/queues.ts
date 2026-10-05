@@ -1,22 +1,5 @@
-import { Queue, type JobsOptions } from 'bullmq';
-
-import { getRedis } from './redis';
-
-const globalForQueues = globalThis as unknown as { nexusQueues?: Map<string, Queue> };
-
-export function getQueue<T>(name: string) {
-  // Reuse queues across hot-reloading dev servers.
-  if (!globalForQueues.nexusQueues) {
-    globalForQueues.nexusQueues = new Map();
-  }
-  const existing = globalForQueues.nexusQueues.get(name);
-  if (existing) {
-    return existing as Queue<T>;
-  }
-  const queue = new Queue<T>(name, { connection: getRedis() });
-  globalForQueues.nexusQueues.set(name, queue);
-  return queue;
-}
+import { type JobsOptions } from 'bullmq';
+import { getQueue } from '../../lib/getQueue';
 
 export type KnowledgeProcessJob = { sourceId: string };
 export type KnowledgeRemoveJob = { storageKey: string };
@@ -30,7 +13,7 @@ export function getKnowledgeQueue() {
 }
 
 /** Enqueue the ingestion job keyed on the source so re-submits don't double-process. */
-export async function enqueueIngest({
+export async function enqueueKnowledge({
   name,
   data,
   jobId,

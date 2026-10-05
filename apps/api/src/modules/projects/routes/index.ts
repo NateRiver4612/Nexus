@@ -1,10 +1,16 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 
+import { assignDeliverablesRoute } from './assignDeliverables';
+import { completeProjectOnboardingRoute } from './completeOnboarding';
 import { createProjectRoute } from './createProject';
+import { deleteDeliverableRoute } from './deleteDeliverable';
 import { deleteProjectRoute } from './deleteProject';
 import { getOnboardingRoute } from './getOnboarding';
 import { getProjectRoute } from './getProject';
+import { getProjectDeliverablesRoute } from './getProjectDeliverables';
 import { getProjectsRoute } from './getProjects';
+import { removeDeliverableRoute } from './removeDeliverable';
+import { submitProjectOnboardingRoute } from './submitOnboarding';
 import { saveOnboardingRoute } from './saveOnboarding';
 import { updateProjectRoute } from './updateProject';
 import { requireAuth } from '../../../auth-middleware';
@@ -16,6 +22,18 @@ export function projectRoutes() {
   return app.openapiRoutes([
     { route: getOnboardingRoute.route, handler: getOnboardingRoute.handler },
     { route: saveOnboardingRoute.route, handler: saveOnboardingRoute.handler },
+    {
+      route: submitProjectOnboardingRoute.route,
+      handler: submitProjectOnboardingRoute.handler,
+    },
+    {
+      route: completeProjectOnboardingRoute.route,
+      handler: completeProjectOnboardingRoute.handler,
+    },
+    { route: getProjectDeliverablesRoute.route, handler: getProjectDeliverablesRoute.handler },
+    { route: assignDeliverablesRoute.route, handler: assignDeliverablesRoute.handler },
+    { route: removeDeliverableRoute.route, handler: removeDeliverableRoute.handler },
+    { route: deleteDeliverableRoute.route, handler: deleteDeliverableRoute.handler },
     { route: getProjectsRoute.route, handler: getProjectsRoute.handler },
     { route: createProjectRoute.route, handler: createProjectRoute.handler },
     { route: getProjectRoute.route, handler: getProjectRoute.handler },
