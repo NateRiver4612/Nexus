@@ -15,7 +15,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "format": "prettier --write .",
+    "format": "prettier --write --config packages/config/prettier.json .",
     "format:check": "prettier --check .",
     "db:generate": "bun run --filter=@nexus/db generate",
     "db:migrate": "bun run --filter=@nexus/db migrate",
@@ -28,6 +28,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@hono/swagger-ui": "^0.6.1",
+    "@hono/zod-openapi": "^1.5.2",
     "dotenv": "^17.4.2"
   }
 }

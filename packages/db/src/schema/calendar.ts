@@ -25,7 +25,7 @@ export const calendarEvents = pgTable(
     endAt: timestamp('end_at', { withTimezone: true }).notNull(),
     location: varchar('location', { length: 255 }),
     status: eventStatus('status').notNull().default('scheduled'),
-    createdBy: text('created_by')
+    createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     ...timestamps,

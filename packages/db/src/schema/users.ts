@@ -6,6 +6,7 @@ import {
   timestamp,
   uniqueIndex,
   varchar,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 import { timestamps } from './columns';
@@ -15,7 +16,7 @@ import { timestamps } from './columns';
  * `users` is the Nexus-side identity; credentials live on `accounts`.
  */
 export const users = pgTable('users', {
-  id: text('id').primaryKey(),
+  id: uuid().primaryKey(),
   name: text('name'),
   email: text('email').notNull(),
   emailVerified: boolean('email_verified').notNull().default(false),
@@ -32,7 +33,7 @@ export type NewUser = typeof users.$inferInsert;
 
 export const sessions = pgTable('sessions', {
   id: text('id').primaryKey(),
-  userId: text('user_id')
+  userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
@@ -52,7 +53,7 @@ export const accounts = pgTable('accounts', {
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
-  userId: text('user_id')
+  userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   accessToken: text('access_token'),
@@ -92,7 +93,7 @@ export const userPreferences = pgTable(
   'user_preferences',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id')
+    userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     theme: varchar('theme', { length: 16 }).notNull().default('system'),

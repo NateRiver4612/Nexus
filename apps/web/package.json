@@ -8,17 +8,25 @@
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint app features next.config.ts"
+    "lint": "oxlint --config ../../packages/config/oxlint.json app components features hooks lib api next.config.ts"
   },
   "dependencies": {
     "@nexus/types": "workspace:*",
-    "@nexus/ui": "workspace:*",
+    "@nexus/zod-schemas": "workspace:*",
+    "@tanstack/react-query": "^5.101.4",
     "better-auth": "^1.3.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "hono": "4.13.2",
+    "lucide-react": "^0.525.0",
     "next": "^15.5.0",
+    "radix-ui": "^1.6.7",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {
+    "@nexus/api": "workspace:*",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",

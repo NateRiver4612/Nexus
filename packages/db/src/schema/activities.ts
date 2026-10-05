@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 import { idColumn } from './columns';
 import { projects } from './projects';
@@ -15,7 +15,7 @@ export const activities = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
+    userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     type: varchar('type', { length: 64 }).notNull(),

@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env';
 
 import {
   activities,
@@ -7,7 +7,7 @@ import {
   artifacts,
   calendarEvents,
   conversations,
-  documents,
+  file,
   getDb,
   knowledgeCollections,
   messages,
@@ -34,7 +34,7 @@ async function main() {
     artifactVersions,
     artifacts,
     calendarEvents,
-    documents,
+    file,
     knowledgeCollections,
     tasks,
     milestones,
@@ -124,13 +124,14 @@ async function main() {
       .returning()
   )[0]!;
 
-  await db.insert(documents).values({
+  await db.insert(file).values({
     projectId: project.id,
     collectionId: collection.id,
+    sourceType: 'file',
     name: 'stack-notes.pdf',
-    mimeType: 'application/pdf',
+    fileMimeType: 'application/pdf',
     storageKey: 'knowledge/seed/stack-notes.pdf',
-    size: 1024,
+    fileSizeBytes: 1024,
     status: 'ready',
     createdBy: authorId,
   });
