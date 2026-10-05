@@ -1,5 +1,5 @@
 const layout = ({ children }: { children: React.ReactNode }) => {
-  return <div>{children}</div>;
+  return <div className="h-full">{children}</div>;
 };
 
 export default layout;

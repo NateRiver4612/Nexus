@@ -2,7 +2,7 @@
 
 import { Circle, CircleCheck } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { cn, formatTimeMinutes } from '@/lib/utils';
 
 import type { KickoffPlanType } from '@nexus/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -16,22 +16,10 @@ interface KickoffPlanListProps {
   className?: string;
 }
 
-/** Estimated time is stored in minutes → "2h", "1h 30m", "45m". */
-function formatEstimatedTime(minutes?: number | null): string | null {
-  if (!minutes) return null;
-
-  const hours = Math.floor(minutes / 60);
-  const remaining = minutes % 60;
-
-  if (hours === 0) return `${remaining}m`;
-  if (remaining === 0) return `${hours}h`;
-  return `${hours}h ${remaining}m`;
-}
-
 function TaskRow({ task }: { task: Task }) {
   const isCompleted = task.status === 'completed';
   const StatusIcon = isCompleted ? CircleCheck : Circle;
-  const estimated = formatEstimatedTime(task.estimatedTimeMinutes);
+  const estimated = formatTimeMinutes(task.estimatedTimeMinutes);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3">

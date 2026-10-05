@@ -24,6 +24,8 @@ export const milestoneKeys = {
 export const taskKeys = {
   all: ['tasks'] as const,
   detail: (id: string) => ['tasks', id] as const,
+  notes: (taskId: string) => ['tasks', taskId, 'notes'] as const,
+  note: (taskId: string, noteId: string) => ['tasks', taskId, 'notes', noteId] as const,
 };
 
 export const artifactKeys = {

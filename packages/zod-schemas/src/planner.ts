@@ -120,6 +120,29 @@ export const updateTaskSchema = taskSchema
   })
   .partial();
 
+/** A note attached to a task — persisted row DTO. `content` is the structured
+ * document (e.g. Tiptap JSON); `contentText` is the plain-text render. */
+export const taskNoteSchema = z
+  .object({
+    id: idSchema,
+    taskId: idSchema,
+    title: z.string().max(255).default('Untitled').openapi({ example: 'Setup notes' }),
+    content: z.record(z.string(), z.unknown()),
+    contentText: z.string().nullable().openapi({ example: 'Install Postgres and configure…' }),
+    ...timestampSchema,
+  })
+  .openapi('TaskNote');
+
+/** Create payload — title + document JSON (+ optional plain-text render). */
+export const createTaskNoteSchema = z.object({
+  title: z.string().min(1).max(255).openapi({ example: 'Setup notes' }),
+  content: z.record(z.string(), z.unknown()),
+  contentText: z.string().nullish(),
+});
+
+/** Update payload — any subset of the note's editable fields. */
+export const updateTaskNoteSchema = createTaskNoteSchema.partial();
+
 export const submitOnboardingOutputSchema = z.object({
   runId: z.uuid(),
 });
@@ -269,6 +292,13 @@ export const taskStepParamsSchema = taskCompleteParamsSchema.extend({
 export const taskDodParamsSchema = taskCompleteParamsSchema.extend({
   dodId: idSchema.openapi({
     param: { name: 'dodId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
+
+export const taskNoteParamsSchema = taskCompleteParamsSchema.extend({
+  noteId: idSchema.openapi({
+    param: { name: 'noteId', in: 'path' },
     example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
   }),
 });

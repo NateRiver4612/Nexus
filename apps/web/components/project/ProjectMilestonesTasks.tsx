@@ -37,10 +37,6 @@ function withMilestoneTarget<T extends { operation: { target?: { id: unknown } |
 
   if (resolved == null || resolved === operation.target.id) return event;
 
-  console.log({
-    resolved,
-  });
-
   return {
     ...event,
     operation: { ...operation, target: { ...operation.target, id: resolved } },
