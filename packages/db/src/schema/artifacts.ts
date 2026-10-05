@@ -46,7 +46,7 @@ export const artifacts = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     type: artifactType('type').notNull(),
     status: artifactStatus('status').notNull().default('queued'),
-    createdBy: text('created_by')
+    createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     ...timestamps,
@@ -71,7 +71,7 @@ export const artifactVersions = pgTable(
     storageKey: text('storage_key').notNull(),
     mimeType: varchar('mime_type', { length: 128 }).notNull(),
     size: bigint('size', { mode: 'number' }).notNull().default(0),
-    createdBy: text('created_by')
+    createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

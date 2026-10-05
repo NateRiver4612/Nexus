@@ -24,7 +24,7 @@ export default function ProjectLayout({
         <h1 className="text-2xl font-semibold">Project</h1>
         <p className="text-sm text-muted-foreground">{projectId}</p>
       </header>
-      <nav className="flex gap-1 border-b">
+      <nav className="flex gap-1 border-b-border">
         {tabs.map((tab) => (
           <Link
             key={tab.href}

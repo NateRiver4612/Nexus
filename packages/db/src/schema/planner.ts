@@ -57,7 +57,7 @@ export const tasks = pgTable(
     position: integer('position').notNull().default(0),
     dueDate: timestamp('due_date', { withTimezone: true, mode: 'date' }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
-    createdBy: text('created_by')
+    createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     ...timestamps,

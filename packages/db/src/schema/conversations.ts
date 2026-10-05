@@ -16,7 +16,7 @@ export const conversations = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
+    userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     title: varchar('title', { length: 255 }).notNull().default('New conversation'),

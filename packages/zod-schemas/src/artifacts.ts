@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-import { idSchema } from './common';
+import { idSchema, timestampSchema } from './common';
 
 export const artifactSchema = z
   .object({
@@ -10,8 +10,7 @@ export const artifactSchema = z
     title: z.string().min(1).max(255).openapi({ example: 'Nexus architecture' }),
     content: z.string().nullable().openapi({ example: 'High level system diagram' }),
     metadata: z.record(z.string(), z.unknown()).nullable(),
-    createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
-    updatedAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+    ...timestampSchema,
   })
   .openapi('Artifact');
 

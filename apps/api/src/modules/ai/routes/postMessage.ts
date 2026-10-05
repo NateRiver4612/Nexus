@@ -1,16 +1,18 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { createMessageSchema, errorResponseSchema, idParamsSchema, messageSchema } from '@nexus/zod-schemas';
+import {
+  createMessageSchema,
+  errorResponseSchema,
+  idParamsSchema,
+  messageSchema,
+} from '@nexus/zod-schemas';
 
-import type { Message } from '@nexus/types';
-
-import { bearerSecurity } from '../../../openapi';
+import type { MessageType } from '@nexus/types';
 
 export const postMessageRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
     path: '/conversations/items/{id}/messages',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
       body: {
@@ -46,7 +48,8 @@ export const postMessageRoute = defineOpenAPIRoute({
         content: body.content,
         sourceId: body.sourceId ?? null,
         createdAt: new Date().toISOString(),
-      } satisfies Message,
+        updatedAt: new Date().toISOString(),
+      } satisfies MessageType,
       201,
     );
   },

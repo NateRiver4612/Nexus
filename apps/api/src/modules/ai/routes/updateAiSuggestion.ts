@@ -7,15 +7,12 @@ import {
   updateAiSuggestionSchema,
 } from '@nexus/zod-schemas';
 
-import type { AiSuggestion } from '@nexus/types';
-
-import { bearerSecurity } from '../../../openapi';
+import type { AiSuggestionType } from '@nexus/types';
 
 export const updateAiSuggestionRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
     path: '/suggestions/items/{id}',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
       body: {
@@ -49,12 +46,13 @@ export const updateAiSuggestionRoute = defineOpenAPIRoute({
         projectId: body.projectId ?? '3fa85f64-5717-4562-b3fc-2c963f66afa6',
         type: body.type ?? 'refactor',
         title: body.title ?? 'Placeholder',
-        description: 'description' in body ? body.description ?? null : null,
+        description: 'description' in body ? (body.description ?? null) : null,
         status: body.status ?? 'pending',
         metadata: body.metadata ?? {},
         createdAt: new Date().toISOString(),
-        expiresAt: 'expiresAt' in body ? body.expiresAt ?? null : null,
-      } satisfies AiSuggestion,
+        updatedAt: new Date().toISOString(),
+        expiresAt: 'expiresAt' in body ? (body.expiresAt ?? null) : null,
+      } satisfies AiSuggestionType,
       200,
     );
   },

@@ -1,12 +1,32 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { listNotifications } from '@/api';
+import type { CreateNotificationInputType } from '@nexus/types';
+
+import { createNotification, getNotifications, readNotification } from '@/api/notifications';
 
 import { notificationKeys } from './queryKeys';
 
-export function useNotifications() {
+export function useGetNotifications() {
   return useQuery({
     queryKey: notificationKeys.all,
-    queryFn: () => listNotifications(),
+    queryFn: () => getNotifications(),
+  });
+}
+
+export function useCreateNotification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateNotificationInputType) => createNotification(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+  });
+}
+
+export function useReadNotification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => readNotification(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
   });
 }

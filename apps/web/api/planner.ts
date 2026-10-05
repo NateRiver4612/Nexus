@@ -1,20 +1,20 @@
-import type { CreatePlannerItemInput, UpdatePlannerItemInput } from '@nexus/types';
+import type { CreatePlannerItemInputType, UpdatePlannerItemInputType } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function listPlanner(projectId: string) {
+export async function getPlanner(projectId: string) {
   return handleResponse(
     await apiClient.api.v1.planner[':projectId'].$get({ param: { projectId } }),
   );
 }
 
-export async function createPlannerItem(projectId: string, input: CreatePlannerItemInput) {
+export async function createPlannerItem(projectId: string, input: CreatePlannerItemInputType) {
   return handleResponse(
     await apiClient.api.v1.planner[':projectId'].$post({ param: { projectId }, json: input }),
   );
 }
 
-export async function updatePlannerItem(id: string, input: UpdatePlannerItemInput) {
+export async function updatePlannerItem(id: string, input: UpdatePlannerItemInputType) {
   return handleResponse(
     await apiClient.api.v1.planner.items[':id'].$patch({ param: { id }, json: input }),
   );

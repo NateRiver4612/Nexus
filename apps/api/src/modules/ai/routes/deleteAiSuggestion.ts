@@ -2,13 +2,10 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { errorResponseSchema, idParamsSchema, okSchema } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../openapi';
-
 export const deleteAiSuggestionRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'delete',
     path: '/suggestions/items/{id}',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
     },

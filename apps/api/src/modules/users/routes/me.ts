@@ -2,7 +2,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { errorResponseSchema, userSchema } from '@nexus/zod-schemas';
 
-import type { User } from '@nexus/types';
+import type { UserType } from '@nexus/types';
 
 import { getUser } from '../../../auth-middleware';
 import { bearerSecurity } from '../../../openapi';
@@ -14,7 +14,7 @@ export const meRoute = defineOpenAPIRoute({
     security: bearerSecurity,
     responses: {
       200: {
-        content: { 'application/json': { schema: userSchema.openapi('User') } },
+        content: { 'application/json': { schema: userSchema.openapi('UserType') } },
         description: 'Current user profile',
       },
       401: {
@@ -31,7 +31,7 @@ export const meRoute = defineOpenAPIRoute({
         email: user.email ?? '',
         name: user.name ?? null,
         image: user.image ?? null,
-      } satisfies User,
+      } satisfies UserType,
       200,
     );
   },

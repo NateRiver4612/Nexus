@@ -7,15 +7,12 @@ import {
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
 
-import type { Conversation } from '@nexus/types';
-
-import { bearerSecurity } from '../../../openapi';
+import type { ConversationType } from '@nexus/types';
 
 export const createConversationRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
     path: '/conversations/{projectId}',
-    security: bearerSecurity,
     request: {
       params: projectIdParamsSchema,
       body: {
@@ -53,7 +50,7 @@ export const createConversationRoute = defineOpenAPIRoute({
         title: body.title ?? 'New conversation',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      } satisfies Conversation,
+      } satisfies ConversationType,
       201,
     );
   },

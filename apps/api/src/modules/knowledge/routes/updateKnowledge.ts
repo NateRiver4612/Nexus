@@ -7,7 +7,7 @@ import {
   updateKnowledgeItemSchema,
 } from '@nexus/zod-schemas';
 
-import type { KnowledgeItem } from '@nexus/types';
+import type { KnowledgeItemType } from '@nexus/types';
 
 import { bearerSecurity } from '../../../openapi';
 
@@ -55,7 +55,7 @@ export const updateKnowledgeRoute = defineOpenAPIRoute({
         tags: 'tags' in body ? (body.tags ?? []) : [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      } satisfies KnowledgeItem,
+      } satisfies KnowledgeItemType,
       200,
     );
   },

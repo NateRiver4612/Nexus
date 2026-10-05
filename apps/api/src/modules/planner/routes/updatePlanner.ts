@@ -7,13 +7,10 @@ import {
   updatePlannerItemSchema,
 } from '@nexus/zod-schemas';
 
-import { bearerSecurity } from '../../../openapi';
-
 export const updatePlannerRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
     path: '/items/{id}',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
       body: {

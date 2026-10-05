@@ -7,23 +7,22 @@ A modular monolith for project planning and collaboration.
 ```
 apps/
   web/     Next.js frontend (App Router)
-  api/     Hono modular monolith (vertical-slice modules)
+  api/     Hono modular monolith (vertical-slice modules) + drizzle config, migrations, seed, .env
 packages/
-  db/      Drizzle schema, migrations, seed
+  db/      Drizzle schema (schema-only)
   ui/      shadcn/ui components
   types/   Shared zod contracts + typed API client
   config/  Shared tsconfig, lint, and formatter config
-infrastructure/
-  docker/  Local services (Postgres)
+docker-compose.yml   Local services (Postgres, Redis, MinIO) — reads apps/api/.env
 ```
 
 ## Quick start
 
 ```sh
 bun install
-cp .env.example .env
-docker compose -f infrastructure/docker/docker-compose.yml up -d
-bun run db:generate && bun run db:migrate
+cp apps/api/.env.example apps/api/.env
+docker compose --env-file apps/api/.env up -d
+bun run db:migrate
 bun run dev
 ```
 

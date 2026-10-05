@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-
 import { Providers } from '@/lib/providers';
 import './globals.css';
 

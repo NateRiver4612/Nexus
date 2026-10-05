@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-import { idSchema } from './common';
+import { idSchema, timestampSchema } from './common';
 
 export const plannerItemSchema = z
   .object({
@@ -12,8 +12,7 @@ export const plannerItemSchema = z
     priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
     sortOrder: z.number().int().default(0),
     metadata: z.record(z.string(), z.unknown()).nullable(),
-    createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
-    updatedAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+    ...timestampSchema,
   })
   .openapi('PlannerItem');
 

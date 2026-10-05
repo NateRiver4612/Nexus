@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
+    ports:
+      - '5432:5432'
+    volumes:
+      - nexus-postgres:/var/lib/postgresql/data
+      - ./apps/api/infra/postgres-init/01-vector.sql:/docker-entrypoint-initdb.d/01-vector.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nexus} -d ${POSTGRES_DB:-nexus}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nexus-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nexus.com
+      PGADMIN_DEFAULT_PASSWORD: nexus
+    ports:
+      - '5050:80'
+    volumes:
+      - nexus-pgadmin:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - nexus-redis:/data
+    command: redis-server --appendonly yes
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - '5540:5540'
+    volumes:
+      - nexus-redisinsight:/data
+    depends_on:
+      - redis
+
+  minio:
+    image: minio/minio:latest
+    container_name: nexus-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - nexus-minio:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set local http://minio:9000 minioadmin minioadmin) do sleep 1; done;
+      mc mb --ignore-existing local/nexus;
+      exit 0;
+      "
+
+volumes:
+  nexus-postgres:
+  nexus-redis:
+  nexus-redisinsight:
+  nexus-pgadmin:
+  nexus-minio:

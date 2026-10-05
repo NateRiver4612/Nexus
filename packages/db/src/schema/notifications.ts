@@ -7,7 +7,7 @@ export const notifications = pgTable(
   'notifications',
   {
     id: idColumn(),
-    userId: text('user_id')
+    userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     type: varchar('type', { length: 48 }).notNull(),
