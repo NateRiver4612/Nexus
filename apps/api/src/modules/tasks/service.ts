@@ -62,9 +62,10 @@ export function TaskService(db: Db) {
         const currentPosition = task.milestoneId
           ? milestones.find((m) => m.id === task.milestoneId)?.position
           : undefined;
-        const followingMilestones = currentPosition == null
-          ? milestones
-          : milestones.filter((m) => m.position > currentPosition);
+        const followingMilestones =
+          currentPosition == null
+            ? milestones
+            : milestones.filter((m) => m.position > currentPosition);
 
         for (const milestone of followingMilestones) {
           const nextTasks = await txRepository.listTasksByMilestone(milestone.id);

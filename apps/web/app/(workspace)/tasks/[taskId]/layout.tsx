@@ -80,11 +80,7 @@ const layout = ({
         </div>
 
         <div className="flex items-center gap-6">
-          <Status
-            size="sm"
-            status={task.status}
-            explain={taskStatusExplain(task.status)}
-          ></Status>
+          <Status size="sm" status={task.status} explain={taskStatusExplain(task.status)}></Status>
 
           <div className="flex text-sm text-gray-400 items-center gap-2">
             <Clock size={16}></Clock>
