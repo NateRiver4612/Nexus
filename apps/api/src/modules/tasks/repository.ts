@@ -10,6 +10,7 @@ import {
   tasks,
   users,
   type Db,
+  type TaskStatus,
   type TaskStepStatus,
   type NewTaskNote,
   type TaskNote,
@@ -156,12 +157,49 @@ export const TaskRepository = (db: Db) => ({
       .returning();
   },
 
-  /** Points the project's `currentTaskId` at this task (it became the active one). */
-  setCurrentTask(projectId: string, taskId: string) {
+  /** Rewrites only a task's status — scoped by id (used to pause the previous current task). */
+  setTaskStatus(taskId: string, status: TaskStatus) {
+    return db
+      .update(tasks)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(tasks.id, taskId))
+      .returning();
+  },
+
+  /** The project's current active task id (if any). */
+  async getCurrentTaskId(projectId: string): Promise<string | null> {
+    const rows = await db
+      .select({ currentTaskId: projectProgress.currentTaskId })
+      .from(projectProgress)
+      .where(eq(projectProgress.projectId, projectId))
+      .limit(1);
+    return rows[0]?.currentTaskId ?? null;
+  },
+
+  /** Points the project's `currentTaskId` at this task — pass `null` to clear it. */
+  setCurrentTask(projectId: string, taskId: string | null) {
     return db
       .update(projectProgress)
       .set({ currentTaskId: taskId, updatedAt: new Date() })
       .where(eq(projectProgress.projectId, projectId));
+  },
+
+  /** A milestone's tasks in plan order — used to find the next task to activate. */
+  listTasksByMilestone(milestoneId: string) {
+    return db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.milestoneId, milestoneId))
+      .orderBy(tasks.position);
+  },
+
+  /** A project's milestone rows (id + position), in plan order. */
+  listMilestonesByProject(projectId: string) {
+    return db
+      .select({ id: milestones.id, position: milestones.position })
+      .from(milestones)
+      .where(eq(milestones.projectId, projectId))
+      .orderBy(milestones.position);
   },
 
   /** Rewrites one DoD item's status — scoped to the task so foreign ids are a no-op. */
@@ -187,6 +225,16 @@ export const TaskRepository = (db: Db) => ({
     return db
       .update(tasks)
       .set({ status: 'completed', completedAt: new Date(), updatedAt: new Date() })
+      .where(eq(tasks.id, taskId))
+      .returning();
+  },
+
+  /** Re-opens a completed task — status `reopen`, clearing `completedAt`.
+   * Steps/DoD items are intentionally left untouched. */
+  reopenTask(taskId: string) {
+    return db
+      .update(tasks)
+      .set({ status: 'reopen', completedAt: null, updatedAt: new Date() })
       .where(eq(tasks.id, taskId))
       .returning();
   },

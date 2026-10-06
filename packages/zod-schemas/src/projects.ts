@@ -55,6 +55,18 @@ export const projectSchema = z
   })
   .openapi('Project');
 
+/** The project's progress record — mirrors the `project_progress` row in the projects schema. */
+export const projectProgressSchema = z
+  .object({
+    id: idSchema,
+    projectId: idSchema,
+    progressPercentage: z.number().int().min(0).max(100).default(0),
+    currentTaskId: idSchema.nullable(),
+    lastOpenedAt: z.string().openapi({ example: '2026-09-12T10:00:00.000Z' }),
+    ...timestampSchema,
+  })
+  .openapi('ProjectProgress');
+
 export const onboardingStatusSchema = z
   .enum(['in_progress', 'submitted', 'completed'])
   .default('in_progress');

@@ -14,7 +14,14 @@ import { idColumn, timestamps } from './columns';
 import { projects } from './projects';
 import { users } from './users';
 
-export const taskStatus = pgEnum('task_status', ['todo', 'in_progress', 'completed', 'cancelled']);
+export const taskStatus = pgEnum('task_status', [
+  'todo',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'paused',
+  'reopen',
+]);
 export const milestoneStatus = pgEnum('milestone_status', ['planned', 'active', 'completed']);
 export const taskDifficulty = pgEnum('task_difficulty', ['low', 'medium', 'high']);
 export const taskStepStatus = pgEnum('task_step_status', ['todo', 'completed']);
@@ -141,20 +148,3 @@ export const taskNotes = pgTable(
 
 export type TaskNote = typeof taskNotes.$inferSelect;
 export type NewTaskNote = typeof taskNotes.$inferInsert;
-
-/**
- * "Resume working" — points back at where the user left off inside a project.
- */
-export const projectProgress = pgTable('project_progress', {
-  id: idColumn(),
-  projectId: uuid('project_id')
-    .notNull()
-    .unique()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  progressPercentage: integer('progress_percentage').notNull().default(0),
-  currentTaskId: uuid('current_task_id').references(() => tasks.id, { onDelete: 'set null' }),
-  lastOpenedAt: timestamp('last_opened_at', { withTimezone: true }).notNull().defaultNow(),
-  ...timestamps,
-});
-
-export type ProjectProgress = typeof projectProgress.$inferSelect;

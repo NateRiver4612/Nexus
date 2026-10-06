@@ -1,4 +1,4 @@
-import type { Db, TaskStepStatus, TaskNote } from '@nexus/db';
+import type { Db, TaskStepStatus, TaskNote, Task } from '@nexus/db';
 import type {
   TaskDetailType,
   TaskNoteType,
@@ -8,6 +8,14 @@ import type {
 } from '@nexus/types';
 
 import { TaskRepository, type TaskDetailRow } from './repository';
+import { HttpError } from '../../errors';
+
+/** The first non-completed task of the batch, in plan order — or undefined. */
+function firstActiveTask(
+  rows: Array<Pick<Task, 'id' | 'status'>>,
+): Pick<Task, 'id' | 'status'> | undefined {
+  return rows.find((row) => row.status !== 'completed');
+}
 
 export function TaskService(db: Db) {
   const repository = TaskRepository(db);
@@ -18,9 +26,72 @@ export function TaskService(db: Db) {
   }
 
   /**
+   * Completes a task (gated on all DoD items) and auto-advances the project's
+   * current task to the next non-completed task: first in the same milestone,
+   * then — when that milestone is done — the first non-completed task of the
+   * following milestone. Clears `currentTaskId` when nothing remains.
+   */
+  async function complete(id: string): Promise<TaskDetailType | undefined> {
+    const task = await repository.getById(id);
+    if (!task) return undefined;
+
+    await db.transaction(async (tx) => {
+      const txRepository = TaskRepository(tx);
+
+      // The "definition of done" gates completion: every DOD must be satisfied.
+      const dods = await txRepository.listDods(id);
+      if (dods.some((dod) => dod.status !== 'completed')) {
+        throw HttpError.validation(
+          'Complete every definition-of-done item before completing the task.',
+        );
+      }
+
+      await txRepository.completeTask(id);
+
+      // Find where to resume — same milestone first, then the next one.
+      const projectId = task.projectId;
+      let nextTaskId: string | null = null;
+
+      if (task.milestoneId) {
+        const milestoneTasks = await txRepository.listTasksByMilestone(task.milestoneId);
+        nextTaskId = firstActiveTask(milestoneTasks)?.id ?? null;
+      }
+
+      if (!nextTaskId) {
+        const milestones = await txRepository.listMilestonesByProject(projectId);
+        const currentPosition = task.milestoneId
+          ? milestones.find((m) => m.id === task.milestoneId)?.position
+          : undefined;
+        const followingMilestones = currentPosition == null
+          ? milestones
+          : milestones.filter((m) => m.position > currentPosition);
+
+        for (const milestone of followingMilestones) {
+          const nextTasks = await txRepository.listTasksByMilestone(milestone.id);
+          const next = firstActiveTask(nextTasks);
+          if (next) {
+            nextTaskId = next.id;
+            break;
+          }
+        }
+      }
+
+      if (nextTaskId) {
+        await txRepository.setTaskStatus(nextTaskId, 'in_progress');
+        await txRepository.setCurrentTask(projectId, nextTaskId);
+      } else {
+        await txRepository.setCurrentTask(projectId, null);
+      }
+    });
+
+    return getDetail(id);
+  }
+
+  /**
    * Generic scalar-field update. When `status` is set to `in_progress`, the
-   * task is also made the project's current task (`project_progress.currentTaskId`)
-   * in the same transaction — both columns say "this is the task being worked on".
+   * task is also made the project's current task (`project_progress.currentTaskId`):
+   * the previous current task is downgraded to `paused`, then this task becomes
+   * the active one — only one task is `in_progress` at a time.
    */
   async function update(
     id: string,
@@ -31,6 +102,14 @@ export function TaskService(db: Db) {
 
     await db.transaction(async (tx) => {
       const txRepository = TaskRepository(tx);
+
+      if (input.status === 'in_progress') {
+        const previous = await txRepository.getCurrentTaskId(task.projectId);
+        if (previous && previous !== id) {
+          await txRepository.setTaskStatus(previous, 'paused');
+        }
+      }
+
       await txRepository.update(id, input);
 
       if (input.status === 'in_progress') {
@@ -83,7 +162,7 @@ export function TaskService(db: Db) {
     return row ? toNoteView(row) : undefined;
   }
 
-  return { getDetail, update, listNotes, getNote, createNote, updateNote, deleteNote };
+  return { getDetail, complete, update, listNotes, getNote, createNote, updateNote, deleteNote };
 }
 
 function toNoteView(row: TaskNote): TaskNoteType {

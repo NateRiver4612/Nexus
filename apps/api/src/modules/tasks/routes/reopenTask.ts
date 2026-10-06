@@ -8,13 +8,14 @@ import {
 import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';
+import { TaskRepository } from '../repository';
 import { TaskService } from '../service';
 import { HttpError } from '../../../errors';
 
-export const completeTaskRoute = defineOpenAPIRoute({
+export const reopenTaskRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
-    path: '/:taskId/complete',
+    path: '/:taskId/reopen',
     request: {
       params: taskCompleteParamsSchema,
     },
@@ -22,11 +23,7 @@ export const completeTaskRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: { 'application/json': { schema: taskDetailSchema } },
-        description: 'Task completed',
-      },
-      400: {
-        content: { 'application/json': { schema: errorResponseSchema } },
-        description: 'Not all DoD items are completed',
+        description: 'Task re-opened',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },
@@ -42,13 +39,13 @@ export const completeTaskRoute = defineOpenAPIRoute({
     const { taskId } = c.req.valid('param');
 
     const db = getDb();
+    const repository = TaskRepository(db);
+
+    const [task] = await repository.reopenTask(taskId);
+    if (!task) throw HttpError.notFound('Task not found.');
+
     const taskService = TaskService(db);
-
-    // Completes the task (DoD-gated) and auto-advances the current task to the
-    // next non-completed task in the milestone — or the next milestone.
-    const detail = await taskService.complete(taskId);
-    if (!detail) throw HttpError.notFound('Task not found.');
-
-    return c.json(detail, 200);
+    const detail = await taskService.getDetail(taskId);
+    return c.json(detail!, 200);
   },
 });

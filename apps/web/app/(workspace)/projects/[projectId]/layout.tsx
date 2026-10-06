@@ -39,7 +39,7 @@ export default function ProjectLayout({
   const status = project?.status;
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-full flex-col gap-6">
       <div>
         <div className="flex items-center gap-2">
           <p
@@ -75,7 +75,7 @@ export default function ProjectLayout({
           ))}
         </TabsList>
       </Tabs>
-      {children}
+      <div className="overflow-y-auto no-scrollbar min-h-0 flex-1">{children}</div>
     </div>
   );
 }

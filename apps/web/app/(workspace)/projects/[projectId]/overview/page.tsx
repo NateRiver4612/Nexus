@@ -9,14 +9,8 @@ import ProjectMilestonesTasks, {
 import ProjectGeneral from '@/components/project/ProjectGeneral';
 import { useGetMilestones, useUpdateMilestonesPositions } from '@/hooks/useMilestones';
 import { useGetProjectById } from '@/hooks/useProjects';
-import { useUpdateTask } from '@/hooks/useTasks';
+import { useReopenTask, useUpdateTask } from '@/hooks/useTasks';
 import ProjectSummary from '@/components/project/ProjectSummary';
-
-/** The "current" task is the first non-completed task of the first non-completed milestone. */
-function findCurrentTask(milestones: PlanMilestone[]): PlanTask | undefined {
-  const activeMilestone = milestones.find((m) => m.tasks.some((t) => t.status !== 'completed'));
-  return activeMilestone?.tasks.find((t) => t.status !== 'completed');
-}
 
 export default function Page() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -33,6 +27,7 @@ export default function Page() {
 
   const { mutate: updateMilestonesPositions } = useUpdateMilestonesPositions();
   const { mutate: updateTask } = useUpdateTask();
+  const { mutate: reopenTask } = useReopenTask();
 
   if (!project || !milestones) {
     return <></>;
@@ -52,19 +47,23 @@ export default function Page() {
         })),
       },
     });
+  };
 
-    // First use-case of the generic task update: the reorder may have made a
-    // task the current/active one — promote it (status + project currentTaskId
-    // both happen in the one PATCH, server-side).
-    const currentTask = findCurrentTask(ordered);
-
-    if (currentTask && currentTask.status !== 'in_progress') {
-      updateTask({ taskId: currentTask.id, input: { status: 'in_progress' } });
-    }
+  // The user chooses which task to work on via the row's hover "Activate" button.
+  // Reusing the generic task update: setting `status: 'in_progress'` makes it the
+  // current task (project_progress.currentTaskId) — and the previous current task
+  // is paused, all server-side.
+  const handleActivateTask = (_milestone: PlanMilestone, task: PlanTask) => {
+    if (task.status === 'in_progress') return;
+    updateTask({ taskId: task.id, input: { status: 'in_progress' } });
   };
 
   const handleContinueTask = (_milestone: PlanMilestone, task: PlanTask) => {
     router.push(`/tasks/${task.id}`);
+  };
+
+  const handleReopenTask = (_milestone: PlanMilestone, task: PlanTask) => {
+    reopenTask(task.id);
   };
 
   return (
@@ -75,6 +74,9 @@ export default function Page() {
         milestones={milestones}
         onContinueTask={handleContinueTask}
         onOrderChange={handleOrderChange}
+        currentTaskId={project.currentTask?.id ?? null}
+        onActivateTask={handleActivateTask}
+        onReopenTask={handleReopenTask}
       />
     </div>
   );

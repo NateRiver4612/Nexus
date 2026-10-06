@@ -34,7 +34,17 @@ const projectDetailsFields = {
 
   // progress
   lastOpenedAt: projectProgress.lastOpenedAt,
-  progressPercentage: projectProgress.progressPercentage,
+  // Live-computed from task statuses (not the stored column) so it's always
+  // correct after any task completes/reopens — no write-time coupling.
+  progressPercentage: sql<number>`(
+    case when (select count(*) from ${tasks} where ${tasks.projectId} = ${projects.id}) = 0 then 0
+    else round(
+      100.0
+      * (select count(*) from ${tasks} where ${tasks.projectId} = ${projects.id} and ${tasks.status} = 'completed')
+      / (select count(*) from ${tasks} where ${tasks.projectId} = ${projects.id})
+    )
+    end
+  )::int`,
 
   // full current task as a nested object, not flattened columns
   currentTask: sql<TaskType | null>`(

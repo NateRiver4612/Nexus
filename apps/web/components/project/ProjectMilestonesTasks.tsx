@@ -61,6 +61,16 @@ type ProjectMilestonesTasksProps = {
    * up in both the source and destination lists).
    */
   onOrderChange?: (orderedMilestones: PlanMilestone[]) => void;
+  /**
+   * The currently active task (from `project.currentTask`), persisted via
+   * `project_progress.currentTaskId`. The row with this id renders as the
+   * pinned "Current task" card regardless of its milestone.
+   */
+  currentTaskId?: string | null;
+  /** Fired when the user activates a task from its row's hover "Activate" button. */
+  onActivateTask?: (milestone: PlanMilestone, task: PlanTask) => void;
+  /** Fired when the user re-opens a completed task from its row's hover "Re-open" button. */
+  onReopenTask?: (milestone: PlanMilestone, task: PlanTask) => void;
 };
 
 export type PlanTask = Omit<TaskType, 'projectId' | 'createdBy' | 'createdAt' | 'updatedAt'>;
@@ -89,6 +99,9 @@ const ProjectMilestonesTasks = ({
   onMilestoneReorder,
   onTaskMove,
   onOrderChange,
+  currentTaskId,
+  onActivateTask,
+  onReopenTask,
 }: ProjectMilestonesTasksProps) => {
   const [milestoneOrder, setMilestoneOrder] = useState<PlanMilestone[]>(() =>
     [...milestones].sort((a, b) => a.position - b.position),
@@ -114,10 +127,17 @@ const ProjectMilestonesTasks = ({
     setTasksByMilestone(buildTasksByMilestone(milestones));
   }, [milestones]);
 
-  const activeMilestone = milestoneOrder.find((m) => !isDone(tasksByMilestone[String(m.id)] ?? []));
+  // The milestone that should render its accordion open by default: the one
+  // holding the current task, falling back to the first non-completed milestone.
+  const activeMilestone =
+    (currentTaskId
+      ? milestoneOrder.find((m) =>
+          (tasksByMilestone[String(m.id)] ?? []).some((t) => t.id === currentTaskId),
+        )
+      : undefined) ?? milestoneOrder.find((m) => !isDone(tasksByMilestone[String(m.id)] ?? []));
 
   return (
-    <Card className={cn('p-6 flex flex-col gap-4 bg-white', className)}>
+    <Card className={cn('p-6 flex border border-gray-200 flex-col gap-4 bg-white', className)}>
       <h1 className="text-lg font-bold">Milestones & Tasks</h1>
       <DragDropProvider
         onDragStart={(event) => {
@@ -221,6 +241,9 @@ const ProjectMilestonesTasks = ({
             isActive={milestone === activeMilestone}
             tasks={tasksByMilestone[String(milestone.id)] ?? []}
             onContinueTask={onContinueTask}
+            currentTaskId={currentTaskId ?? null}
+            onActivateTask={onActivateTask}
+            onReopenTask={onReopenTask}
           />
         ))}
         <DragOverlay>
