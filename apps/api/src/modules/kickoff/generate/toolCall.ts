@@ -24,7 +24,14 @@ export type AttemptToolCallInput<T> = {
 
 export type AttemptToolCallResult<T> =
   | { ok: true; data: T; finishReason?: string; usage?: CompletionUsage }
-  | { ok: false; error: Error; finishReason?: string; missingKeys?: string[] };
+  | {
+      ok: false;
+      error: Error;
+      finishReason?: string;
+      missingKeys?: string[];
+      /** Per-field validation problems, e.g. "milestones.0.tasks.1.description: Too big: ..." */
+      issues?: string[];
+    };
 
 /**
  * The shared single-tool-call core used by both kickoff stages: require the
@@ -112,6 +119,7 @@ export async function attemptToolCall<T>({
       ok: false,
       finishReason,
       missingKeys,
+      issues: result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
       error: new Error(
         `AI ${toolName} failed validation (finish_reason: ${finishReason}): ` +
           `${result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')} ` +

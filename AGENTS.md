@@ -63,7 +63,7 @@ function TaskCard(title: string, status: TaskStatus) {
 
 ## Agent tool/script output
 
-If writing a custom script or skill whose output is read back by the agent itself (not by the app) — a dev-tooling helper, a skill's bash script — prefer [TOON](https://toonformat.dev) format over JSON (`name[count]{fields}:` header + comma rows); ~40% fewer tokens for the same information, per the [AXI](https://axi.md) principles. `git status --short`'s terse style is the same idea in spirit. This does **not** apply to Nexus's own API responses — those stay structured JSON per the zod-schemas contract; this rule is agent-tooling only.
+If writing a custom script or skill whose output is read back by the agent itself (not by the app) — a dev-tooling helper, a skill's bash script — prefer [TOON] (https://toonformat.dev) format over JSON (`name[count]{fields}:` header + comma rows); ~40% fewer tokens for the same information, per the [AXI](https://axi.md) principles. `git status --short`'s terse style is the same idea in spirit. This does **not** apply to Nexus's own API responses — those stay structured JSON per the zod-schemas contract; this rule is agent-tooling only.
 
 ## Reference docs
 

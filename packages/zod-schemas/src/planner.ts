@@ -23,10 +23,12 @@ export const taskStepSchema = z
     taskId: idSchema,
     value: z
       .string()
+      .max(150)
       .openapi({ example: 'Create the Postgres database' })
       .describe(
         'Name the exact command, API, file, or concept the user performs — concrete enough ' +
-          'to act on without going back to the source material.',
+          'to act on without going back to the source material. Keep it to a single action, ' +
+          'at most 150 characters.',
       ),
     position: z.number().int().default(0),
     status: taskStepStatusSchema.default('todo'),
@@ -41,10 +43,12 @@ export const taskDodSchema = z
     taskId: idSchema,
     value: z
       .string()
+      .max(150)
       .openapi({ example: 'Migration runs cleanly from scratch' })
       .describe(
         'A concrete, verifiable acceptance criterion — an outcome or result the user can ' +
-          'check, not an action: e.g. "migration runs cleanly from scratch" or "endpoint ',
+          'check, not an action: e.g. "migration runs cleanly from scratch" or "endpoint ' +
+          'returns 200". Keep it to a single criterion, at most 150 characters.',
       ),
     position: z.number().int().default(0),
     status: taskStepStatusSchema.default('todo'),
