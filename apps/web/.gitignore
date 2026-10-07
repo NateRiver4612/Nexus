@@ -1,2 +1,8 @@
 # Authentication tokens
 .npmrc
+.tsbuildinfo
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo

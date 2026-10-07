@@ -7,7 +7,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex h-full flex-col gap-12">
       <div className="flex items-center gap-2">
         <p
           onClick={() => router.push('/projects')}
@@ -19,7 +19,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
         <h1>Create new project</h1>
       </div>
 
-      <div>{children}</div>
+      <div className="overflow-y-auto no-scrollbar min-h-0 flex-1">{children}</div>
     </div>
   );
 };

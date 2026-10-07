@@ -14,6 +14,7 @@ const PER_SOURCE_FLOOR = 2; // every source gets at least this many chunks, if i
 const GLOBAL_FILL_TARGET = 12; // total chunks after floor + fill, budget permitting
 const LEADING_CHUNKS_PER_SOURCE = 3; // fallback when embeddings are unavailable
 const MAX_CONTEXT_CHARS = 6000; // rough token budget — see note in prompt.ts
+const MAX_EXCERPT_CHARS = 400; // per-chunk cap so long passages don't encourage verbose plan text
 
 /**
  * Builds the knowledge context for Kickoff.
@@ -68,12 +69,18 @@ export async function buildKnowledgeContext({
     if (usedChars >= MAX_CONTEXT_CHARS) break;
     const title = titles.get(chunk.knowledgeSourceId) ?? 'Untitled';
     const excerpts = groups.get(title) ?? [];
-    excerpts.push(chunk.content);
+    excerpts.push(truncateExcerpt(chunk.content));
     groups.set(title, excerpts);
     usedChars += chunk.content.length;
   }
 
   return Array.from(groups.entries()).map(([title, excerpts]) => ({ title, excerpts }));
+}
+
+/** Caps a chunk to a readable excerpt so the model mirrors brevity, not long passages. */
+function truncateExcerpt(content: string, max = MAX_EXCERPT_CHARS): string {
+  if (content.length <= max) return content;
+  return `${content.slice(0, max).trimEnd()}…`;
 }
 
 async function searchWithFloorAndFill(

@@ -29,4 +29,10 @@ The "keyTopics" array lists the most important topics the plan covers (each with
 The "highlights" array lists 1-6 standout properties of the plan (e.g. it produces a demoable artifact, \
 it compresses fundamentals, its history of verifiable milestone endings).
 
+LENGTH BUDGET (hard limits, enforced) — keep the summary tight:
+- "overview": at most 750 characters (a tight 3-4 sentence paragraph).
+- each "keyTopics" entry: "topic" 10-100 characters, "description" 50-300 characters.
+- each "highlights" entry: 20-200 characters.
+Respect these limits exactly — fields that exceed them are rejected.
+
 Call the generate_project_summary tool with your result.`;

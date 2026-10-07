@@ -42,6 +42,17 @@ services:
       - nexus-redis:/data
     command: redis-server --appendonly yes
 
+  benchwork:
+    image: ghcr.io/pontusab/workbench-standalone:latest
+    platform: linux/amd64
+    ports:
+      - '3002:3000'
+    environment:
+      REDIS_URL: redis://redis:6379
+      QUEUE_NAMES: 'ai-generation,artifact-generation,kickoff,knowledge,knowledge-process,knowledge-remove'
+    depends_on:
+      - redis
+
   redisinsight:
     image: redis/redisinsight:latest
     ports:

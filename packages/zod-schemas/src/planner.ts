@@ -5,7 +5,14 @@ import { projectSchema } from './projects';
 import { userSchema } from './users';
 
 export const milestoneStatusSchema = z.enum(['planned', 'active', 'completed']);
-export const taskStatusSchema = z.enum(['todo', 'in_progress', 'completed', 'cancelled']);
+export const taskStatusSchema = z.enum([
+  'todo',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'paused',
+  'reopen',
+]);
 export const taskDifficultySchema = z.enum(['low', 'medium', 'high']);
 export const taskStepStatusSchema = z.enum(['todo', 'completed']);
 
@@ -16,10 +23,12 @@ export const taskStepSchema = z
     taskId: idSchema,
     value: z
       .string()
+      .max(150)
       .openapi({ example: 'Create the Postgres database' })
       .describe(
         'Name the exact command, API, file, or concept the user performs — concrete enough ' +
-          'to act on without going back to the source material.',
+          'to act on without going back to the source material. Keep it to a single action, ' +
+          'at most 150 characters.',
       ),
     position: z.number().int().default(0),
     status: taskStepStatusSchema.default('todo'),
@@ -34,10 +43,12 @@ export const taskDodSchema = z
     taskId: idSchema,
     value: z
       .string()
+      .max(150)
       .openapi({ example: 'Migration runs cleanly from scratch' })
       .describe(
         'A concrete, verifiable acceptance criterion — an outcome or result the user can ' +
-          'check, not an action: e.g. "migration runs cleanly from scratch" or "endpoint ',
+          'check, not an action: e.g. "migration runs cleanly from scratch" or "endpoint ' +
+          'returns 200". Keep it to a single criterion, at most 150 characters.',
       ),
     position: z.number().int().default(0),
     status: taskStepStatusSchema.default('todo'),
@@ -94,17 +105,6 @@ export const taskSchema = z
     ...timestampSchema,
   })
   .openapi('Task');
-
-export const projectProgressSchema = z
-  .object({
-    id: idSchema,
-    projectId: idSchema,
-    progressPercentage: z.number().int().min(0).max(100).default(0),
-    currentTaskId: idSchema.nullable(),
-    lastOpenedAt: z.string().openapi({ example: '2026-09-12T10:00:00.000Z' }),
-    ...timestampSchema,
-  })
-  .openapi('ProjectProgress');
 
 /**
  * Generic task update — one or more scalar task fields. `milestoneId` is NOT

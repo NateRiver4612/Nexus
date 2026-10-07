@@ -39,44 +39,44 @@ export async function generateMilestones(context: KickoffContext): Promise<Miles
     return { milestones: first.data.milestones, usage: first.usage };
   }
 
+  // Any failure becomes a single escalated retry with corrective feedback.
   const missingKeys = first.missingKeys ?? [];
-  if (first.finishReason === 'length' || missingKeys.length > 0) {
-    const reason =
-      first.finishReason === 'length'
-        ? 'truncated (finish_reason: length)'
-        : `missing required fields: ${missingKeys.join(', ')}`;
-    console.error(
-      `[kickoff] milestones first attempt ${reason} — retrying with ${MILESTONES_MAX_TOKENS_RETRY} tokens.`,
-    );
+  const validationIssues = first.issues ?? [];
+  const retryMessages = [...messages];
 
-    const correction =
-      missingKeys.length > 0
-        ? `Your previous response was incomplete: it was missing required field(s): ` +
-          `${missingKeys.join(', ')}. Re-generate the FULL "milestones" array — every milestone's ` +
-          `tasks fully populated with "steps", "dods" and "estimatedTimeMinutes". Never omit any ` +
-          `required field.`
-        : undefined;
-
-    const retry = await attemptToolCall({
-      messages: [
-        ...messages,
-        ...(correction ? [{ role: 'user' as const, content: correction }] : []),
-      ],
-      toolName: MILESTONES_TOOL_NAME,
-      toolParamsSchema: kickoffMilestonesSchema,
-      validateSchema: kickoffMilestonesSchema,
-      maxTokens: MILESTONES_MAX_TOKENS_RETRY,
-    });
-    if (retry.ok) return { milestones: retry.data.milestones, usage: retry.usage };
-
-    if (retry.finishReason === 'length') {
-      throw new Error(
-        `AI plan generation exceeded the token limit even after a retry (${MILESTONES_MAX_TOKENS_RETRY} completion tokens). ` +
-          `The plan is too large — trim the project scope or lower per-task requirements.`,
-      );
-    }
-    throw retry.error;
+  if (validationIssues.length > 0) {
+    // Field-level length/shape failures — feed the exact issue paths back so the
+    // model shortens/repairs precisely those fields instead of rerolling blindly.
+    const correction = `Your previous response failed validation. Fix exactly these issues and \
+re-output the FULL "milestones" array (every milestone's tasks fully populated with "steps", "dods" \
+and "estimatedTimeMinutes"; shorten any over-length field to respect its limit — task descriptions \
+<=200 chars, milestone descriptions <=300 chars, step/DoD values <=150 chars, titles <=100 chars):\n` +
+      validationIssues.map((issue) => `- ${issue}`).join('\n');
+    retryMessages.push({ role: 'user', content: correction });
+  } else if (first.finishReason === 'length') {
+    console.error(`[kickoff] milestones first attempt truncated — retrying with ${MILESTONES_MAX_TOKENS_RETRY} tokens.`);
+  } else if (missingKeys.length > 0) {
+    const correction = `Your previous response was incomplete: it was missing required field(s): ` +
+      `${missingKeys.join(', ')}. Re-generate the FULL "milestones" array — every milestone's ` +
+      `tasks fully populated with "steps", "dods" and "estimatedTimeMinutes". Never omit any ` +
+      `required field.`;
+    retryMessages.push({ role: 'user', content: correction });
   }
 
-  throw first.error;
+  const retry = await attemptToolCall({
+    messages: retryMessages,
+    toolName: MILESTONES_TOOL_NAME,
+    toolParamsSchema: kickoffMilestonesSchema,
+    validateSchema: kickoffMilestonesSchema,
+    maxTokens: MILESTONES_MAX_TOKENS_RETRY,
+  });
+  if (retry.ok) return { milestones: retry.data.milestones, usage: retry.usage };
+
+  if (retry.finishReason === 'length') {
+    throw new Error(
+      `AI plan generation exceeded the token limit even after a retry (${MILESTONES_MAX_TOKENS_RETRY} completion tokens). ` +
+        `The plan is too large — trim the project scope or lower per-task requirements.`,
+    );
+  }
+  throw retry.error;
 }

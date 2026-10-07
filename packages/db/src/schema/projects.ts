@@ -14,6 +14,7 @@ import {
 import { idColumn, timestamps } from './columns';
 import { users } from './users';
 import { workspaces } from './workspaces';
+import { tasks } from './planner';
 import { type OnboardingDataType } from '@nexus/types';
 import { aiRuns } from './ai';
 
@@ -119,3 +120,23 @@ export const projectOnboarding = pgTable(
 );
 
 export type ProjectMember = typeof projectMembers.$inferSelect;
+
+/**
+ * "Resume working" — points back at where the user left off inside a project.
+ * Lives here (not planner) because it's the project-level progress record; the
+ * current-task FK defers onto `tasks` via a lazy thunk to avoid eager evaluation
+ * of the planner ⇄ projects circular import.
+ */
+export const projectProgress = pgTable('project_progress', {
+  id: idColumn(),
+  projectId: uuid('project_id')
+    .notNull()
+    .unique()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  progressPercentage: integer('progress_percentage').notNull().default(0),
+  currentTaskId: uuid('current_task_id').references(() => tasks.id, { onDelete: 'set null' }),
+  lastOpenedAt: timestamp('last_opened_at', { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps,
+});
+
+export type ProjectProgress = typeof projectProgress.$inferSelect;

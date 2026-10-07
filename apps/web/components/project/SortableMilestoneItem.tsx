@@ -10,13 +10,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { cn } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/react';
 import DragHandle from '../DragHandle';
-import { Check, Circle } from 'lucide-react';
+import { Check, Circle, Play, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
-
-function getCurrentTask(tasks: PlanTask[]) {
-  return tasks.find((t) => t.status !== 'completed');
-}
 
 const SortableTaskRow = ({
   task,
@@ -25,6 +21,8 @@ const SortableTaskRow = ({
   milestone,
   currentMilestoneId,
   onContinueTask,
+  onActivateTask,
+  onReopenTask,
 }: {
   task: PlanTask;
   index: number;
@@ -32,6 +30,8 @@ const SortableTaskRow = ({
   milestone: PlanMilestone;
   isCurrent: boolean;
   onContinueTask?: (milestone: PlanMilestone, task: PlanTask) => void;
+  onActivateTask?: (milestone: PlanMilestone, task: PlanTask) => void;
+  onReopenTask?: (milestone: PlanMilestone, task: PlanTask) => void;
 }) => {
   const sortable = useSortable({
     id: task.id,
@@ -47,7 +47,12 @@ const SortableTaskRow = ({
     router.push(`/tasks/${task.id}`);
   };
 
-  if (isCurrent) {
+  const done = task.status === 'completed';
+
+  // A completed task always renders as the completed row (green check +
+  // strikethrough + Re-open) — never as the "Current task" card, even if
+  // `currentTaskId` still points at it transiently before the refetch lands.
+  if (isCurrent && !done) {
     return (
       <div ref={sortable.ref} className={cn(sortable.isDragging && 'z-10 opacity-60')}>
         <div className="mx-2 my-3 rounded-lg border-2 border-primary bg-blue-50/60 p-3">
@@ -95,14 +100,12 @@ const SortableTaskRow = ({
     );
   }
 
-  const done = task.status === 'completed';
-
   return (
     <div
       ref={sortable.ref}
       onClick={handleOnClick}
       className={cn(
-        'flex cursor-pointer items-center gap-2 py-2 pl-10 pr-2',
+        'group flex cursor-pointer items-center gap-2 py-2 pl-10 pr-2',
         sortable.isDragging && 'z-10 bg-white shadow-sm opacity-60',
       )}
     >
@@ -120,6 +123,33 @@ const SortableTaskRow = ({
       >
         {task.title}
       </span>
+      {done ? (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={(event) => {
+            event.stopPropagation();
+            onReopenTask?.(milestone, task);
+          }}
+          className="shrink-0 gap-1 px-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          <RotateCcw size={12} />
+          Re-open
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={(event) => {
+            event.stopPropagation();
+            onActivateTask?.(milestone, task);
+          }}
+          className="shrink-0 gap-1 px-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          <Play size={12} />
+          Activate
+        </Button>
+      )}
     </div>
   );
 };
@@ -130,12 +160,18 @@ const SortableMilestoneItem = ({
   isActive,
   tasks,
   onContinueTask,
+  currentTaskId,
+  onActivateTask,
+  onReopenTask,
 }: {
   milestone: PlanMilestone;
   index: number;
   isActive: boolean;
   tasks: PlanTask[];
   onContinueTask?: (milestone: PlanMilestone, task: PlanTask) => void;
+  currentTaskId?: string | null;
+  onActivateTask?: (milestone: PlanMilestone, task: PlanTask) => void;
+  onReopenTask?: (milestone: PlanMilestone, task: PlanTask) => void;
 }) => {
   const currentMilestoneId = String(milestone.id);
 
@@ -157,7 +193,6 @@ const SortableMilestoneItem = ({
 
   const done = isDone(tasks);
   const doneCount = tasks.filter((t) => t.status === 'completed').length;
-  const currentTask = isActive ? getCurrentTask(tasks) : undefined;
 
   return (
     <Accordion
@@ -230,8 +265,10 @@ const SortableMilestoneItem = ({
                 index={taskIndex}
                 currentMilestoneId={currentMilestoneId}
                 milestone={milestone}
-                isCurrent={currentTask?.id === task.id}
+                isCurrent={task.id === currentTaskId}
                 onContinueTask={onContinueTask}
+                onActivateTask={onActivateTask}
+                onReopenTask={onReopenTask}
               />
             ))}
           </AccordionContent>

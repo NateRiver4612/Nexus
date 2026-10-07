@@ -62,6 +62,16 @@ Every task must include a realistic "estimatedTimeMinutes" value — how long th
 in whole minutes (e.g. 45, 90, 240). Estimate from the task's own steps and difficulty: heavier tasks \
 get longer estimates, trivial tasks get short ones. Never omit it and never use null.
 
+LENGTH BUDGET (hard limits, enforced) — keep every text field tight so the plan reads at a glance in a \
+list view:
+- task "title": 20-100 characters.
+- task "description": at most 200 characters — a short phrase stating the concrete outcome and its \
+  key approach, not a paragraph (aim for 1-2 tight sentences).
+- milestone "title": 20-100 characters.
+- milestone "description": at most 300 characters — 1-3 tight sentences.
+- each "steps"/"dods" entry's "value": at most 150 characters — a single, tightly-worded action or criterion.
+When in doubt, shorter. Respect these limits exactly — fields that exceed them are rejected.
+
 Where a level covers multiple stages (e.g. advanced covering fundamentals through advanced), \
 earlier stages should be represented but brief — the plan's size and depth should scale with how \
 much of it is genuinely at the target difficulty, not spread evenly across every stage it touches.

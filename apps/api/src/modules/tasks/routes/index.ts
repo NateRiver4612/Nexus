@@ -7,6 +7,7 @@ import { deleteTaskNoteRoute } from './deleteTaskNote';
 import { getTaskNoteRoute } from './getTaskNote';
 import { getTaskNotesRoute } from './getTaskNotes';
 import { getTaskRoute } from './getTask';
+import { reopenTaskRoute } from './reopenTask';
 import { updateTaskDodStatusRoute } from './updateTaskDodStatus';
 import { updateTaskRoute } from './updateTask';
 import { updateTaskNoteRoute } from './updateTaskNote';
@@ -22,6 +23,7 @@ export function taskRoutes() {
     { route: updateTaskStepStatusRoute.route, handler: updateTaskStepStatusRoute.handler },
     { route: updateTaskDodStatusRoute.route, handler: updateTaskDodStatusRoute.handler },
     { route: completeTaskRoute.route, handler: completeTaskRoute.handler },
+    { route: reopenTaskRoute.route, handler: reopenTaskRoute.handler },
     { route: getTaskNotesRoute.route, handler: getTaskNotesRoute.handler },
     { route: getTaskNoteRoute.route, handler: getTaskNoteRoute.handler },
     { route: createTaskNoteRoute.route, handler: createTaskNoteRoute.handler },

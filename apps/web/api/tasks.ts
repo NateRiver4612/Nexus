@@ -63,9 +63,15 @@ export async function updateTaskDodStatus({
 }
 
 export async function completeTask(taskId: string) {
-  return handleResponse(
+  return (await handleResponse(
     await apiClient.api.v1.tasks[':taskId'].complete.$patch({ param: { taskId } }),
-  );
+  )) as TaskDetailType;
+}
+
+export async function reopenTask(taskId: string) {
+  return (await handleResponse(
+    await apiClient.api.v1.tasks[':taskId'].reopen.$patch({ param: { taskId } }),
+  )) as TaskDetailType;
 }
 
 export async function getTaskNotes(taskId: string) {

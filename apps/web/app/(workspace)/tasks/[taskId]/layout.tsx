@@ -1,10 +1,11 @@
 'use client';
 
 import DifficultyIndicator from '@/components/DifficultyIndicator';
-import Status from '@/components/Status';
+import Status, { taskStatusExplain } from '@/components/Status';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetTask } from '@/hooks/useTasks';
+import { cn } from '@/lib/utils';
 import { ChevronRight, Clock, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -41,6 +42,8 @@ const layout = ({
     return <></>;
   }
 
+  const isCompleted = task.status === 'completed';
+
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex text-sm flex-wrap items-center text-gray-400 gap-1">
@@ -59,7 +62,13 @@ const layout = ({
       </div>
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-6">
-          <h1 className="text-3xl font-bold">{task?.title}</h1>
+          <h1
+            className={cn('text-3xl font-bold', {
+              'line-through text-gray-300': isCompleted,
+            })}
+          >
+            {task?.title}
+          </h1>
           <div>
             <DifficultyIndicator difficulty={task.difficulty} />
           </div>
@@ -71,7 +80,7 @@ const layout = ({
         </div>
 
         <div className="flex items-center gap-6">
-          <Status size="sm" status={task.status}></Status>
+          <Status size="sm" status={task.status} explain={taskStatusExplain(task.status)}></Status>
 
           <div className="flex text-sm text-gray-400 items-center gap-2">
             <Clock size={16}></Clock>
@@ -94,7 +103,7 @@ const layout = ({
           ))}
         </TabsList>
       </Tabs>
-      {children}
+      <div className="overflow-y-auto no-scrollbar min-h-0 flex-1">{children}</div>
     </div>
   );
 };
