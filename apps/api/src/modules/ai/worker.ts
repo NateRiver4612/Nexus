@@ -4,7 +4,7 @@ import { getRedis } from '../../redis';
 import { AI_QUEUE, AI_QUEUE_KICKOFF, type AIKickoffJob } from './queues';
 import { aiRuns, getDb, projectOnboarding } from '@nexus/db';
 import { buildKnowledgeContext } from '../kickoff/context';
-import { generateKickoffPlan, type GeneratedKickoffPlan } from '../kickoff/generate';
+import { generateKickoffPlan } from '../kickoff/generate';
 import { eq } from 'drizzle-orm';
 import { onComplete } from '../../startWorkers';
 
@@ -54,7 +54,7 @@ const AIWorker = () => {
     },
   );
 
-  worker.on('completed', async (job, result: GeneratedKickoffPlan) => {
+  worker.on('completed', async (job) => {
     const db = getDb();
 
     const aiRun = job.data.jobId;
