@@ -49,6 +49,7 @@ export const createNotificationRoute = defineOpenAPIRoute({
         body: body.body ?? null,
         readAt: null,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
       201,
     );

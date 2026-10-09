@@ -5,7 +5,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { Github, Sparkle } from 'lucide-react';
+import { GitBranch, Sparkle } from 'lucide-react';
 import { FormInput } from './FormInput';
 import { authClient } from '@/lib/authClient';
 // ^ Assumes FormInput follows the same pattern as FormTextArea:
@@ -287,7 +287,7 @@ export function AuthCard({
               onClick={onGoogleClick}
             />
             <SocialButton
-              icon={<Github className="h-4 w-4" />}
+              icon={<GitBranch className="h-4 w-4" />}
               label="Continue with GitHub"
               onClick={onGithubClick}
             />

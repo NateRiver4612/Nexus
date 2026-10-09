@@ -37,9 +37,8 @@ export async function deleteAiSuggestion(id: string) {
 }
 
 export async function getAiRuns(projectId: string) {
-  return handleResponse(
-    await apiClient.api.v1.ai.runs[':projectId'].$get({ param: { projectId } }),
-  );
+  // TODO: endpoint not implemented
+  return Promise.resolve([]);
 }
 
 export async function getAiRun(id: string): Promise<AiRunType> {

@@ -22,13 +22,21 @@ for i in $(seq 1 60); do
 done
 
 echo "==> Generating migrations"
+# Runs on the host: `drizzle-kit generate` is offline (schema vs snapshots) and
+# writes migration files to apps/api/drizzle, so it must see the host filesystem.
 bun run generate
 
+# Applying migrations + seeding talk to Postgres, so they run inside the API
+# container — `DATABASE_URL`/`REDIS_URL` there use the compose service names
+# (postgres/redis), which aren't resolvable from the host. The host's
+# apps/api/.env intentionally keeps those service-name URLs too. The runtime
+# image only ships apps/ + packages/ (no root package.json), so we target the
+# API package's own scripts via --cwd.
 echo "==> Applying migrations"
-bun run migrate
+docker compose --env-file "$ENV_FILE" run --rm nexus-api bun run --cwd apps/api migrate
 
 echo "==> Seeding database"
-bun run seed
+docker compose --env-file "$ENV_FILE" run --rm nexus-api bun run --cwd apps/api seed
 
 echo "==> All steps succeeded. Starting the docker stack"
 docker compose --env-file "$ENV_FILE" up -d
