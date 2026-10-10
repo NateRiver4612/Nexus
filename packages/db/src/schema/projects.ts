@@ -60,7 +60,7 @@ export const projects = pgTable(
     status: projectStatus('status').notNull().default('draft'),
     startDate: timestamp('start_date', { withTimezone: true, mode: 'date' }),
     targetDate: timestamp('target_date', { withTimezone: true, mode: 'date' }),
-    createdBy: uuid('user_id')
+    createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
