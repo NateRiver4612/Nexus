@@ -10,12 +10,29 @@ Hono modular monolith. Domain modules live in `src/modules/*`; infrastructure cl
 
 ## Module pattern
 
-Each domain is `src/modules/<domain>/routes/`:
+Each domain is `src/modules/<domain>/` with a service (`service.ts`), a repository
+(`repository.ts`), and one route file per endpoint in `routes/`:
 
-- One file per endpoint exporting `defineOpenAPIRoute({ route: createRoute({...}), handler })`.
-- `createRoute` is self-contained: method, path, `security: bearerSecurity`, params/body/query schemas, and responses (200/201/401/404 with `errorResponseSchema`) are written **inline** — do not extract a `shared.ts` unless genuinely reused.
+- **Repository** — `XRepository(db)` factory (e.g. `ProjectsRepository`). Takes the
+  pooled `Db` as an argument; never calls `getDb()` itself. Groups raw DB reads/writes
+  for that module's tables. Export row-input types with it (`export type NewProjectRow = typeof projects.$inferInsert`).
+  Type the parameter as `Db | PgTransaction<…>` so multi-statement writes can run inside `db.transaction((tx) => XRepository(tx))`.
+- **Service** — `XService(db)` factory (e.g. `ProjectService`). Instantiates the
+  module's repositories, holds the business logic, maps DB rows to the `@nexus/types`
+  DTOs, and throws `HttpError` for failures. Routes never touch the repository or `Db` directly.
+- **Route files** — one per endpoint exporting `defineOpenAPIRoute({ route: createRoute({...}), handler })`.
+  - `createRoute` is self-contained: method, path, params/body/query schemas, and responses
+    (200/201/400/401/404 with `errorResponseSchema`) are written **inline** — do not extract a `shared.ts`
+    unless genuinely reused.
+  - Handlers use the **shared service instance** pattern:
+    ```
+    const db = getDb();
+    const projectService = ProjectService(db);
+    const project = await projectService.get(id);
+    ```
+  - `getUser(c)` from `auth-middleware` for the current user; 404s via `throw HttpError.notFound(...)`.
+  - No per-route `security: bearerSecurity` — auth is enforced by `requireAuth` in `routes/index.ts`.
 - `routes/index.ts` does `const app = new OpenAPIHono(); app.use('*', requireAuth); return app.openapiRoutes([...] as const);` — `as const` is required to preserve the schema types.
-- Handlers are stubs (no DB yet): build the response object **inline** and type-check it with `satisfies <Type>` from `@nexus/types`.
 
 ## Reference model
 
@@ -23,8 +40,14 @@ The **DB schema is the target** (`packages/db/src/schema/*`). `@nexus/zod-schema
 
 ## Environment
 
-- Root `.env` is the source; dev/start scripts run `bun --env-file=../../.env ...`. `packages/db/src/env.ts` also loads the root `.env` for DB/seed/drizzle tooling.
+- `apps/api/.env` is the single source of backend credentials (Postgres/Redis/S3/Auth/AI). dev/start scripts run `bun --env-file=.env ...`; `drizzle.config.ts` loads it via `dotenv/config`; the root `docker-compose.yml` interpolates `POSTGRES_*` from it via `docker compose --env-file apps/api/.env`.
+- `DATABASE_URL` is required (no fallback) — `getDb()` in `packages/db` and `drizzle.config.ts` both read it.
 - Never hardcode secrets; read via `process.env` with sensible dev defaults.
+
+## DB tooling
+
+- Backend tooling lives here: `drizzle.config.ts`, `drizzle/` (migrations), `src/seed.ts`, `infra/postgres-init/` (init SQL mounted by docker-compose).
+- Scripts: `db:generate` (`drizzle-kit generate`), `db:migrate`, `db:seed`. The root `db:generate|migrate|seed|reset` scripts tunnel here via `--filter=@nexus/api`.
 
 ## Infra files
 

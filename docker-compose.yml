@@ -4,15 +4,14 @@ services:
     container_name: nexus-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydb
-    ports:
-      - '5432:5432'
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
     volumes:
       - nexus-postgres:/var/lib/postgresql/data
+      - ./apps/api/infra/postgres-init/01-vector.sql:/docker-entrypoint-initdb.d/01-vector.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U nexus -d nexus']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nexus} -d ${POSTGRES_DB:-nexus}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,9 +20,11 @@ services:
     image: dpage/pgadmin4:latest
     container_name: nexus-pgadmin
     restart: unless-stopped
+    # Dev-only GUI — opt in with `docker compose --profile tools up`.
+    profiles: ['tools']
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@nexus.com
-      PGADMIN_DEFAULT_PASSWORD: nexus
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@nexus.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-nexus}
     ports:
       - '5050:80'
     volumes:
@@ -35,14 +36,28 @@ services:
     image: redis:7-alpine
     container_name: nexus-redis
     restart: unless-stopped
-    ports:
-      - '6379:6379'
     volumes:
       - nexus-redis:/data
     command: redis-server --appendonly yes
 
+  benchwork:
+    image: ghcr.io/pontusab/workbench-standalone:latest
+    platform: linux/amd64
+    # Dev-only BullMQ dashboard — opt in with `docker compose --profile tools up`.
+    # (amd64-only image, so it runs emulated on Apple Silicon.)
+    profiles: ['tools']
+    ports:
+      - '3002:3000'
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      QUEUE_NAMES: ${QUEUE_NAMES:-ai-generation,artifact-generation,kickoff,knowledge,knowledge-process,knowledge-remove}
+    depends_on:
+      - redis
+
   redisinsight:
     image: redis/redisinsight:latest
+    # Dev-only Redis GUI — opt in with `docker compose --profile tools up`.
+    profiles: ['tools']
     ports:
       - '5540:5540'
     volumes:
@@ -50,6 +65,93 @@ services:
     depends_on:
       - redis
 
+  # minio:
+  #   image: minio/minio:latest
+  #   container_name: nexus-minio
+  #   restart: unless-stopped
+  #   command: server /data --console-address ":9001"
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+  #     MINIO_API_CORS_ALLOW_ORIGIN: ${WEB_BASE_URL:-http://localhost:3000}
+  #   ports:
+  #     - '9000:9000'
+  #     - '9001:9001'
+  #   volumes:
+  #     - nexus-minio:/data
+  #   healthcheck:
+  #     test: ['CMD', 'mc', 'ready', 'local']
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 10
+
+  # minio-init:
+  #   image: minio/mc:latest
+  #   depends_on:
+  #     - minio
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+  #     S3_BUCKET: ${S3_BUCKET:-nexus}
+  #   entrypoint: >
+  #     /bin/sh -c "
+  #     until (mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD) do sleep 1; done;
+  #     mc mb --ignore-existing local/$$S3_BUCKET;
+  #     exit 0;
+  #     "
+
+  nexus-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: nexus-api:latest
+    container_name: nexus-api
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexus}@postgres:5432/${POSTGRES_DB:-nexus}
+      S3_BUCKET: ${S3_BUCKET:-nexus}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      # These are S3-compatible / MinIO-specific values, commented out because
+      # Nexus runs on AWS S3 where the endpoint is derived from the region and
+      # credentials come from the attached IAM role (FullAccess policy) via the
+      # SDK's default credential chain. Only re-enable them in dev when running
+      # against a self-hosted S3-compatible store (e.g. MinIO in local dev).
+      # S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      # S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      # S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      # S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      PORT: ${PORT:-3001}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:3001}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-test-key}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-text-embedding-3-small}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-secret-change-me}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001/api/auth}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  nexus-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: nexus-web:latest
+    container_name: nexus-web
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Browser-facing API URL
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    depends_on:
+      - nexus-api
 volumes:
   nexus-postgres:
   nexus-redis:

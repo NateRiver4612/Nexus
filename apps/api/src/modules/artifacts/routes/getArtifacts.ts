@@ -3,7 +3,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 import { artifactListSchema, errorResponseSchema, projectIdParamsSchema } from '@nexus/zod-schemas';
 
 import { bearerSecurity } from '../../../openapi';
-import type { ArtifactList } from '@nexus/types';
+import type { ArtifactListType } from '@nexus/types';
 
 export const getArtifactsRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -31,7 +31,7 @@ export const getArtifactsRoute = defineOpenAPIRoute({
     },
   }),
   handler: (c) => {
-    const artifaces: ArtifactList = [
+    const artifaces: ArtifactListType = [
       {
         id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
         projectId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',

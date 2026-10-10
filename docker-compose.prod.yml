@@ -1,0 +1,110 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
+    volumes:
+      - nexus-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nexus} -d ${POSTGRES_DB:-nexus}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nexus-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@nexus.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-nexus}
+    ports:
+      - '5050:80'
+    volumes:
+      - nexus-pgadmin:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: unless-stopped
+    volumes:
+      - nexus-redis:/data
+    command: redis-server --appendonly yes
+
+  benchwork:
+    image: ghcr.io/pontusab/workbench-standalone:latest
+    platform: linux/amd64
+    ports:
+      - '3002:3000'
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      QUEUE_NAMES: ${QUEUE_NAMES:-ai-generation,artifact-generation,kickoff,knowledge,knowledge-process,knowledge-remove}
+    depends_on:
+      - redis
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - '5540:5540'
+    volumes:
+      - nexus-redisinsight:/data
+    depends_on:
+      - redis
+
+  nexus-api:
+    image: 124871951307.dkr.ecr.us-east-1.amazonaws.com/nexus-api
+    container_name: nexus-api
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexus}@postgres:5432/${POSTGRES_DB:-nexus}
+      S3_BUCKET: ${S3_BUCKET:-nexus}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      # S3-compatible / MinIO-specific values, commented out because Nexus runs
+      # on AWS S3 — the endpoint is derived from the region and credentials come
+      # from the attached IAM role (FullAccess policy) via the SDK's default
+      # credential chain. Only re-enable when using a self-hosted S3-compatible
+      # store.
+      # S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      # S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      # S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      # S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      PORT: ${PORT:-3001}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:3001}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-test-key}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-text-embedding-3-small}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-secret-change-me}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001/api/auth}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  nexus-web:
+    image: 124871951307.dkr.ecr.us-east-1.amazonaws.com/nexus-web
+    container_name: nexus-web
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Browser-facing API URL
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    depends_on:
+      - nexus-api
+volumes:
+  nexus-postgres:
+  nexus-redis:
+  nexus-redisinsight:
+  nexus-pgadmin:

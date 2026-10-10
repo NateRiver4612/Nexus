@@ -16,11 +16,15 @@ import { idColumn, timestamps } from './columns';
 import { projects } from './projects';
 import { users } from './users';
 
-export const documentStatus = pgEnum('document_status', [
-  'pending',
-  'processing',
-  'ready',
-  'failed',
+export const sourceStatus = pgEnum('source_status', ['pending', 'processing', 'ready', 'failed']);
+
+export const sourceType = pgEnum('source_type', [
+  'file',
+  'url',
+  'youtube',
+  'copied_text',
+  'audio',
+  'video',
 ]);
 
 export const knowledgeCollections = pgTable(
@@ -44,8 +48,8 @@ export type NewKnowledgeCollection = typeof knowledgeCollections.$inferInsert;
  * Uploaded / imported knowledge sources.
  * The file bytes live in S3/MinIO; Postgres stores metadata + storage_key.
  */
-export const documents = pgTable(
-  'documents',
+export const knowledgeSources = pgTable(
+  'knowledge_sources',
   {
     id: idColumn(),
     projectId: uuid('project_id')
@@ -56,35 +60,42 @@ export const documents = pgTable(
     }),
     name: varchar('name', { length: 255 }).notNull(),
     mimeType: varchar('mime_type', { length: 128 }),
-    storageKey: text('storage_key').notNull(),
-    size: bigint('size', { mode: 'number' }).notNull().default(0),
-    status: documentStatus('status').notNull().default('pending'),
-    createdBy: text('created_by')
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull().default(0),
+    sourceRef: text('source_ref'),
+    sourceType: sourceType('source_type').notNull().default('file'),
+    storageKey: text('storage_key'),
+    content: text('content'),
+    errorMessage: text('error_message'),
+    status: sourceStatus('status').notNull().default('pending'),
+    createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     ...timestamps,
   },
   (table) => [
-    index('documents_project_idx').on(table.projectId),
-    index('documents_collection_idx').on(table.collectionId),
-    index('documents_status_idx').on(table.status),
+    index('knowledge_sources_project_idx').on(table.projectId),
+    index('knowledge_sources_collection_idx').on(table.collectionId),
+    index('knowledge_sources_status_idx').on(table.status),
   ],
 );
 
-export type Document = typeof documents.$inferSelect;
-export type NewDocument = typeof documents.$inferInsert;
+export type KnowledgeSource = typeof knowledgeSources.$inferSelect;
+export type NewKnowledgeSource = typeof knowledgeSources.$inferInsert;
 
 /**
- * Documents are split into retrieval chunks. Each chunk may carry a pgvector
+ * Sources are split into retrieval chunks. Each chunk may carry a pgvector
  * embedding (dimensions depend on the embedding model).
  */
-export const documentChunks = pgTable(
-  'document_chunks',
+export const knowledgeSourceChunks = pgTable(
+  'knowledge_source_chunks',
   {
     id: idColumn(),
-    documentId: uuid('document_id')
+    knowledgeSourceId: uuid('knowledge_source_id')
       .notNull()
-      .references(() => documents.id, { onDelete: 'cascade' }),
+      .references(() => knowledgeSources.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     content: text('content').notNull(),
     chunkIndex: integer('chunk_index').notNull().default(0),
     metadata: jsonb('metadata')
@@ -94,8 +105,11 @@ export const documentChunks = pgTable(
     embedding: vector('embedding', { dimensions: 1536 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('document_chunks_document_idx').on(table.documentId, table.chunkIndex)],
+  (table) => ({
+    embeddingIdx: index('embeddingIndex').using('hnsw', table.embedding.op('vector_cosine_ops')),
+    projectIdx: index('knowledge_source_chunks_project_idx').on(table.projectId),
+  }),
 );
 
-export type DocumentChunk = typeof documentChunks.$inferSelect;
-export type NewDocumentChunk = typeof documentChunks.$inferInsert;
+export type KnowledgeSourceChunk = typeof knowledgeSourceChunks.$inferSelect;
+export type NewKnowledgeSourceChunk = typeof knowledgeSourceChunks.$inferInsert;

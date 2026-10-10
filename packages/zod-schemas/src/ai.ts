@@ -1,6 +1,37 @@
 import { z } from '@hono/zod-openapi';
 
-import { idSchema } from './common';
+import { idSchema, timestampSchema } from './common';
+import { kickoffPlanSchema } from './planner';
+
+export const aiTaskEnum = z.enum([
+  'rewrite',
+  'summarize',
+  'classify',
+  'project-chat',
+  'kickoff',
+  'research',
+  'artifact-generation',
+  'project-health',
+]);
+
+/**
+ * Per-task result schemas — the zod-side twin of `AITaskResultMap` in
+ * @nexus/types. Adding a task means adding a member here; both
+ * `aiTaskDataSchema` (type-level map) and `aiRunDataSchema` (the
+ * `aiRun.data` shape) pick it up.
+ */
+const aiTaskResultSchemas = {
+  kickoff: kickoffPlanSchema.nullable(),
+};
+
+export const aiTaskDataSchema = z.discriminatedUnion('aiTask', [
+  z.object({ aiTask: z.literal('kickoff'), data: aiTaskResultSchemas.kickoff }),
+]);
+
+/** Union of every task's result shape — what `aiRun.data` holds. */
+export const aiRunDataSchema: z.ZodType<z.output<typeof aiTaskDataSchema>['data']> = z.union([
+  aiTaskResultSchemas.kickoff,
+]);
 
 export const aiSuggestionSchema = z
   .object({
@@ -14,8 +45,8 @@ export const aiSuggestionSchema = z
       .openapi({ example: 'Suggest splitting validation into shared utilities' }),
     status: z.enum(['pending', 'accepted', 'dismissed', 'expired']).default('pending'),
     metadata: z.record(z.string(), z.unknown()).default({}),
-    createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
     expiresAt: z.string().nullable().openapi({ example: '2026-08-19T00:00:00.000Z' }),
+    ...timestampSchema,
   })
   .openapi('AiSuggestion');
 
@@ -37,13 +68,14 @@ export const aiRunSchema = z
     id: idSchema,
     projectId: idSchema,
     userId: z.string().openapi({ example: 'seed@nexus.local' }),
-    type: z.string().min(1).max(64).openapi({ example: 'suggest' }),
+    aiTask: aiTaskEnum,
+    data: aiRunDataSchema,
     status: z.enum(['queued', 'processing', 'completed', 'failed']).default('queued'),
     model: z.string().nullable().openapi({ example: 'claude-sonnet-4' }),
     inputTokens: z.number().int().nonnegative().default(0),
     outputTokens: z.number().int().nonnegative().default(0),
-    createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
     completedAt: z.string().nullable().openapi({ example: '2026-08-12T00:00:01.000Z' }),
+    ...timestampSchema,
   })
   .openapi('AiRun');
 
@@ -60,8 +92,7 @@ export const conversationSchema = z
       .max(255)
       .default('New conversation')
       .openapi({ example: 'Scope the AI module' }),
-    createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
-    updatedAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+    ...timestampSchema,
   })
   .openapi('Conversation');
 
@@ -83,7 +114,7 @@ export const messageSchema = z
       .string()
       .nullable()
       .openapi({ example: 'artifact:3fa85f64-5717-4562-b3fc-2c963f66afa6' }),
-    createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+    ...timestampSchema,
   })
   .openapi('Message');
 

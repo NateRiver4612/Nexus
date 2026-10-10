@@ -33,6 +33,10 @@ export class HttpError extends Error {
   static validation(message: string, issues?: Record<string, unknown>) {
     return new HttpError(400, 'ValidationError', message, issues);
   }
+
+  static internal(message: string) {
+    return new HttpError(400, 'ServerError', message);
+  }
 }
 
 export function handleHttpError(c: Context, err: unknown): Response {

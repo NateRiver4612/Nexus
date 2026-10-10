@@ -1,10 +1,11 @@
 import { createApp } from './app';
+import { env } from './env';
 import { getRedis } from './redis';
-import { startWorkers } from './workers';
+import { startWorkers } from './startWorkers';
 
 startWorkers();
 
-const port = Number(process.env.PORT ?? 3001);
+const port = env.PORT;
 const server = Bun.serve({ port, fetch: createApp().fetch });
 
 console.log(`@nexus/api running on http://localhost:${server.port}`);

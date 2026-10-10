@@ -1,0 +1,1 @@
+ALTER TABLE "tasks" DROP COLUMN "actual_time_minutes";

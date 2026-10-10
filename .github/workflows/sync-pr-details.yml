@@ -1,0 +1,47 @@
+name: Sync PR Details from Branch and Commits
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  update-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate PR Title and Body from Commits
+        run: |
+          # Random delimiter so a heredoc never prematurely closes if a commit
+          # body happens to contain the literal word "EOF" on its own line.
+          DELIM=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+
+          {
+            echo "PR_BODY<<$DELIM"
+            git log --format="- %s%n%b%n" "origin/${{ github.event.pull_request.base.ref }}..HEAD"
+            echo "$DELIM"
+          } >> "$GITHUB_ENV"
+
+          # Title comes from the first commit's subject line — it already
+          # follows the "<TICKET> <description>" Nexus commit convention, so
+          # there's no need to re-derive a title from the branch name.
+          FIRST_SUBJECT=$(git log --reverse --format="%s" "origin/${{ github.event.pull_request.base.ref }}..HEAD" | head -n 1)
+          echo "PR_TITLE=$FIRST_SUBJECT" >> "$GITHUB_ENV"
+
+      - name: Update Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              title: process.env.PR_TITLE,
+              body: process.env.PR_BODY,
+            });

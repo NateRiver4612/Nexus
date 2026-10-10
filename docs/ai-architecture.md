@@ -20,8 +20,8 @@ It is an **intelligence layer** that sits across the workspace and uses project 
           ▼                 ▼                 ▼
      Project Data       AI Workflows      Suggestions
      Knowledge          LLM Provider      Artifacts
-     Tasks              LangGraph         Analysis
-     Artifacts          Structured AI     Planning
+     Tasks              Structured AI     Analysis
+     Artifacts                            Planning
      Activity
           │                 │                 │
           └─────────────────┼─────────────────┘
@@ -253,6 +253,8 @@ LLM
 
 This becomes the foundation of Nexus RAG.
 
+**Implementation note:** Kickoff's context retrieval (`buildKnowledgeContext`) uses a floor-and-fill strategy — every knowledge source gets a guaranteed minimum of chunks (so no uploaded source is silently starved out), with remaining budget filled by the best-ranked chunks project-wide. For requests spanning multiple distinct sub-topics (e.g. a single long tutorial covering setup, core logic, testing, and deployment), a single query embedding tends to favor whichever sub-topic the goal text emphasizes most. Where that matters, prefer a small fixed set of aspect-specific queries over one global query, rather than trying to fix it by over-fetching.
+
 ---
 
 # 6. AI Provider Layer
@@ -292,6 +294,8 @@ You want to be able to:
 - Control AI costs
 
 without rewriting the AI architecture.
+
+**Implementation note:** domain modules (kickoff included) should call this abstraction, never a provider SDK directly. If a domain module is currently instantiating a provider client inline, that's a gap to close before adding more AI-driven modules — otherwise a future provider swap means hunting down every call site instead of changing one place.
 
 ---
 
@@ -351,15 +355,17 @@ Not:
 
 The first can safely become application data after validation.
 
+**Implementation note:** prefer provider-native structured output (forced tool-calling against a Zod-derived JSON schema, e.g. `z.toJSONSchema()`) over prompting for prose-formatted JSON. It's more reliable, and a single schema can drive both the tool definition and the post-generation validation — no risk of the two drifting out of sync.
+
 ---
 
 # 9. AI Workflow Architecture
 
-Nexus will have two types of AI operations.
+Nexus has two types of AI operations — the distinction is **synchronous vs. background**, not "simple vs. complex." A multi-step operation is not automatically a LangGraph candidate; see Section 10 for the actual bar.
 
 ## Simple AI Operations
 
-For short operations:
+For short, synchronous operations where the user is waiting:
 
 ```
 Frontend
@@ -381,13 +387,35 @@ Examples:
 - Explain something
 - Improve writing
 
-These do **not** need LangGraph.
+## Multi-step AI Operations (BullMQ, no LangGraph required)
 
----
+For operations that are long-running or expensive, but whose steps are **known and fixed in advance** — the code decides what happens next, not the model:
 
-## Complex AI Workflows
+```
+Frontend
+   ↓
+Hono
+   ↓
+BullMQ
+   ↓
+AI Worker
+   ↓
+AI Service (one or more calls, sequenced by plain code)
+   ↓
+Result
+```
 
-For multi-step operations:
+Examples:
+
+- **AI Project Kickoff** — one structured-output call (context → generate → validate), wrapped in a job for retries/backoff. Implemented as a single tool-calling request, not a graph.
+- **Project Health** — one synthesis call over data the application already knows how to fetch (tasks, milestones, deadlines, artifact/knowledge status). The application decides what to read; the model doesn't need to.
+- **Artifact generation (current scope: single markdown deliverable)** — gather context → one generation call → validate → save version.
+
+These stay in this category as long as the sequence of steps is fixed by the application. If artifact generation later needs a stage to conditionally loop back (e.g. a generated outline fails a quality check and needs re-planning, not just a retry of the same step), that specific workflow moves to the next category — the rest don't automatically follow.
+
+## Agentic AI Workflows (LangGraph)
+
+For workflows where the **model itself decides what to do next**, in a way the application cannot predetermine as an if/else — genuine dynamic branching, not just "several steps."
 
 ```
 Frontend
@@ -405,81 +433,58 @@ AI Provider
 Result
 ```
 
-Examples:
+Current candidate:
 
-- AI Project Kickoff
-- Research workflow
-- Large document analysis
-- Artifact generation
-- Project health analysis
+- **Research workflow** — if built so the AI decides, based on what it's already found, whether to keep searching, change approach, or stop. This is the one workflow in Nexus where the branching is genuinely data-dependent at runtime.
+
+Not yet built. Before reaching for LangGraph even here: a plain bounded loop (fixed max iterations, coded as regular control flow) may be sufficient — escalate to LangGraph only if that loop's branching logic becomes hard to manage as plain code, not by default.
 
 ---
 
 # 10. LangGraph
 
-LangGraph is used for **stateful AI workflows**, not every AI request.
+LangGraph is for workflows where **the model's own output determines control flow** — not for workflows that merely have multiple steps, persisted state, or a human-approval gate. Those three, specifically, are usually _not_ reasons to reach for it on their own:
 
-A workflow can look like:
+- **Multiple steps** — a sequence of AI Service calls inside a worker function is still just a sequence; LangGraph doesn't simplify a fixed sequence, it adds a framework layer around one.
+- **State / persistence** — an `ai_runs` row (or equivalent) already gives you a durable record of a workflow's progress and result. That's a database concern, not a reason for a graph framework.
+- **Human approval** — approval is an application-layer gate (a stored draft + an explicit commit/accept endpoint), not a step inside the AI's own reasoning. It happens _after_ the AI's output, in Nexus's domain services — the AI never needs to "know" approval is part of its workflow.
 
-```
-START
-  ↓
-Load Context
-  ↓
-Analyze
-  ↓
-Generate
-  ↓
-Validate
-  ↓
-Human Review
-  ↓
-Execute
-  ↓
-END
-```
-
-This is useful when AI needs:
-
-- Multiple steps
-- State
-- Persistence
-- Human approval
-- Tool usage
-- Retry/resume behavior
+The actual bar: does the model need to choose what happens next based on what it's already produced or found, in a way the application genuinely cannot express as an if/else ahead of time? Only that clears the bar. As of now, only a genuinely agentic Research workflow (Section 9) meets it — everything else in Nexus achieves "multi-step, stateful, human-approved" using plain sequential code, a database row, and an application-layer approval gate.
 
 ---
 
 # 11. AI Project Kickoff
 
-AI Project Kickoff is the first major AI workflow in Nexus.
+AI Project Kickoff is the first major AI workflow in Nexus, and the first one actually implemented.
 
 ### Input
 
 ```
 Project Name
 Goal
-Description
+Category
+Level (beginner | intermediate | advanced)
+Deliverable intent
+Deliverables (preset or custom, multi-select)
+Knowledge sources (optional — files/links/YouTube/text)
 ```
 
 ### Process
 
 ```
-Project Goal
+Project Goal + Category + Level + Deliverables
       ↓
-Load Relevant Context
+Retrieve Relevant Knowledge Context (floor-and-fill)
       ↓
-Analyze Goal
+Build Prompt (base + category guidance + level guidance + deliverable guidance)
       ↓
-Generate Deliverables
+Generate (single structured tool-calling request)
       ↓
-Generate Milestones
+Validate (Zod)
       ↓
-Generate Tasks
+Store as Draft
       ↓
-Validate Structure
-      ↓
-Present to User
+Present to User for Review
 ```
 
 ### Output
@@ -487,24 +492,26 @@ Present to User
 ```
 Project Summary
 
-Suggested Deliverables
-Suggested Milestones
-Suggested Tasks
+Milestones[]
+  Tasks[]
+    instructions: string[]  — ordered, concrete steps per task
 ```
 
 ### Important
 
-AI does **not** automatically create them.
+AI does **not** automatically create the real project structure.
 
 ```
-AI Suggests
+AI Generates Draft
      ↓
-User Reviews
+User Reviews (edits titles, removes/adds tasks)
      ↓
-User Accepts
+User Approves (explicit commit action)
      ↓
-Application Creates
+Application Creates Milestone/Task rows
 ```
+
+**Implementation note:** this workflow does not use LangGraph. It's a single forced tool-calling request (context → one generation call → Zod validation), run inside a BullMQ job for retries/idempotency. The draft/approve boundary is enforced by having exactly one code path — the commit endpoint — permitted to write real `Milestone`/`Task` rows; nothing about that boundary requires a workflow framework.
 
 ---
 
@@ -581,6 +588,8 @@ The AI is identifying useful information.
 
 The user remains in control.
 
+**Implementation note:** the application already knows which data sources a health check needs (tasks, milestones, deadlines, artifact/knowledge status) — the model isn't being asked to decide what's relevant, only to synthesize what's already been fetched. This is a single synthesis call, not a LangGraph workflow.
+
 ---
 
 # 14. AI Artifact Generation
@@ -624,6 +633,8 @@ presentation.pptx
 ```
 
 This is much more reliable than asking an LLM to directly produce a binary file.
+
+**Implementation note:** current scope is a single markdown deliverable — one generation call, no orchestration framework needed. As deliverable formats expand (per the `deliverable_kind` presets — word report, financial model, presentation, timeline, spreadsheet), most of these still fit "gather context → one generation call → hand structured content to the matching file generator" as plain sequential code. LangGraph is only justified for a specific artifact type if its generation needs a genuine re-plan loop (e.g. a generated structure fails validation in a way that calls for reasoning about _why_, not just retrying) — decide per artifact type when it's built, not as a blanket rule for "artifact generation."
 
 ---
 
@@ -839,26 +850,27 @@ Artifact Ready
 
 # 20. Background AI Jobs
 
-Use BullMQ + Redis for operations that shouldn't block HTTP requests.
+Use BullMQ + Redis for operations that shouldn't block HTTP requests. Most of these are plain sequential logic inside the worker (see Section 9) — only a workflow with genuine dynamic branching (currently: research, if/when built that way) routes through LangGraph specifically.
 
 ```
 AI Jobs
 
-artifact-generation
-knowledge-processing
+kickoff-generate        (plain sequential — implemented)
+artifact-generation     (plain sequential, current scope)
+knowledge-processing    (extraction/chunking/embedding — not an AI reasoning step)
 embedding-generation
 ocr-processing
-research
-project-health
+research                (candidate for LangGraph, if built as dynamic tool-use)
+project-health          (plain sequential)
 notifications
 ```
 
-Example:
+Example — kickoff, as implemented:
 
 ```
 User
  ↓
-Generate Report
+Create Project / Continue Kickoff
  ↓
 API
  ↓
@@ -866,13 +878,11 @@ BullMQ
  ↓
 AI Worker
  ↓
-LangGraph
+AI Service (single structured call)
  ↓
-Artifact Generator
+Draft Stored
  ↓
-S3
- ↓
-Artifact Ready
+SSE → Frontend Review
 ```
 
 ---
@@ -907,6 +917,8 @@ Fail gracefully
 ```
 
 Do not endlessly retry invalid AI output.
+
+**Implementation note:** Zod validation failing on a structured-output call is itself a legitimate retry trigger, not just a hard failure — a job's normal retry/backoff (BullMQ `attempts` + exponential backoff) naturally re-runs generation when the model returns output that fails schema validation. Bound this the same as any other retry — don't let a persistently invalid response spin indefinitely.
 
 ---
 
@@ -1082,21 +1094,21 @@ Putting everything together:
                      ▼              │              ▼
                Context Builder      │          AI Worker
                      │              │              │
-          ┌──────────┼──────────┐   │              ▼
-          │          │          │   │         LangGraph
-          ▼          ▼          ▼   │              │
-       Project    Knowledge   Artifacts            ▼
-          │          │          │            AI Provider
-          │          ▼          │                 │
-          │       pgvector      │                 ▼
-          │                     │              LLM
-          └──────────┬──────────┘
-                     │
-                     ▼
-               Context + Tools
-                     │
-                     ▼
-                    AI
+          ┌──────────┼──────────┐   │      ┌───────┴───────┐
+          │          │          │   │      │               │
+          ▼          ▼          ▼   │      ▼               ▼
+       Project    Knowledge   Artifacts    AI Provider   LangGraph
+          │          │          │    │   (plain sequential  (agentic
+          │          ▼          │    │    workflows —        workflows —
+          │       pgvector      │    │    kickoff, health,    research,
+          │                     │    │    artifact gen)       if built)
+          └──────────┬──────────┘    │         │               │
+                     │                └─────────┴───────┬───────┘
+                     ▼                                  ▼
+               Context + Tools                    AI Provider
+                     │                                  │
+                     ▼                                  ▼
+                    AI  ◄─────────────────────────── LLM
                      │
              ┌───────┴────────┐
              ▼                ▼
@@ -1139,11 +1151,13 @@ Models should be replaceable.
 
 ### 6. Use the Right Tool for the Job
 
-Simple AI → direct provider.
+Simple AI → direct provider call.
 
-Complex AI → LangGraph.
+Multi-step but deterministic AI (the sequence is known in advance) → plain sequential logic in a worker, no framework required.
 
-Long-running work → BullMQ.
+Genuinely dynamic, model-decided branching → LangGraph.
+
+Long-running work → BullMQ, regardless of which of the above applies.
 
 Knowledge retrieval → pgvector.
 

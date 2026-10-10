@@ -1,8 +1,9 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import {
   aiRunListSchema,
   aiRunSchema,
+  aiTaskDataSchema,
   aiSuggestionListSchema,
   aiSuggestionSchema,
   artifactListSchema,
@@ -11,16 +12,21 @@ import {
   createAiSuggestionSchema,
   createConversationSchema,
   createKnowledgeItemSchema,
+  createKnowledgeSourcesSchema,
   createMessageSchema,
   createNotificationSchema,
   createPlannerItemSchema,
   createProjectSchema,
+  createUploadUrlResponseSchema,
+  createUploadUrlSchema,
   errorResponseSchema,
   errorSchema,
   idParamsSchema,
   idSchema,
   knowledgeItemListSchema,
   knowledgeItemSchema,
+  knowledgeSourceListSchema,
+  knowledgeSourceSchema,
   messageListSchema,
   messageSchema,
   notificationListSchema,
@@ -29,9 +35,28 @@ import {
   paginationSchema,
   plannerItemListSchema,
   plannerItemSchema,
+  milestoneSchema,
+  taskSchema,
+  taskStepSchema,
+  taskDodSchema,
+  taskNoteSchema,
+  createTaskNoteSchema,
+  updateTaskNoteSchema,
+  taskDetailSchema,
+  updateTaskSchema,
+  milestoneWithTasksSchema,
+  milestonesWithTasksSchema,
+  projectMilestonesTasksSchema,
+  projectProgressSchema,
+  kickoffPlanSchema,
+  kickoffSummarySchema,
+  completeOnboardingSchema,
+  onboardingIdQuerySchema,
   projectIdParamsSchema,
   projectListSchema,
   projectSchema,
+  projectDetailListSchema,
+  projectDetailSchema,
   searchQuerySchema,
   searchResultSchema,
   searchResultsSchema,
@@ -44,73 +69,162 @@ import {
   userSchema,
   conversationListSchema,
   conversationSchema,
+  onboardingStatusSchema,
+  onboardingLevelEnum,
+  onboardingStep1Schema,
+  onboardingStep2Schema,
+  onboardingStep3Schema,
+  onboardingStep4Schema,
+  onboardingStep5Schema,
+  onboardingDataSchema,
+  onboardingStateSchema,
+  updateOnboardingSchema,
+  createKnowledgeSourceTextSchema,
+  createKnowledgeSourceYoutubeSchema,
+  createDeliverableSchema,
+  assignDeliverablesSchema,
+  deliverablesQuerySchema,
+  deliverableSchema,
+  deliverableListSchema,
+  updateDeliverableSchema,
+  deliverableParamsSchema,
+  deliverableKindSchema,
+  aiTaskEnum,
+  submitOnboardingOutputSchema,
+  projectStatusEnum,
+  projectCategoryEnum,
+  taskStatusSchema,
+  taskStepStatusSchema,
 } from '@nexus/zod-schemas';
 
-export type Id = z.infer<typeof idSchema>;
-export type IdParams = z.infer<typeof idParamsSchema>;
-export type ProjectIdParams = z.infer<typeof projectIdParamsSchema>;
-export type PaginationQuery = z.infer<typeof paginationSchema>;
+export type OnboardingStatusType = z.infer<typeof onboardingStatusSchema>;
+export type OnboardingLevelType = z.infer<typeof onboardingLevelEnum>;
+export type OnboardingStep1InputType = z.infer<typeof onboardingStep1Schema>;
+export type OnboardingStep2InputType = z.infer<typeof onboardingStep2Schema>;
+export type OnboardingStep3InputType = z.infer<typeof onboardingStep3Schema>;
+export type OnboardingStep4InputType = z.infer<typeof onboardingStep4Schema>;
+export type OnboardingStep5InputType = z.infer<typeof onboardingStep5Schema>;
+export type OnboardingDataType = z.infer<typeof onboardingDataSchema>;
+export type OnboardingStateType = z.infer<typeof onboardingStateSchema>;
+export type UpdateOnboardingInputType = z.infer<typeof updateOnboardingSchema>;
 
-export type AiSuggestion = z.infer<typeof aiSuggestionSchema>;
-export type AiSuggestionList = z.infer<typeof aiSuggestionListSchema>;
-export type CreateAiSuggestionInput = z.infer<typeof createAiSuggestionSchema>;
-export type UpdateAiSuggestionInput = z.infer<typeof updateAiSuggestionSchema>;
+export type IdType = z.infer<typeof idSchema>;
+export type IdParamsType = z.infer<typeof idParamsSchema>;
+export type ProjectIdParamsType = z.infer<typeof projectIdParamsSchema>;
+export type PaginationQueryType = z.infer<typeof paginationSchema>;
 
-export type AiRun = z.infer<typeof aiRunSchema>;
-export type AiRunList = z.infer<typeof aiRunListSchema>;
+export type AiSuggestionType = z.infer<typeof aiSuggestionSchema>;
+export type AiSuggestionListType = z.infer<typeof aiSuggestionListSchema>;
+export type CreateAiSuggestionInputType = z.infer<typeof createAiSuggestionSchema>;
+export type UpdateAiSuggestionInputType = z.infer<typeof updateAiSuggestionSchema>;
 
-export type Conversation = z.infer<typeof conversationSchema>;
-export type ConversationList = z.infer<typeof conversationListSchema>;
-export type CreateConversationInput = z.infer<typeof createConversationSchema>;
-export type UpdateConversationInput = z.infer<typeof updateConversationSchema>;
+export type AiRunType = z.infer<typeof aiRunSchema>;
+export type AiRunListType = z.infer<typeof aiRunListSchema>;
 
-export type Message = z.infer<typeof messageSchema>;
-export type MessageList = z.infer<typeof messageListSchema>;
-export type CreateMessageInput = z.infer<typeof createMessageSchema>;
+export type ConversationType = z.infer<typeof conversationSchema>;
+export type ConversationListType = z.infer<typeof conversationListSchema>;
+export type CreateConversationInputType = z.infer<typeof createConversationSchema>;
+export type UpdateConversationInputType = z.infer<typeof updateConversationSchema>;
 
-export type Project = z.infer<typeof projectSchema>;
-export type ProjectList = z.infer<typeof projectListSchema>;
-export type CreateProjectInput = z.infer<typeof createProjectSchema>;
-export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+export type MessageType = z.infer<typeof messageSchema>;
+export type MessageListType = z.infer<typeof messageListSchema>;
+export type CreateMessageInputType = z.infer<typeof createMessageSchema>;
 
-export type PlannerItem = z.infer<typeof plannerItemSchema>;
-export type PlannerItemList = z.infer<typeof plannerItemListSchema>;
-export type CreatePlannerItemInput = z.infer<typeof createPlannerItemSchema>;
-export type UpdatePlannerItemInput = z.infer<typeof updatePlannerItemSchema>;
+export type ProjectType = z.infer<typeof projectSchema>;
+export type ProjectStatusType = z.infer<typeof projectStatusEnum>;
+export type ProjectCategoryType = z.infer<typeof projectCategoryEnum>;
+export type ProjectListType = z.infer<typeof projectListSchema>;
+export type ProjectDetailType = z.infer<typeof projectDetailSchema>;
+export type ProjectDetailListType = z.infer<typeof projectDetailListSchema>;
+export type CreateProjectInputType = z.infer<typeof createProjectSchema>;
+export type UpdateProjectInputType = z.infer<typeof updateProjectSchema>;
 
-export type Artifact = z.infer<typeof artifactSchema>;
-export type ArtifactList = z.infer<typeof artifactListSchema>;
-export type CreateArtifactInput = z.infer<typeof createArtifactSchema>;
-export type UpdateArtifactInput = z.infer<typeof updateArtifactSchema>;
+export type PlannerItemType = z.infer<typeof plannerItemSchema>;
+export type PlannerItemListType = z.infer<typeof plannerItemListSchema>;
+export type MilestoneType = z.infer<typeof milestoneSchema>;
+export type TaskType = z.infer<typeof taskSchema>;
+export type TaskStepType = z.infer<typeof taskStepSchema>;
+export type TaskDodType = z.infer<typeof taskDodSchema>;
+export type TaskNoteType = z.infer<typeof taskNoteSchema>;
+export type TaskNoteListType = TaskNoteType[];
+export type CreateTaskNoteInputType = z.infer<typeof createTaskNoteSchema>;
+export type UpdateTaskNoteInputType = z.infer<typeof updateTaskNoteSchema>;
+export type TaskStatusEnum = z.infer<typeof taskStatusSchema>;
+export type TaskStepStatusType = z.infer<typeof taskStepStatusSchema>;
+export type TaskDetailType = z.infer<typeof taskDetailSchema>;
+export type UpdateTaskInputType = z.infer<typeof updateTaskSchema>;
+export type MilestoneWithTasksType = z.infer<typeof milestoneWithTasksSchema>;
+export type MilestoneWithTasksListType = z.infer<typeof milestonesWithTasksSchema>;
+export type ProjectMilestonesTasksInputType = z.infer<typeof projectMilestonesTasksSchema>;
+export type ProjectProgressType = z.infer<typeof projectProgressSchema>;
+export type CompleteOnboardingType = z.infer<typeof completeOnboardingSchema>;
+export type SubmitOnboardingOutputType = z.infer<typeof submitOnboardingOutputSchema>;
+export type OnboardingIdQueryType = z.infer<typeof onboardingIdQuerySchema>;
+export type CreatePlannerItemInputType = z.infer<typeof createPlannerItemSchema>;
+export type UpdatePlannerItemInputType = z.infer<typeof updatePlannerItemSchema>;
 
-export type KnowledgeItem = z.infer<typeof knowledgeItemSchema>;
-export type KnowledgeItemList = z.infer<typeof knowledgeItemListSchema>;
-export type CreateKnowledgeItemInput = z.infer<typeof createKnowledgeItemSchema>;
-export type UpdateKnowledgeItemInput = z.infer<typeof updateKnowledgeItemSchema>;
+export type ArtifactType = z.infer<typeof artifactSchema>;
+export type ArtifactListType = z.infer<typeof artifactListSchema>;
+export type CreateArtifactInputType = z.infer<typeof createArtifactSchema>;
+export type UpdateArtifactInputType = z.infer<typeof updateArtifactSchema>;
 
-export type Notification = z.infer<typeof notificationSchema>;
-export type NotificationList = z.infer<typeof notificationListSchema>;
-export type CreateNotificationInput = z.infer<typeof createNotificationSchema>;
+export type KnowledgeItemType = z.infer<typeof knowledgeItemSchema>;
+export type KnowledgeItemListType = z.infer<typeof knowledgeItemListSchema>;
+export type CreateKnowledgeItemInputType = z.infer<typeof createKnowledgeItemSchema>;
+export type UpdateKnowledgeItemInputType = z.infer<typeof updateKnowledgeItemSchema>;
 
-export type SearchQuery = z.infer<typeof searchQuerySchema>;
-export type SearchResult = z.infer<typeof searchResultSchema>;
-export type SearchResults = z.infer<typeof searchResultsSchema>;
+export type KnowledgeSourceType = z.infer<typeof knowledgeSourceSchema>;
+export type KnowledgeSourceListType = z.infer<typeof knowledgeSourceListSchema>;
+export type CreateKnowledgeSourcesInputType = z.infer<typeof createKnowledgeSourcesSchema>;
+export type CreateKnowledgeSourceItemType = CreateKnowledgeSourcesInputType[number];
+export type CreateUploadUrlInputType = z.infer<typeof createUploadUrlSchema>;
+export type CreateUploadUrlResponseType = z.infer<typeof createUploadUrlResponseSchema>;
+export type CreateKnowledgeSourceTextType = z.infer<typeof createKnowledgeSourceTextSchema>;
+export type CreateKnowledgeSourceYoutubeType = z.infer<typeof createKnowledgeSourceYoutubeSchema>;
+export type DeliverableKindType = z.infer<typeof deliverableKindSchema>;
+export type DeliverableType = z.infer<typeof deliverableSchema>;
+export type DeliverableListType = z.infer<typeof deliverableListSchema>;
+export type CreateDeliverableInputType = z.infer<typeof createDeliverableSchema>;
+export type AssignDeliverablesInputType = z.infer<typeof assignDeliverablesSchema>;
+export type DeliverablesQueryType = z.infer<typeof deliverablesQuerySchema>;
+export type UpdateDeliverableInputType = z.infer<typeof updateDeliverableSchema>;
+export type DeliverableParamsType = z.infer<typeof deliverableParamsSchema>;
 
-export type User = z.infer<typeof userSchema>;
+export type NotificationType = z.infer<typeof notificationSchema>;
+export type NotificationListType = z.infer<typeof notificationListSchema>;
+export type CreateNotificationInputType = z.infer<typeof createNotificationSchema>;
 
-export type Ok = z.infer<typeof okSchema>;
-export type ApiError = z.infer<typeof errorSchema>;
-export type ErrorResponse = z.infer<typeof errorResponseSchema>;
+export type SearchQueryType = z.infer<typeof searchQuerySchema>;
+export type SearchResultType = z.infer<typeof searchResultSchema>;
+export type SearchResultsType = z.infer<typeof searchResultsSchema>;
 
-export type ApiModule =
-  'ai' | 'projects' | 'planner' | 'artifacts' | 'knowledge' | 'notifications' | 'search' | 'users';
+export type KickoffPlanType = z.infer<typeof kickoffPlanSchema>;
+export type KickoffSummaryType = z.infer<typeof kickoffSummarySchema>;
 
-export type ApiContext = {
-  user: { id: string; email: string; name: string | null } | null;
-  set: (user: ApiContext['user']) => void;
+export type AITaskType = z.infer<typeof aiTaskEnum>;
+
+type AiTaskResultEntry = z.output<typeof aiTaskDataSchema>;
+
+/** Maps each AI task to the shape its result (`aiRun.data`) takes. Schema-derived. */
+export type AITaskResultMap = {
+  [K in AiTaskResultEntry['aiTask']]: Extract<AiTaskResultEntry, { aiTask: K }>['data'];
 };
 
-export type ApiList<T> = {
+export type UserType = z.infer<typeof userSchema>;
+
+export type OkType = z.infer<typeof okSchema>;
+export type ApiErrorType = z.infer<typeof errorSchema>;
+export type ErrorResponseType = z.infer<typeof errorResponseSchema>;
+
+export type ApiModuleType =
+  'ai' | 'projects' | 'planner' | 'artifacts' | 'knowledge' | 'notifications' | 'search' | 'users';
+
+export type ApiContextType = {
+  user: { id: string; email: string; name: string | null } | null;
+  set: (user: ApiContextType['user']) => void;
+};
+
+export type ApiListType<T> = {
   items: T[];
   page: number;
   pageSize: number;

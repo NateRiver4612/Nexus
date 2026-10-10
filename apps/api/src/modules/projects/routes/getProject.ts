@@ -1,22 +1,21 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, idParamsSchema, projectSchema } from '@nexus/zod-schemas';
+import { errorResponseSchema, idParamsSchema, projectDetailSchema } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
-import type { Project } from '@nexus/types';
-
-import { bearerSecurity } from '../../../openapi';
+import { HttpError } from '../../../errors';
+import { ProjectService } from '../service';
 
 export const getProjectRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
     path: '/{id}',
-    security: bearerSecurity,
     request: {
       params: idParamsSchema,
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: projectSchema } },
+        content: { 'application/json': { schema: projectDetailSchema } },
         description: 'Project retrieved',
       },
       401: {
@@ -29,19 +28,14 @@ export const getProjectRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
+  handler: async (c) => {
     const { id } = c.req.valid('param');
-    return c.json(
-      {
-        id,
-        name: 'Placeholder',
-        slug: 'placeholder',
-        description: null,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } satisfies Project,
-      200,
-    );
+
+    const db = getDb();
+    const projectService = ProjectService(db);
+
+    const project = await projectService.get(id);
+    if (!project) throw HttpError.notFound('Project not found');
+    return c.json(project, 200);
   },
 });

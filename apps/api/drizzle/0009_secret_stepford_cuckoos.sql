@@ -1,0 +1,1 @@
+ALTER TYPE "public"."project_onboarding_status" ADD VALUE 'submitted' BEFORE 'completed';

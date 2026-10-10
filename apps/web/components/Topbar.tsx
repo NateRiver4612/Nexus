@@ -42,7 +42,7 @@ export function Topbar({ collapsed, onToggle }: TopbarProps) {
 
       <button
         type="button"
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium hover:bg-accent"
+        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
       >
         <span className="text-muted-foreground">Jordan&apos;s Workspace</span>
       </button>

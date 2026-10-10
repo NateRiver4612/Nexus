@@ -38,6 +38,7 @@ export const readNotificationRoute = defineOpenAPIRoute({
         body: null,
         readAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
       200,
     );

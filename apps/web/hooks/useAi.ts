@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type {
-  CreateAiSuggestionInput,
-  CreateConversationInput,
-  CreateMessageInput,
-  UpdateAiSuggestionInput,
-  UpdateConversationInput,
+  CreateAiSuggestionInputType,
+  CreateConversationInputType,
+  CreateMessageInputType,
+  UpdateAiSuggestionInputType,
+  UpdateConversationInputType,
 } from '@nexus/types';
 
 import {
@@ -23,6 +23,7 @@ import {
 } from '@/api/ai';
 
 import { aiRunKeys, aiSuggestionKeys, conversationKeys, messageKeys } from './queryKeys';
+import { createDetailQueryHook } from './createQuery';
 
 export function useGetAiSuggestions(projectId: string) {
   return useQuery({
@@ -36,7 +37,7 @@ export function useCreateAiSuggestion(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateAiSuggestionInput) => createAiSuggestion(projectId, input),
+    mutationFn: (input: CreateAiSuggestionInputType) => createAiSuggestion(projectId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: aiSuggestionKeys.list(projectId) }),
   });
 }
@@ -45,7 +46,7 @@ export function useUpdateAiSuggestion(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateAiSuggestionInput }) =>
+    mutationFn: ({ id, input }: { id: string; input: UpdateAiSuggestionInputType }) =>
       updateAiSuggestion(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: aiSuggestionKeys.list(projectId) }),
   });
@@ -68,13 +69,16 @@ export function useGetAiRuns(projectId: string) {
   });
 }
 
-export function useAiRun(id: string) {
-  return useQuery({
-    queryKey: aiRunKeys.detail(id),
-    queryFn: () => getAiRun(id),
-    enabled: Boolean(id),
-  });
-}
+export const useGetAiRun = createDetailQueryHook(getAiRun, (id) => aiRunKeys.detail(id), {
+  refetchInterval(query) {
+    const status = query.state.data?.status;
+
+    if (status === 'processing' || status === 'queued') {
+      return 3000;
+    }
+    return false;
+  },
+});
 
 export function useGetConversations(projectId: string) {
   return useQuery({
@@ -88,7 +92,7 @@ export function useCreateConversation(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateConversationInput) => createConversation(projectId, input),
+    mutationFn: (input: CreateConversationInputType) => createConversation(projectId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: conversationKeys.list(projectId) }),
   });
 }
@@ -97,7 +101,7 @@ export function useUpdateConversation(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateConversationInput }) =>
+    mutationFn: ({ id, input }: { id: string; input: UpdateConversationInputType }) =>
       updateConversation(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: conversationKeys.list(projectId) }),
   });
@@ -115,7 +119,7 @@ export function usePostMessage(conversationId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateMessageInput) => postMessage(conversationId, input),
+    mutationFn: (input: CreateMessageInputType) => postMessage(conversationId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: messageKeys.list(conversationId) }),
   });
 }

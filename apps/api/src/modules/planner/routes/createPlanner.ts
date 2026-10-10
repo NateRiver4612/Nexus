@@ -50,7 +50,7 @@ export const createPlannerRoute = defineOpenAPIRoute({
         title: body.title,
         description: body.description ?? null,
         status: body.status,
-        priority: body.priority,
+        difficulty: body.difficulty,
         sortOrder: body.sortOrder,
         metadata: null,
         createdAt: new Date().toISOString(),

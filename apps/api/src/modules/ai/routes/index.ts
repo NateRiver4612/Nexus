@@ -5,7 +5,6 @@ import { createAiSuggestionRoute } from './createAiSuggestion';
 import { createConversationRoute } from './createConversation';
 import { deleteAiSuggestionRoute } from './deleteAiSuggestion';
 import { getAiRunRoute } from './getAiRun';
-import { getAiRunsRoute } from './getAiRuns';
 import { getAiSuggestionsRoute } from './getAiSuggestions';
 import { getConversationsRoute } from './getConversations';
 import { getMessagesRoute } from './getMessages';
@@ -22,7 +21,7 @@ export function aiRoutes() {
     { route: createAiSuggestionRoute.route, handler: createAiSuggestionRoute.handler },
     { route: updateAiSuggestionRoute.route, handler: updateAiSuggestionRoute.handler },
     { route: deleteAiSuggestionRoute.route, handler: deleteAiSuggestionRoute.handler },
-    { route: getAiRunsRoute.route, handler: getAiRunsRoute.handler },
+    // { route: getAiRunsRoute.route, handler: getAiRunsRoute.handler },
     { route: getAiRunRoute.route, handler: getAiRunRoute.handler },
     { route: getConversationsRoute.route, handler: getConversationsRoute.handler },
     { route: createConversationRoute.route, handler: createConversationRoute.handler },
