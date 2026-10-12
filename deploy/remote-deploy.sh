@@ -21,6 +21,8 @@ PROJECT="nexus"   # pinned so the compose project name never depends on the fold
 COMPOSE="docker compose -p $PROJECT -f docker-compose.prod.yml"
 STATE_FILE="/opt/nexus/.current_tag"
 PREV_TAG="$(cat "$STATE_FILE" 2>/dev/null || true)"
+API_PORT="${API_PORT:-3001}"
+WEB_PORT="${WEB_PORT:-3000}"
 
 echo "==> Deploying $IMAGE_TAG (previous: ${PREV_TAG:-none})"
 
@@ -48,6 +50,10 @@ docker ps -a --filter "name=^nexus-" \
 # 4. Make sure infra is up and healthy
 $COMPOSE up -d --wait postgres redis
 
+# 4b. Ensure required extensions exist (init scripts only run on an empty volume)
+$COMPOSE exec -T postgres sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector;"'
+
 # 5. Backup the DB before touching schema; keep the last 5
 mkdir -p backups
 $COMPOSE exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > "backups/pre-$IMAGE_TAG.sql"
@@ -68,7 +74,7 @@ $COMPOSE up -d nexus-api nexus-web
 # 8. Health check
 echo "==> Health checking..."
 for i in $(seq 1 20); do
-  if curl -sf http://localhost:4000/health > /dev/null && curl -sf http://localhost:3000 > /dev/null; then
+  if curl -sf http://localhost:$API_PORT/health > /dev/null && curl -sf http://localhost:$WEB_PORT > /dev/null; then
     echo "$IMAGE_TAG" > "$STATE_FILE"
     docker image prune -af --filter "until=168h" > /dev/null
     echo "==> Healthy. Deploy complete: $IMAGE_TAG"
