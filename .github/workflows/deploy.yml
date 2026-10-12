@@ -82,6 +82,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug SSH config
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          echo "SSH_KEY length: ${#SSH_KEY}"
+          echo "SSH_KEY first 50 chars: ${SSH_KEY:0:50}"
+          echo "HOST: $HOST"
+
       - name: Configure SSH
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
