@@ -4,6 +4,19 @@ cd "$(dirname "$0")/.."
 
 ENV_FILE="apps/api/.env"
 
+# Runs a step with a labeled banner; on failure prints the full output (bun /
+# drizzle / postgres stacks included) plus a clear exit marker so the failing
+# step is obvious instead of the script just dying silently.
+run_step() {
+  local label="$1"
+  shift
+  echo "==> $label"
+  if ! "$@" 2>&1; then
+    echo "!! $label FAILED (exit code: $?) — see the error output above." >&2
+    exit 1
+  fi
+}
+
 echo "==> Tearing down Nexus containers, networks, and volumes"
 docker compose --env-file "$ENV_FILE" down -v --remove-orphans
 
@@ -24,19 +37,15 @@ done
 echo "==> Generating migrations"
 # Runs on the host: `drizzle-kit generate` is offline (schema vs snapshots) and
 # writes migration files to apps/api/drizzle, so it must see the host filesystem.
-bun run generate
+run_step "Generating migrations" bun run generate
 
-# Applying migrations + seeding talk to Postgres, so they run inside the API
-# container — `DATABASE_URL`/`REDIS_URL` there use the compose service names
-# (postgres/redis), which aren't resolvable from the host. The host's
-# apps/api/.env intentionally keeps those service-name URLs too. The runtime
-# image only ships apps/ + packages/ (no root package.json), so we target the
-# API package's own scripts via --cwd.
-echo "==> Applying migrations"
-docker compose --env-file "$ENV_FILE" run --rm nexus-api bun run --cwd apps/api migrate
+# Applying migrations + seeding talk to Postgres from the host. Local dev runs
+# the API/web on the host, and postgres/redis publish their ports to localhost —
+# so apps/api/.env resolves `localhost`, which host processes can reach. The
+# compose `nexus-api` service is only used for the containerized deploy.
+run_step "Applying migrations" bun run migrate
 
-echo "==> Seeding database"
-docker compose --env-file "$ENV_FILE" run --rm nexus-api bun run --cwd apps/api seed
+run_step "Seeding database" bun run seed
 
 echo "==> All steps succeeded. Starting the docker stack"
 docker compose --env-file "$ENV_FILE" up -d
