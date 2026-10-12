@@ -88,7 +88,7 @@ jobs:
           HOST: ${{ secrets.EC2_HOST }}
         run: |
           install -m 700 -d ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          echo "$SSH_KEY" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
 
