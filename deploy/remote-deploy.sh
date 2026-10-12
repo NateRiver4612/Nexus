@@ -9,6 +9,14 @@ cd /opt/nexus
 : "${AWS_REGION:?AWS_REGION is required}"
 export ECR_REGISTRY IMAGE_TAG
 
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ EDIT THIS: the command that applies DB migrations, run inside the api image.│
+# │ It must point at a script in a WORKSPACE package.json (the image has no     │
+# │ root package.json). Find yours with:                                        │
+# │   grep -rn "migrate" --include=package.json . --exclude-dir=node_modules    │
+# └─────────────────────────────────────────────────────────────────────────────┘
+MIGRATE_CMD="${MIGRATE_CMD:-bun run --cwd apps/api migrate}"
+
 PROJECT="nexus"   # pinned so the compose project name never depends on the folder name
 COMPOSE="docker compose -p $PROJECT -f docker-compose.prod.yml"
 STATE_FILE="/opt/nexus/.current_tag"
@@ -16,17 +24,18 @@ PREV_TAG="$(cat "$STATE_FILE" 2>/dev/null || true)"
 
 echo "==> Deploying $IMAGE_TAG (previous: ${PREV_TAG:-none})"
 
-# 1. ECR login via the instance role — token lasts 12h, we log in on every deploy anyway
+# 1. ECR login via the instance role. The token is removed again when the script exits,
+#    so it doesn't sit unencrypted in ~/.docker/config.json between deploys.
 aws ecr get-login-password --region "$AWS_REGION" \
   | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+trap 'docker logout "$ECR_REGISTRY" > /dev/null 2>&1 || true' EXIT
 
 # 2. Pull FIRST. If this fails, nothing that's currently running has been touched.
-$COMPOSE pull nexus-api nexus-web   # worker shares the api image
+$COMPOSE pull nexus-api nexus-web
 
 # 3. Remove stray containers squatting on our fixed container_names (nexus-postgres, etc.)
 #    that belong to a DIFFERENT compose project or were started with plain `docker run`.
-#    Containers from this project are left alone, so normal deploys never touch them here.
-#    Volumes are never removed — data survives.
+#    Containers from this project are left alone. Volumes are never removed.
 docker ps -a --filter "name=^nexus-" \
   --format '{{.ID}} {{.Names}} {{.Label "com.docker.compose.project"}}' \
   | while read -r id name proj; do
@@ -45,11 +54,16 @@ $COMPOSE exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > "
 ls -1t backups/*.sql | tail -n +6 | xargs -r rm
 
 # 6. Migrate using a one-off container from the NEW image.
-#    Adjust to your real migrate script. Migrations are NOT auto-reverted on rollback.
-$COMPOSE run --rm --no-deps nexus-api bun run --cwd packages/db migrate
+#    Fails BEFORE the cutover, so the running app is untouched. Migrations are NOT auto-reverted.
+echo "==> Running migrations: $MIGRATE_CMD"
+if ! $COMPOSE run --rm --no-deps nexus-api sh -c "$MIGRATE_CMD"; then
+  echo "!! Migration failed. Nothing was switched over; the running app is untouched."
+  echo "!! Check MIGRATE_CMD names a real script in a workspace package.json (the image has no root package.json)."
+  exit 1
+fi
 
 # 7. Roll the app containers onto the new tag
-$COMPOSE up -d nexus-api nexus-worker nexus-web
+$COMPOSE up -d nexus-api nexus-web
 
 # 8. Health check
 echo "==> Health checking..."
@@ -69,7 +83,7 @@ echo "!! Health check failed"
 if [ -n "$PREV_TAG" ]; then
   echo "==> Rolling back to $PREV_TAG"
   export IMAGE_TAG="$PREV_TAG"
-  $COMPOSE up -d nexus-api nexus-worker nexus-web
+  $COMPOSE up -d nexus-api nexus-web
   echo "!! Rolled back code only. Applied migrations are NOT reverted — backup: backups/pre-*.sql"
 else
   echo "!! No previous tag to roll back to."
