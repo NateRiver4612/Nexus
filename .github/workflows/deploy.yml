@@ -92,6 +92,15 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
 
+      - name: Debug SSH config
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          echo "SSH_KEY length: ${#SSH_KEY}"
+          echo "SSH_KEY: ${SSH_KEY}"
+          echo "HOST: $HOST"
+
       - name: Sync compose file, init SQL, and deploy script
         env:
           SSH_USER: ${{ secrets.EC2_USER }}
