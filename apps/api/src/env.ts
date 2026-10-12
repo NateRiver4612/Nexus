@@ -10,7 +10,7 @@ const envSchema = z.object({
   // S3_ENDPOINT is intentionally optional: it's only for S3-compatible endpoints
   // (e.g. MinIO). When unset (the AWS-native case) the SDK derives the regional
   // AWS S3 endpoint from S3_REGION automatically.
-  S3_ENDPOINT: z.url().optional(),
+  S3_ENDPOINT: z.url().optional().or(z.literal('')),
   S3_REGION: z.string().default('us-east-1'),
   S3_BUCKET: z.string(),
   // Static credentials are optional — with an IAM role / FullAccess policy the
