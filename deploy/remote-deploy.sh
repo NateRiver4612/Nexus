@@ -9,7 +9,8 @@ cd /opt/nexus
 : "${AWS_REGION:?AWS_REGION is required}"
 export ECR_REGISTRY IMAGE_TAG
 
-COMPOSE="docker compose -f docker-compose.prod.yml"
+PROJECT="nexus"   # pinned so the compose project name never depends on the folder name
+COMPOSE="docker compose -p $PROJECT -f docker-compose.prod.yml"
 STATE_FILE="/opt/nexus/.current_tag"
 PREV_TAG="$(cat "$STATE_FILE" 2>/dev/null || true)"
 
@@ -22,22 +23,35 @@ aws ecr get-login-password --region "$AWS_REGION" \
 # 2. Pull FIRST. If this fails, nothing that's currently running has been touched.
 $COMPOSE pull nexus-api nexus-web   # worker shares the api image
 
-# 3. Make sure infra is up and healthy
+# 3. Remove stray containers squatting on our fixed container_names (nexus-postgres, etc.)
+#    that belong to a DIFFERENT compose project or were started with plain `docker run`.
+#    Containers from this project are left alone, so normal deploys never touch them here.
+#    Volumes are never removed — data survives.
+docker ps -a --filter "name=^nexus-" \
+  --format '{{.ID}} {{.Names}} {{.Label "com.docker.compose.project"}}' \
+  | while read -r id name proj; do
+      if [ "$proj" != "$PROJECT" ]; then
+        echo "==> Removing stray container $name (project: ${proj:-none})"
+        docker rm -f "$id" > /dev/null
+      fi
+    done
+
+# 4. Make sure infra is up and healthy
 $COMPOSE up -d --wait postgres redis
 
-# 4. Backup the DB before touching schema; keep the last 5
+# 5. Backup the DB before touching schema; keep the last 5
 mkdir -p backups
 $COMPOSE exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > "backups/pre-$IMAGE_TAG.sql"
 ls -1t backups/*.sql | tail -n +6 | xargs -r rm
 
-# 5. Migrate using a one-off container from the NEW image.
+# 6. Migrate using a one-off container from the NEW image.
 #    Adjust to your real migrate script. Migrations are NOT auto-reverted on rollback.
 $COMPOSE run --rm --no-deps nexus-api bun run --cwd packages/db migrate
 
-# 6. Roll the app containers onto the new tag
+# 7. Roll the app containers onto the new tag
 $COMPOSE up -d nexus-api nexus-worker nexus-web
 
-# 7. Health check
+# 8. Health check
 echo "==> Health checking..."
 for i in $(seq 1 20); do
   if curl -sf http://localhost:4000/health > /dev/null && curl -sf http://localhost:3000 > /dev/null; then
@@ -50,7 +64,7 @@ for i in $(seq 1 20); do
   sleep 3
 done
 
-# 8. Failed: roll back to the previous tag, then exit non-zero so CI shows the deploy as failed
+# 9. Failed: roll back to the previous tag, then exit non-zero so CI shows the deploy as failed
 echo "!! Health check failed"
 if [ -n "$PREV_TAG" ]; then
   echo "==> Rolling back to $PREV_TAG"
