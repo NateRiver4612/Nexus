@@ -84,21 +84,22 @@ jobs:
 
       - name: Configure SSH
         env:
-          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          SSH_KEY_B64: ${{ secrets.EC2_SSH_KEY_B64 }}
           HOST: ${{ secrets.EC2_HOST }}
         run: |
           install -m 700 -d ~/.ssh
-          echo "$SSH_KEY" | base64 -d > ~/.ssh/deploy_key
+          echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null && echo "key parses OK"
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
 
       - name: Debug SSH config
         env:
-          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          SSH_KEY_B64: ${{ secrets.EC2_SSH_KEY_B64 }}
           HOST: ${{ secrets.EC2_HOST }}
         run: |
-          echo "SSH_KEY length: ${#SSH_KEY}"
-          echo "SSH_KEY: ${SSH_KEY}"
+          echo "SSH_KEY_B64 length: ${#SSH_KEY_B64}"
+          echo "SSH_KEY_B64: ${SSH_KEY_B64}"
           echo "HOST: $HOST"
 
       - name: Sync compose file, init SQL, and deploy script
