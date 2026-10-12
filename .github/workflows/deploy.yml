@@ -85,6 +85,7 @@ jobs:
       - name: Configure SSH
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
@@ -92,6 +93,9 @@ jobs:
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
 
       - name: Sync compose file, init SQL, and deploy script
+        env:
+          SSH_USER: ${{ secrets.EC2_USER }}
+          HOST: ${{ secrets.EC2_HOST }}
         run: |
           SSH="ssh -i $HOME/.ssh/deploy_key $SSH_USER@$HOST"
           $SSH "mkdir -p /opt/nexus/postgres-init"
