@@ -4,6 +4,7 @@ import type {
   DeliverableListType,
   DeliverableType,
   OkType,
+  SuccessResponse,
 } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
@@ -24,28 +25,28 @@ export async function getProjectDeliverables(projectId: string): Promise<Deliver
 
 export async function createDeliverable(
   input: CreateDeliverableInputType,
-): Promise<DeliverableType> {
+): Promise<SuccessResponse<DeliverableType>> {
   return (await handleResponse(
     await apiClient.api.v1.deliverables.$post({ json: input }),
-  )) as DeliverableType;
+  )) as SuccessResponse<DeliverableType>;
 }
 
 export async function assignDeliverables(input: {
   projectId: string;
   deliverableIds: AssignDeliverablesInputType['deliverableIds'];
-}): Promise<DeliverableListType> {
+}): Promise<SuccessResponse<DeliverableListType>> {
   return (await handleResponse(
     await apiClient.api.v1.projects[':projectId'].deliverables.$post({
       param: { projectId: input.projectId },
       json: { deliverableIds: input.deliverableIds },
     }),
-  )) as DeliverableListType;
+  )) as SuccessResponse<DeliverableListType>;
 }
 
 export async function deleteDeliverable(input: {
   projectId: string;
   deliverableId: string;
-}): Promise<DeliverableType> {
+}): Promise<SuccessResponse<DeliverableType>> {
   return (await handleResponse(
     await apiClient.api.v1.projects[':projectId'].deliverables[':deliverableId'].delete.$delete({
       param: {
@@ -53,13 +54,13 @@ export async function deleteDeliverable(input: {
         deliverableId: input.deliverableId,
       },
     }),
-  )) as DeliverableType;
+  )) as SuccessResponse<DeliverableType>;
 }
 
 export async function removeDeliverable(input: {
   projectId: string;
   deliverableId: string;
-}): Promise<OkType> {
+}): Promise<SuccessResponse<OkType>> {
   return (await handleResponse(
     await apiClient.api.v1.projects[':projectId'].deliverables[':deliverableId'].remove.$delete({
       param: {
@@ -67,5 +68,5 @@ export async function removeDeliverable(input: {
         deliverableId: input.deliverableId,
       },
     }),
-  )) as OkType;
+  )) as SuccessResponse<OkType>;
 }

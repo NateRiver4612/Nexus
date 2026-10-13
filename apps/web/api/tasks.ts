@@ -1,5 +1,6 @@
 import type {
   CreateTaskNoteInputType,
+  SuccessResponse,
   TaskDetailType,
   TaskNoteListType,
   TaskNoteType,
@@ -25,7 +26,7 @@ export async function updateTask({
 }) {
   return (await handleResponse(
     await apiClient.api.v1.tasks[':taskId'].$patch({ param: { taskId }, json: input }),
-  )) as TaskDetailType;
+  )) as SuccessResponse<TaskDetailType>;
 }
 
 export async function updateTaskStepStatus({
@@ -37,12 +38,20 @@ export async function updateTaskStepStatus({
   stepId: string;
   status: TaskStepStatusType;
 }) {
-  return handleResponse(
+  return (await handleResponse(
     await apiClient.api.v1.tasks[':taskId'].steps[':stepId'].$patch({
       param: { taskId, stepId },
       json: { status },
     }),
-  );
+  )) as SuccessResponse<{
+    id: string;
+    taskId: string;
+    value: string;
+    position: number;
+    status: TaskStepStatusType;
+    createdAt: string;
+    updatedAt: string;
+  }>;
 }
 
 export async function updateTaskDodStatus({
@@ -54,24 +63,32 @@ export async function updateTaskDodStatus({
   dodId: string;
   status: TaskStepStatusType;
 }) {
-  return handleResponse(
+  return (await handleResponse(
     await apiClient.api.v1.tasks[':taskId'].dods[':dodId'].$patch({
       param: { taskId, dodId },
       json: { status },
     }),
-  );
+  )) as SuccessResponse<{
+    id: string;
+    taskId: string;
+    value: string;
+    position: number;
+    status: TaskStepStatusType;
+    createdAt: string;
+    updatedAt: string;
+  }>;
 }
 
 export async function completeTask(taskId: string) {
   return (await handleResponse(
     await apiClient.api.v1.tasks[':taskId'].complete.$patch({ param: { taskId } }),
-  )) as TaskDetailType;
+  )) as SuccessResponse<TaskDetailType>;
 }
 
 export async function reopenTask(taskId: string) {
   return (await handleResponse(
     await apiClient.api.v1.tasks[':taskId'].reopen.$patch({ param: { taskId } }),
-  )) as TaskDetailType;
+  )) as SuccessResponse<TaskDetailType>;
 }
 
 export async function getTaskNotes(taskId: string) {
@@ -97,7 +114,7 @@ export async function createTaskNote({
 }) {
   return (await handleResponse(
     await apiClient.api.v1.tasks[':taskId'].notes.$post({ param: { taskId }, json: input }),
-  )) as TaskNoteType;
+  )) as SuccessResponse<TaskNoteType>;
 }
 
 export async function updateTaskNote({
@@ -114,7 +131,7 @@ export async function updateTaskNote({
       param: { taskId, noteId },
       json: input,
     }),
-  )) as TaskNoteType;
+  )) as SuccessResponse<TaskNoteType>;
 }
 
 export async function deleteTaskNote({ taskId, noteId }: { taskId: string; noteId: string }) {
@@ -122,5 +139,5 @@ export async function deleteTaskNote({ taskId, noteId }: { taskId: string; noteI
     await apiClient.api.v1.tasks[':taskId'].notes[':noteId'].$delete({
       param: { taskId, noteId },
     }),
-  )) as TaskNoteType;
+  )) as SuccessResponse<TaskNoteType>;
 }

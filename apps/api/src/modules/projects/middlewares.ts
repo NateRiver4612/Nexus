@@ -3,7 +3,7 @@ import { getUser } from '../../auth-middleware';
 import { getDb } from '@nexus/db';
 import { OnboardingService } from './service';
 import { OnboardingRepository, ProjectsRepository } from './repository';
-import { HttpError } from '../../errors';
+import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
 import type { OnboardingDataType } from '@nexus/types';
 
 /** Every step must be present before we can generate a plan. */
@@ -18,17 +18,14 @@ export const requireCompleteOnboarding: MiddlewareHandler = async (c, next) => {
   const user = getUser(c);
   const db = getDb();
 
-  const onboarding = await OnboardingService(db).getOnboarding(user.id);
-  const stepData = onboarding?.stepData;
-
-  if (!onboarding || !stepData) {
-    throw HttpError.validation('Onboarding has not been started yet.');
-  }
+  const onboarding = ensureExists(
+    await OnboardingService(db).getOnboarding(user.id),
+    ValidationError('Onboarding has not been started yet.'),
+  );
+  const stepData = ensureExists(onboarding?.stepData, ValidationError('Onboarding has not been started yet.'));
 
   for (const step of REQUIRED_STEPS) {
-    if (stepData[step] == null) {
-      throw HttpError.validation(`Onboarding step ${step} is missing. Complete all steps first.`);
-    }
+    ensure(stepData[step] != null, ValidationError(`Onboarding step ${step} is missing. Complete all steps first.`));
   }
 
   c.set('onboarding', stepData as OnboardingDataType);
@@ -51,23 +48,25 @@ export const requireOnboardingForProject: MiddlewareHandler = async (c, next) =>
   const projectId = c.req.param('projectId')!;
   const onboardingId = c.req.param('onboardingId')!;
 
-  const onboarding = await OnboardingRepository(db).getById(onboardingId);
+  const onboarding = ensureExists(
+    await OnboardingRepository(db).getById(onboardingId),
+    NotFoundError('Onboarding not found for this project.'),
+  );
 
-  if (!onboarding || onboarding.userId !== user.id || onboarding.projectId !== projectId) {
-    throw HttpError.notFound('Onboarding not found for this project.');
-  }
+  ensure(
+    onboarding.userId === user.id && onboarding.projectId === projectId,
+    NotFoundError('Onboarding not found for this project.'),
+  );
 
   const stepData = (onboarding.stepData ?? {}) as Record<string, unknown>;
   for (const step of REQUIRED_STEPS) {
-    if (stepData[step] == null) {
-      throw HttpError.validation(`Onboarding step ${step} is missing. Complete all steps first.`);
-    }
+    ensure(stepData[step] != null, ValidationError(`Onboarding step ${step} is missing. Complete all steps first.`));
   }
 
-  const project = await ProjectsRepository(db).getByIdRaw(projectId);
-  if (!project) {
-    throw HttpError.notFound('Project not found.');
-  }
+  const project = ensureExists(
+    await ProjectsRepository(db).getByIdRaw(projectId),
+    NotFoundError('Project not found.'),
+  );
 
   c.set('onboarding', stepData as OnboardingDataType);
   c.set('project', project);
@@ -80,15 +79,15 @@ export const requireProjectAccess: MiddlewareHandler = async (c, next) => {
 
   const projectId = c.req.param('projectId')!;
 
-  const project = await ProjectsRepository(db).getByIdRaw(projectId);
-  if (!project) {
-    throw HttpError.notFound('Project not found.');
-  }
+  const project = ensureExists(
+    await ProjectsRepository(db).getByIdRaw(projectId),
+    NotFoundError('Project not found.'),
+  );
 
-  const isMember = await ProjectsRepository(db).isWorkspaceMember(user.id, project.workspaceId);
-  if (!isMember) {
-    throw HttpError.notFound('Project not found.');
-  }
+  ensure(
+    await ProjectsRepository(db).isWorkspaceMember(user.id, project.workspaceId),
+    NotFoundError('Project not found.'),
+  );
 
   c.set('project', project);
   await next();

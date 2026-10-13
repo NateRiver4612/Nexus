@@ -1,11 +1,16 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, taskNoteParamsSchema, taskNoteSchema } from '@nexus/zod-schemas';
+import {
+  errorResponseSchema,
+  successResponseSchema,
+  taskNoteParamsSchema,
+  taskNoteSchema,
+} from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';
 import { TaskService } from '../service';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 
 export const deleteTaskNoteRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -17,7 +22,7 @@ export const deleteTaskNoteRoute = defineOpenAPIRoute({
     middleware: [requireTaskAccess],
     responses: {
       200: {
-        content: { 'application/json': { schema: taskNoteSchema } },
+        content: { 'application/json': { schema: successResponseSchema(taskNoteSchema) } },
         description: 'Task note deleted',
       },
       401: {
@@ -36,9 +41,8 @@ export const deleteTaskNoteRoute = defineOpenAPIRoute({
     const db = getDb();
     const taskService = TaskService(db);
 
-    const note = await taskService.deleteNote(taskId, noteId);
-    if (!note) throw HttpError.notFound('Task note not found.');
+    const note = ensureExists(await taskService.deleteNote(taskId, noteId));
 
-    return c.json(note, 200);
+    return c.json({ data: note, message: 'Note deleted' }, 200);
   },
 });

@@ -37,6 +37,12 @@ export const errorResponseSchema = z.object({ error: errorSchema }).openapi('Err
 
 export const okSchema = z.object({ ok: z.boolean() }).openapi('Ok');
 
+/** Wraps a success DTO with a human message the client can surface (toasts).
+ *  `z.ZodTypeAny` allows both object and array schemas as the `data` payload. */
+export function successResponseSchema<T extends z.ZodTypeAny>(dataSchema: T) {
+  return z.object({ data: dataSchema, message: z.string() }).openapi('SuccessResponse');
+}
+
 export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),

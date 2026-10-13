@@ -4,12 +4,13 @@ import {
   deleteKnowledgeResourceSchema,
   errorResponseSchema,
   knowledgeSourceSchema,
+  successResponseSchema,
 } from '@nexus/zod-schemas';
 
 import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 import { KnowledgeService } from '../service';
 
 export const deleteKnowledgeSourceRoute = defineOpenAPIRoute({
@@ -22,7 +23,7 @@ export const deleteKnowledgeSourceRoute = defineOpenAPIRoute({
     middleware: [],
     responses: {
       200: {
-        content: { 'application/json': { schema: knowledgeSourceSchema } },
+        content: { 'application/json': { schema: successResponseSchema(knowledgeSourceSchema) } },
         description: 'Knowledge source deleted',
       },
       401: {
@@ -42,9 +43,8 @@ export const deleteKnowledgeSourceRoute = defineOpenAPIRoute({
     const db = getDb();
     const knowledgeService = KnowledgeService(db);
 
-    const deletedSource = await knowledgeService.deleteSource(projectId, sourceId);
-    if (!deletedSource) throw HttpError.notFound('Knowledge source not found');
+    const deletedSource = ensureExists(await knowledgeService.deleteSource(projectId, sourceId));
 
-    return c.json(deletedSource, 200);
+    return c.json({ data: deletedSource, message: 'Source deleted' }, 200);
   },
 });

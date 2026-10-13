@@ -2,6 +2,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
   errorResponseSchema,
+  successResponseSchema,
   taskDodSchema,
   taskDodParamsSchema,
   taskItemStatusUpdateSchema,
@@ -10,7 +11,7 @@ import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';
 import { TaskRepository } from '../repository';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 
 export const updateTaskDodStatusRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -26,7 +27,7 @@ export const updateTaskDodStatusRoute = defineOpenAPIRoute({
     middleware: [requireTaskAccess],
     responses: {
       200: {
-        content: { 'application/json': { schema: taskDodSchema } },
+        content: { 'application/json': { schema: successResponseSchema(taskDodSchema) } },
         description: 'Task DoD item status updated',
       },
       400: {
@@ -50,18 +51,20 @@ export const updateTaskDodStatusRoute = defineOpenAPIRoute({
     const db = getDb();
     const repository = TaskRepository(db);
 
-    const [dod] = await repository.updateDodStatus(taskId, dodId, status);
-    if (!dod) throw HttpError.notFound('Task DoD item not found.');
+    const dod = ensureExists((await repository.updateDodStatus(taskId, dodId, status))[0]);
 
     return c.json(
       {
-        id: dod.id,
-        taskId: dod.taskId,
-        value: dod.value,
-        position: dod.position,
-        status: dod.status,
-        createdAt: dod.createdAt.toISOString(),
-        updatedAt: dod.updatedAt.toISOString(),
+        data: {
+          id: dod.id,
+          taskId: dod.taskId,
+          value: dod.value,
+          position: dod.position,
+          status: dod.status,
+          createdAt: dod.createdAt.toISOString(),
+          updatedAt: dod.updatedAt.toISOString(),
+        },
+        message: 'Definition-of-done updated',
       },
       200,
     );
