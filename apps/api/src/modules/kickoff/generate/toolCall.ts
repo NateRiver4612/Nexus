@@ -5,7 +5,7 @@ import type OpenAI from 'openai';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
 import { jsonrepair } from 'jsonrepair';
 
-interface DeepSeekChatCompletionParams extends OpenAI.Chat.ChatCompletionCreateParamsNonStreaming {
+type DeepSeekChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParamsNonStreaming & {
   thinking?: {
     type: 'enabled' | 'disabled';
     budget_tokens?: number;

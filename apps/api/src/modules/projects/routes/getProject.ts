@@ -3,7 +3,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 import { errorResponseSchema, idParamsSchema, projectDetailSchema } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 import { ProjectService } from '../service';
 
 export const getProjectRoute = defineOpenAPIRoute({
@@ -34,8 +34,7 @@ export const getProjectRoute = defineOpenAPIRoute({
     const db = getDb();
     const projectService = ProjectService(db);
 
-    const project = await projectService.get(id);
-    if (!project) throw HttpError.notFound('Project not found');
+    const project = ensureExists(await projectService.get(id));
     return c.json(project, 200);
   },
 });

@@ -1,6 +1,11 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, idParamsSchema, okSchema } from '@nexus/zod-schemas';
+import {
+  errorResponseSchema,
+  idParamsSchema,
+  okSchema,
+  successResponseSchema,
+} from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { ProjectService } from '../service';
@@ -15,7 +20,7 @@ export const deleteProjectRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: {
-          'application/json': { schema: okSchema },
+          'application/json': { schema: successResponseSchema(okSchema) },
         },
         description: 'Project deleted',
       },
@@ -36,6 +41,6 @@ export const deleteProjectRoute = defineOpenAPIRoute({
     const projectService = ProjectService(db);
 
     await projectService.remove(id);
-    return c.json({ ok: true }, 200);
+    return c.json({ data: { ok: true }, message: 'Project deleted' }, 200);
   },
 });

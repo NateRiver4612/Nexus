@@ -2,7 +2,7 @@
 
 import { Circle, CircleCheck } from 'lucide-react';
 
-import { cn, formatTimeMinutes } from '@/lib/utils';
+import { cn, formatTimeMinutes, totalEstimatedMinutes } from '@/lib/utils';
 
 import type { KickoffPlanType } from '@nexus/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -11,7 +11,7 @@ import DifficultyIndicator from './DifficultyIndicator';
 type Milestone = KickoffPlanType['milestones'][number];
 type Task = Milestone['tasks'][number];
 
-interface KickoffPlanListProps {
+type KickoffPlanListProps = {
   milestones: KickoffPlanType['milestones'];
   className?: string;
 }
@@ -61,6 +61,8 @@ function TaskRow({ task }: { task: Task }) {
 }
 
 function MilestoneHeader({ index, milestone }: { index: number; milestone: Milestone }) {
+  const total = formatTimeMinutes(totalEstimatedMinutes(milestone.tasks));
+
   return (
     <div className="flex w-full items-start justify-between gap-3 pr-2">
       <div className="flex min-w-0 items-start gap-3">
@@ -76,7 +78,9 @@ function MilestoneHeader({ index, milestone }: { index: number; milestone: Miles
           )}
         </div>
       </div>
-      <span className="shrink-0 pt-0.5 text-xs text-gray-400">{milestone.tasks.length} tasks</span>
+      <span className="shrink-0 pt-0.5 text-xs text-gray-400">
+        {milestone.tasks.length} tasks{total && ` · ${total}`}
+      </span>
     </div>
   );
 }

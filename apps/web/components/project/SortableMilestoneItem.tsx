@@ -7,9 +7,10 @@ import {
 } from './ProjectMilestonesTasks';
 import MilestoneStatusIcon from '../MilestoneStatusIcon';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
-import { cn } from '@/lib/utils';
+import { cn, formatTimeMinutes, totalEstimatedMinutes } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/react';
 import DragHandle from '../DragHandle';
+import DifficultyIndicator from '../DifficultyIndicator';
 import { Check, Circle, Play, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -48,6 +49,7 @@ const SortableTaskRow = ({
   };
 
   const done = task.status === 'completed';
+  const estimated = formatTimeMinutes(task.estimatedTimeMinutes);
 
   // A completed task always renders as the completed row (green check +
   // strikethrough + Re-open) — never as the "Current task" card, even if
@@ -76,6 +78,7 @@ const SortableTaskRow = ({
                   </p>
                   <p className="truncate font-semibold text-gray-900">{task.title}</p>
                 </div>
+                <DifficultyIndicator difficulty={task.difficulty} />
                 {task.estimatedTimeMinutes != null && (
                   <span className="shrink-0 text-xs text-gray-400">
                     {task.estimatedTimeMinutes} min left
@@ -123,6 +126,10 @@ const SortableTaskRow = ({
       >
         {task.title}
       </span>
+      <div className="flex shrink-0 items-center gap-2">
+        <DifficultyIndicator difficulty={task.difficulty} />
+        {estimated && <span className="text-xs tabular-nums text-gray-400">{estimated}</span>}
+      </div>
       {done ? (
         <Button
           size="sm"
@@ -193,6 +200,7 @@ const SortableMilestoneItem = ({
 
   const done = isDone(tasks);
   const doneCount = tasks.filter((t) => t.status === 'completed').length;
+  const total = formatTimeMinutes(totalEstimatedMinutes(tasks));
 
   return (
     <Accordion
@@ -243,7 +251,7 @@ const SortableMilestoneItem = ({
                   'text-primary': isActive,
                 })}
               >
-                {doneCount}/{tasks.length} tasks
+                {doneCount}/{tasks.length} tasks{total && ` · ${total}`}
               </span>
             </div>
           </AccordionTrigger>

@@ -5,7 +5,7 @@ import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';
 import { TaskService } from '../service';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 
 export const getTaskNoteRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -36,8 +36,7 @@ export const getTaskNoteRoute = defineOpenAPIRoute({
     const db = getDb();
     const taskService = TaskService(db);
 
-    const note = await taskService.getNote(taskId, noteId);
-    if (!note) throw HttpError.notFound('Task note not found.');
+    const note = ensureExists(await taskService.getNote(taskId, noteId));
 
     return c.json(note, 200);
   },

@@ -15,6 +15,10 @@ export function slugify(input: string): string {
     .replace(/^-+|-+$/g, ''); // trim leading/trailing dashes
 }
 
+export function totalEstimatedMinutes(tasks: { estimatedTimeMinutes?: number | null }[]): number {
+  return tasks.reduce((sum, task) => sum + (task.estimatedTimeMinutes ?? 0), 0);
+}
+
 export function formatTimeMinutes(minutes?: number | null): string | null {
   if (!minutes) return null;
 

@@ -3,6 +3,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 import {
   createTaskNoteSchema,
   errorResponseSchema,
+  successResponseSchema,
   taskCompleteParamsSchema,
   taskNoteSchema,
 } from '@nexus/zod-schemas';
@@ -10,7 +11,7 @@ import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';
 import { TaskService } from '../service';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 
 export const createTaskNoteRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -26,7 +27,7 @@ export const createTaskNoteRoute = defineOpenAPIRoute({
     middleware: [requireTaskAccess],
     responses: {
       201: {
-        content: { 'application/json': { schema: taskNoteSchema } },
+        content: { 'application/json': { schema: successResponseSchema(taskNoteSchema) } },
         description: 'Task note created',
       },
       400: {
@@ -50,9 +51,8 @@ export const createTaskNoteRoute = defineOpenAPIRoute({
     const db = getDb();
     const taskService = TaskService(db);
 
-    const note = await taskService.createNote(taskId, body);
-    if (!note) throw HttpError.notFound('Task not found.');
+    const note = ensureExists(await taskService.createNote(taskId, body));
 
-    return c.json(note, 201);
+    return c.json({ data: note, message: 'Note created' }, 201);
   },
 });
