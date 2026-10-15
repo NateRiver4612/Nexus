@@ -21,7 +21,10 @@ export const requireTaskAccess: MiddlewareHandler = async (c, next) => {
 
   const taskId = c.req.param('taskId')!;
 
-  const task = ensureExists(await TaskRepository(db).getById(taskId), NotFoundError('Task not found.'));
+  const task = ensureExists(
+    await TaskRepository(db).getById(taskId),
+    NotFoundError('Task not found.'),
+  );
   const project = ensureExists(
     await ProjectsRepository(db).getByIdRaw(task.projectId),
     NotFoundError('Task not found.'),

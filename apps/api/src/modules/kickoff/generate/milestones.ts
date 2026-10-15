@@ -47,16 +47,20 @@ export async function generateMilestones(context: KickoffContext): Promise<Miles
   if (validationIssues.length > 0) {
     // Field-level length/shape failures — feed the exact issue paths back so the
     // model shortens/repairs precisely those fields instead of rerolling blindly.
-    const correction = `Your previous response failed validation. Fix exactly these issues and \
+    const correction =
+      `Your previous response failed validation. Fix exactly these issues and \
 re-output the FULL "milestones" array (every milestone's tasks fully populated with "steps", "dods" \
 and "estimatedTimeMinutes"; shorten any over-length field to respect its limit — task descriptions \
 <=200 chars, milestone descriptions <=300 chars, step/DoD values <=150 chars, titles <=100 chars):\n` +
       validationIssues.map((issue) => `- ${issue}`).join('\n');
     retryMessages.push({ role: 'user', content: correction });
   } else if (first.finishReason === 'length') {
-    console.error(`[kickoff] milestones first attempt truncated — retrying with ${MILESTONES_MAX_TOKENS_RETRY} tokens.`);
+    console.error(
+      `[kickoff] milestones first attempt truncated — retrying with ${MILESTONES_MAX_TOKENS_RETRY} tokens.`,
+    );
   } else if (missingKeys.length > 0) {
-    const correction = `Your previous response was incomplete: it was missing required field(s): ` +
+    const correction =
+      `Your previous response was incomplete: it was missing required field(s): ` +
       `${missingKeys.join(', ')}. Re-generate the FULL "milestones" array — every milestone's ` +
       `tasks fully populated with "steps", "dods" and "estimatedTimeMinutes". Never omit any ` +
       `required field.`;

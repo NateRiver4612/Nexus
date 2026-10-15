@@ -8,11 +8,11 @@ Issues hit while setting up the GitHub Actions → ECR → EC2 deploy pipeline, 
 
 ## Quick index
 
-| # | Symptom | Root cause | Section |
-|---|---------|-----------|---------|
-| 1 | `Not authorized to perform sts:AssumeRoleWithWebIdentity` | OIDC trust policy / role mismatch | [Issue 1](#issue-1-oidc-assumerolewithwebidentity-not-authorized) |
-| 2 | `script "migrate" exited with code 1` (no details) | pgvector extension missing | [Issue 2](#issue-2-migration-fails-with-no-useful-error) |
-| 3 | `not healthy yet (20/20)` though containers are `Up` | Health check used wrong API port | [Issue 3](#issue-3-health-check-fails-but-containers-are-running) |
+| #   | Symptom                                                   | Root cause                        | Section                                                           |
+| --- | --------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------- |
+| 1   | `Not authorized to perform sts:AssumeRoleWithWebIdentity` | OIDC trust policy / role mismatch | [Issue 1](#issue-1-oidc-assumerolewithwebidentity-not-authorized) |
+| 2   | `script "migrate" exited with code 1` (no details)        | pgvector extension missing        | [Issue 2](#issue-2-migration-fails-with-no-useful-error)          |
+| 3   | `not healthy yet (20/20)` though containers are `Up`      | Health check used wrong API port  | [Issue 3](#issue-3-health-check-fails-but-containers-are-running) |
 
 ---
 
@@ -59,10 +59,10 @@ AWS received the GitHub token but the IAM role's trust policy rejected it. The w
    - Manual `workflow_dispatch` from a non-`main` branch produces a different `sub` and fails.
    - If a job uses `environment: X`, the `sub` becomes `repo:<OWNER>/<REPO>:environment:X`.
    - Renamed/transferred repos or forks change the `sub`.
-4. **GitHub secret `AWS_DEPLOY_ROLE_ARN`** is the full ARN of *this* role, with no trailing space/newline. Environment/org-level secrets with the same name override repo-level ones.
+4. **GitHub secret `AWS_DEPLOY_ROLE_ARN`** is the full ARN of _this_ role, with no trailing space/newline. Environment/org-level secrets with the same name override repo-level ones.
 5. **Debug tip:** temporarily loosen `sub` to `repo:<OWNER>/<REPO>:*`. If it works, the mismatch was the `sub`. Tighten it again afterwards. CloudTrail → Event history → `AssumeRoleWithWebIdentity` shows rejection details.
 
-**Also needed later:** the role's *permissions* policy must allow ECR push (`ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`, `ecr:PutImage`) on the `nexus-api` and `nexus-web` repos.
+**Also needed later:** the role's _permissions_ policy must allow ECR push (`ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`, `ecr:PutImage`) on the `nexus-api` and `nexus-web` repos.
 
 ---
 
@@ -116,7 +116,7 @@ $COMPOSE exec -T postgres sh -c \
 - Tables exist but `drizzle.__drizzle_migrations` is empty (DB previously set up via `drizzle-kit push` or manually) → "relation already exists". Wipe the DB if disposable, or baseline the migration table.
 - A genuinely broken migration (bad SQL, duplicate constraint, type change on existing data). The Postgres log names it.
 
-**Improvement:** change the failure message in `remote-deploy.sh` to point at the right place: *"Migration failed. Check `docker logs nexus-postgres` for the SQL error."*
+**Improvement:** change the failure message in `remote-deploy.sh` to point at the right place: _"Migration failed. Check `docker logs nexus-postgres` for the SQL error."_
 
 ---
 

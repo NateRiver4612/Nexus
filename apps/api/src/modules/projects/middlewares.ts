@@ -22,10 +22,16 @@ export const requireCompleteOnboarding: MiddlewareHandler = async (c, next) => {
     await OnboardingService(db).getOnboarding(user.id),
     ValidationError('Onboarding has not been started yet.'),
   );
-  const stepData = ensureExists(onboarding?.stepData, ValidationError('Onboarding has not been started yet.'));
+  const stepData = ensureExists(
+    onboarding?.stepData,
+    ValidationError('Onboarding has not been started yet.'),
+  );
 
   for (const step of REQUIRED_STEPS) {
-    ensure(stepData[step] != null, ValidationError(`Onboarding step ${step} is missing. Complete all steps first.`));
+    ensure(
+      stepData[step] != null,
+      ValidationError(`Onboarding step ${step} is missing. Complete all steps first.`),
+    );
   }
 
   c.set('onboarding', stepData as OnboardingDataType);
@@ -60,7 +66,10 @@ export const requireOnboardingForProject: MiddlewareHandler = async (c, next) =>
 
   const stepData = (onboarding.stepData ?? {}) as Record<string, unknown>;
   for (const step of REQUIRED_STEPS) {
-    ensure(stepData[step] != null, ValidationError(`Onboarding step ${step} is missing. Complete all steps first.`));
+    ensure(
+      stepData[step] != null,
+      ValidationError(`Onboarding step ${step} is missing. Complete all steps first.`),
+    );
   }
 
   const project = ensureExists(

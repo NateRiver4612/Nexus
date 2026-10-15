@@ -92,13 +92,13 @@ export function UploadKnowledgeSource({ projectId: projectIdProp }: { projectId?
   const { projectId: paramProjectId } = useParams<{ projectId: string }>();
   const projectId = projectIdProp ?? paramProjectId ?? '';
 
-  const createKnowledgeSources = useCreateKnowledgeSources(projectId);
+  const { mutateAsync: createKnowledgeSources } = useCreateKnowledgeSources(projectId);
 
   const { data: knowledgeSources } = useGetKnowledgeSources({ variables: projectId });
 
   const onCreate: CreateCallback = (entries) => {
     if (!projectId) throw new Error('Project not ready yet.');
-    return createKnowledgeSources.mutateAsync(entries);
+    return createKnowledgeSources(entries);
   };
 
   const files = knowledgeSources?.filter((k) => k.sourceType === 'file');
