@@ -190,8 +190,9 @@ function calculateDodProgress(dods: Array<{ status: TaskStepStatus }>): number {
 }
 
 /**
- * Task columns map row → string; the FK rows arrive as `to_jsonb` objects whose
- * timestamps are already ISO strings, so they pass through to the DTO.
+ * Task columns map row → string; the FK rows arrive as `json_build_object`
+ * objects whose timestamps are already ISO strings, so they pass through to the
+ * DTO.
  */
 function toDetailView(row: TaskDetailRow): TaskDetailType {
   return {

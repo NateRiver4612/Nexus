@@ -45,7 +45,7 @@ import {
 // closes the dropdown, same as it did before any wiring existed.
 // ---------------------------------------------------------------------------
 
-export interface BlockOption {
+export type BlockOption = {
   label: string;
   icon: LucideIcon;
   type?: string;
@@ -55,7 +55,7 @@ export interface BlockOption {
   onSelect?: (editor: Editor) => void;
 }
 
-export interface SkillsListProps {
+export type SkillsListProps = {
   aiPrompt: string;
   setAiPrompt: (prompt: string) => void;
 }
@@ -146,7 +146,7 @@ function getActiveBlockLabel(editor: Editor): string {
 // TextTypeDropdown
 // ---------------------------------------------------------------------------
 
-export interface TextTypeDropdownProps {
+export type TextTypeDropdownProps = {
   editor: Editor;
   onClose: () => void;
 }
@@ -228,7 +228,7 @@ export const TextTypeDropdown: React.FC<TextTypeDropdownProps> = ({ editor, onCl
 // were originally.
 // ---------------------------------------------------------------------------
 
-export interface FormattingToolbarProps {
+export type FormattingToolbarProps = {
   editor: Editor;
   isDropdownOpen: boolean;
   onToggleDropdown: () => void;
@@ -474,7 +474,7 @@ export const SkillsList: React.FC<SkillsListProps> = ({ aiPrompt, setAiPrompt })
   );
 };
 
-export interface EditorPopupMenuProps {
+export type EditorPopupMenuProps = {
   editor: Editor;
 }
 

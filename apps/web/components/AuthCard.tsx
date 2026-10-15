@@ -54,7 +54,7 @@ function GoogleIcon() {
   );
 }
 
-interface SocialButtonProps {
+type SocialButtonProps = {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
@@ -192,7 +192,7 @@ function RegisterForm({
   );
 }
 
-export interface AuthCardProps {
+export type AuthCardProps = {
   defaultTab?: 'login' | 'register';
   className?: string;
   onGoogleClick?: () => void;

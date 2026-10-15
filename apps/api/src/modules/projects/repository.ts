@@ -16,6 +16,8 @@ import {
 } from '@nexus/db';
 import type { TaskType } from '@nexus/types';
 
+import { taskJsonObject } from '../../lib/taskJson';
+
 export type NewProjectRow = typeof projects.$inferInsert;
 export type NewOnboardingRow = typeof projectOnboarding.$inferInsert;
 
@@ -48,7 +50,7 @@ const projectDetailsFields = {
 
   // full current task as a nested object, not flattened columns
   currentTask: sql<TaskType | null>`(
-    select to_jsonb(${tasks}) from ${tasks} where ${tasks.id} = ${projectProgress.currentTaskId}
+    select ${taskJsonObject} from ${tasks} where ${tasks.id} = ${projectProgress.currentTaskId}
   )`,
 
   // counts — correlated subqueries too, but scalar instead of row
