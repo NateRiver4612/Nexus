@@ -20,18 +20,22 @@ export type AttemptToolCallInput<T> = {
   toolParamsSchema: z.ZodType;
   validateSchema: z.ZodType<T>;
   maxTokens: number;
+  /** Overrides the default kickoff model (e.g. the cheaper research-prompt builder). */
+  model?: string;
+};
+
+/** Diagnostics from a failed tool call, used to build a corrective retry message. */
+export type AttemptToolCallFailure = {
+  error: Error;
+  finishReason?: string;
+  missingKeys?: string[];
+  /** Per-field validation problems, e.g. "milestones.0.tasks.1.description: Too big: ..." */
+  issues?: string[];
 };
 
 export type AttemptToolCallResult<T> =
   | { ok: true; data: T; finishReason?: string; usage?: CompletionUsage }
-  | {
-      ok: false;
-      error: Error;
-      finishReason?: string;
-      missingKeys?: string[];
-      /** Per-field validation problems, e.g. "milestones.0.tasks.1.description: Too big: ..." */
-      issues?: string[];
-    };
+  | ({ ok: false } & AttemptToolCallFailure);
 
 /**
  * The shared single-tool-call core used by both kickoff stages: require the
@@ -44,11 +48,12 @@ export async function attemptToolCall<T>({
   toolParamsSchema,
   validateSchema,
   maxTokens,
+  model,
 }: AttemptToolCallInput<T>): Promise<AttemptToolCallResult<T>> {
   const client = getDeepSeekClient();
 
   const response = await client.chat.completions.create({
-    model: env.AI_KICKOFF_MODEL,
+    model: model ?? env.AI_KICKOFF_MODEL,
     messages,
     max_completion_tokens: maxTokens,
     thinking: { type: 'disabled' },
@@ -130,6 +135,71 @@ export async function attemptToolCall<T>({
   }
 
   return { ok: true, finishReason, data: result.data, usage: response.usage };
+}
+
+export type AttemptToolCallWithRetryInput<T> = {
+  messages: ChatMessage[];
+  toolName: string;
+  toolParamsSchema: z.ZodType;
+  validateSchema: z.ZodType<T>;
+  maxTokens: number;
+  maxTokensRetry: number;
+  model?: string;
+  /** Appended as an extra user message before the retry; null → retry with just a bigger budget. */
+  buildCorrection: (failure: AttemptToolCallFailure) => string | null;
+  /** Label for the final token-limit error, e.g. "plan generation". */
+  label: string;
+};
+
+/**
+ * The shared single-retry wrapper around `attemptToolCall`: one corrective retry
+ * with an escalated token budget, then a friendly token-limit error (or the raw
+ * retry error). Callers supply only what differs — their tool/schema, budgets,
+ * correction wording (`buildCorrection`), and success mapping.
+ */
+export async function attemptToolCallWithRetry<T>({
+  messages,
+  toolName,
+  toolParamsSchema,
+  validateSchema,
+  maxTokens,
+  maxTokensRetry,
+  model,
+  buildCorrection,
+  label,
+}: AttemptToolCallWithRetryInput<T>): Promise<{ data: T; usage?: CompletionUsage }> {
+  const first = await attemptToolCall({
+    messages,
+    toolName,
+    toolParamsSchema,
+    validateSchema,
+    maxTokens,
+    model,
+  });
+  if (first.ok) return { data: first.data, usage: first.usage };
+
+  const correction = buildCorrection(first);
+  const retryMessages: ChatMessage[] = correction
+    ? [...messages, { role: 'user', content: correction }]
+    : messages;
+
+  const retry = await attemptToolCall({
+    messages: retryMessages,
+    toolName,
+    toolParamsSchema,
+    validateSchema,
+    maxTokens: maxTokensRetry,
+    model,
+  });
+  if (retry.ok) return { data: retry.data, usage: retry.usage };
+
+  if (retry.finishReason === 'length') {
+    throw new Error(
+      `AI ${label} exceeded the token limit even after a retry (${maxTokensRetry} completion tokens). ` +
+        `The request is too large — trim the scope or lower per-item requirements.`,
+    );
+  }
+  throw retry.error;
 }
 
 /** Sums prompt/completion tokens across multiple calls. */

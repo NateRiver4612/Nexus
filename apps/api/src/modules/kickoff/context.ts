@@ -117,7 +117,7 @@ async function searchWithFloorAndFill(
   const globalResults = await knowledgeChunkService.searchChunksByEmbedding({
     projectId,
     queryEmbedding,
-    limit: remainingSlots + floorChunks.length, // over-fetch to survive the dedupe filter below
+    limit: GLOBAL_FILL_TARGET, // over-fetch to survive the dedupe filter below
   });
   const fillChunks = globalResults.filter((c) => !floorIds.has(c.id)).slice(0, remainingSlots);
 

@@ -93,6 +93,13 @@ import {
   submitOnboardingOutputSchema,
   projectStatusEnum,
   projectCategoryEnum,
+  researchModelSchema,
+  researchStatusSchema,
+  researchSourceSchema,
+  startResearchParamsSchema,
+  startResearchResultSchema,
+  researchPollSchema,
+  researchPromptSchema,
   taskStatusSchema,
   taskStepStatusSchema,
 } from '@nexus/zod-schemas';
@@ -202,6 +209,22 @@ export type KickoffPlanType = z.infer<typeof kickoffPlanSchema>;
 export type KickoffSummaryType = z.infer<typeof kickoffSummarySchema>;
 
 export type AITaskType = z.infer<typeof aiTaskEnum>;
+
+export type ResearchModelType = z.infer<typeof researchModelSchema>;
+export type ResearchStatusType = z.infer<typeof researchStatusSchema>;
+export type ResearchSourceType = z.infer<typeof researchSourceSchema>;
+export type StartResearchParamsType = z.infer<typeof startResearchParamsSchema>;
+export type StartResearchResultType = z.infer<typeof startResearchResultSchema>;
+export type ResearchPollType = z.infer<typeof researchPollSchema>;
+export type ResearchPromptType = z.infer<typeof researchPromptSchema>;
+
+/** The abstract research provider the kickoff research stage depends on, so the
+ *  concrete (Tavily) implementation stays swappable. */
+export type ResearchProviderType = {
+  name: string;
+  startResearch: (params: StartResearchParamsType) => Promise<StartResearchResultType>;
+  getResearch: (params: { requestId: string }) => Promise<ResearchPollType>;
+};
 
 type AiTaskResultEntry = z.output<typeof aiTaskDataSchema>;
 
