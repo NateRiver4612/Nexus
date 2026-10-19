@@ -1,4 +1,6 @@
-import { z } from 'zod';
+import { z } from '@hono/zod-openapi';
+
+import { idSchema, timestampSchema } from './common';
 
 /** Tavily research depth. Mirrors `project_research.model` ('mini' | 'pro'). */
 export const researchModelSchema = z.enum(['mini', 'pro']);
@@ -111,3 +113,31 @@ export const researchPromptSchema = z.object({
   /** Explicit in/out boundaries; state that it's exploratory when the user wants discovery. */
   scope: z.string().min(10).max(400),
 });
+
+/**
+ * A project's research row as exposed by the read API. Provider internals
+ * (`prompt`, `requestId`) stay server-side; `digest` is re-validated on read.
+ */
+export const projectResearchSchema = z
+  .object({
+    id: idSchema,
+    projectId: idSchema,
+    aiRunId: idSchema.nullable(),
+    status: researchStatusSchema,
+    provider: z.string(),
+    model: z.string(),
+    digest: researchDigestSchema.nullable(),
+    sources: z.array(researchSourceSchema),
+    creditsUsed: z.number().int().nullable(),
+    responseTime: z.number().int().nullable(),
+    errorMessage: z.string().nullable(),
+    startedAt: z.string().nullable(),
+    completedAt: z.string().nullable(),
+    ...timestampSchema,
+  })
+  .openapi('ProjectResearch');
+
+/** Research is optional, so the endpoint returns null when no row exists. */
+export const projectResearchResponseSchema = projectResearchSchema
+  .nullable()
+  .openapi('ProjectResearchResponse');

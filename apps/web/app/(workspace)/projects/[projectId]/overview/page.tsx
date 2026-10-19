@@ -7,8 +7,10 @@ import ProjectMilestonesTasks, {
   type PlanTask,
 } from '@/components/project/ProjectMilestonesTasks';
 import ProjectGeneral from '@/components/project/ProjectGeneral';
+import { ProjectResearchSources } from '@/components/project/ProjectResearchSources';
 import { useGetMilestones, useUpdateMilestonesPositions } from '@/hooks/useMilestones';
 import { useGetProjectById } from '@/hooks/useProjects';
+import { useGetProjectResearch } from '@/hooks/useResearch';
 import { useReopenTask, useUpdateTask } from '@/hooks/useTasks';
 import ProjectSummary from '@/components/project/ProjectSummary';
 
@@ -22,6 +24,10 @@ export default function Page() {
   });
 
   const { data: milestones } = useGetMilestones({
+    variables: projectId,
+  });
+
+  const { data: projectResearch } = useGetProjectResearch({
     variables: projectId,
   });
 
@@ -78,6 +84,7 @@ export default function Page() {
         onActivateTask={handleActivateTask}
         onReopenTask={handleReopenTask}
       />
+      <ProjectResearchSources sources={projectResearch?.sources} />
     </div>
   );
 }

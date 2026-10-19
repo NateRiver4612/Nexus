@@ -48,6 +48,26 @@ export const paginationSchema = z.object({
   pageSize: z.coerce.number().int().positive().max(100).default(20),
 });
 
+/**
+ * Builds an update/patch schema from a create schema, making every field
+ * optional WITHOUT inheriting `.default()` values. Plain `.partial()` keeps
+ * an inner default: a field declared `z.enum([...]).default('x')` still
+ * resolves to `'x'` when the key is absent, so an update that omits it
+ * silently overwrites the stored value. Unwrap defaults first, then optional.
+ */
+type StripDefault<T> = T extends z.ZodDefault<infer Inner> ? Inner : T;
+
+export function partialWithoutDefaults<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
+  const shape = Object.fromEntries(
+    Object.entries(schema.shape).map(([key, field]) => {
+      const base = field instanceof z.ZodDefault ? field.unwrap() : field;
+      return [key, z.optional(base)];
+    }),
+  ) as { [K in keyof T]: z.ZodOptional<StripDefault<T[K]>> };
+
+  return z.object(shape);
+}
+
 // Plain field set (not a ZodObject) so it can be spread into other schemas.
 export const timestampSchema = {
   createdAt: z.string().openapi({ example: '2026-08-12T00:00:00.000Z' }),

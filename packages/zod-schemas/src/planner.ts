@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-import { idSchema, timestampSchema } from './common';
+import { idSchema, partialWithoutDefaults, timestampSchema } from './common';
 import { projectSchema } from './projects';
 import { userSchema } from './users';
 
@@ -112,13 +112,13 @@ export const taskSchema = z
  * set to `in_progress`, the API also points `project_progress.currentTaskId`
  * at this task (the task becomes the "current/active" one being worked on).
  */
-export const updateTaskSchema = taskSchema
-  .pick({
+export const updateTaskSchema = partialWithoutDefaults(
+  taskSchema.pick({
     title: true,
     description: true,
     status: true,
-  })
-  .partial();
+  }),
+);
 
 /** A note attached to a task — persisted row DTO. `content` is the structured
  * document (e.g. Tiptap JSON); `contentText` is the plain-text render. */

@@ -47,15 +47,7 @@ export const updateProjectRoute = defineOpenAPIRoute({
     const db = getDb();
     const projectService = ProjectService(db);
 
-    const project = ensureExists(
-      await projectService.update(projectId, {
-        name: body.name,
-        slug: body.slug,
-        status: body.status,
-        description: body.description,
-        category: body.category,
-      }),
-    );
+    const project = ensureExists(await projectService.update(projectId, body));
     return c.json({ data: project, message: 'Project updated' }, 200);
   },
 });

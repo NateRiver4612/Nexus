@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { KickoffPlanList } from '@/components/KickoffPlanList';
 import AISummary from '@/components/project/AISummary';
+import { ProjectResearchSources } from '@/components/project/ProjectResearchSources';
 import { RegeneratePlanDialog } from '@/components/project/RegeneratePlanDialog';
 import { Button } from '@/components/ui/button';
 import { useGetAiRun } from '@/hooks/useAi';
@@ -17,6 +18,7 @@ import {
   useSubmitProjectOnboarding,
 } from '@/hooks/useProjects';
 import { onboardingKeys } from '@/hooks/queryKeys';
+import { useGetProjectResearch } from '@/hooks/useResearch';
 import { toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +48,10 @@ export default function Page() {
 
   const { data: aiRun, isLoading: isAiRunLoading } = useGetAiRun({
     variables: runId,
+  });
+
+  const { data: projectResearch } = useGetProjectResearch({
+    variables: projectId ?? '',
   });
 
   const { clear: clearDraft } = useOnboardingDraft();
@@ -169,6 +175,7 @@ export default function Page() {
         {kickoffPlanData && (
           <KickoffPlanList milestones={kickoffPlanData.milestones}></KickoffPlanList>
         )}
+        <ProjectResearchSources sources={projectResearch?.sources} />
       </div>
       <div className="w-full flex justify-between">
         <Button variant="outline" disabled={disabled} onClick={handleGoBack} className="border">

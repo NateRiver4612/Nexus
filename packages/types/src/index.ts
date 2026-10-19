@@ -93,6 +93,7 @@ import {
   submitOnboardingOutputSchema,
   projectStatusEnum,
   projectCategoryEnum,
+  projectResearchSchema,
   researchModelSchema,
   researchStatusSchema,
   researchSourceSchema,
@@ -219,6 +220,7 @@ export type StartResearchResultType = z.infer<typeof startResearchResultSchema>;
 export type ResearchPollType = z.infer<typeof researchPollSchema>;
 export type ResearchPromptType = z.infer<typeof researchPromptSchema>;
 export type ResearchDigestType = z.infer<typeof researchDigestSchema>;
+export type ProjectResearchType = z.infer<typeof projectResearchSchema>;
 
 /** The abstract research provider the kickoff research stage depends on, so the
  *  concrete (Tavily) implementation stays swappable. */

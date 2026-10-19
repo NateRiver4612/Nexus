@@ -10,6 +10,7 @@ import { getProjectRoute } from './getProject';
 import { getProjectDeliverablesRoute } from './getProjectDeliverables';
 import { getProjectMilestonesRoute } from '../../milestones/routes/getMilestones';
 import { updateProjectMilestonePositionsRoute } from '../../milestones/routes/updateMilestonePositions';
+import { getProjectResearchRoute } from '../../research/routes/getProjectResearch';
 import { getProjectsRoute } from './getProjects';
 import { removeDeliverableRoute } from './removeDeliverable';
 import { submitProjectOnboardingRoute } from './submitOnboarding';
@@ -39,6 +40,7 @@ export function projectRoutes() {
     },
     { route: getProjectDeliverablesRoute.route, handler: getProjectDeliverablesRoute.handler },
     { route: getProjectMilestonesRoute.route, handler: getProjectMilestonesRoute.handler },
+    { route: getProjectResearchRoute.route, handler: getProjectResearchRoute.handler },
     {
       route: updateProjectMilestonePositionsRoute.route,
       handler: updateProjectMilestonePositionsRoute.handler,

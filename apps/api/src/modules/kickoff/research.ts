@@ -15,7 +15,7 @@ import {
 } from '@nexus/zod-schemas';
 
 import { env } from '../../env';
-import { ResearchRepository } from '../ai/repository';
+import { ResearchRepository } from '../research/repository';
 import { buildResearchPrompt } from './generate/researchPrompt';
 
 /** Tavily research depth. 'mini' is the cheaper, faster option. */
