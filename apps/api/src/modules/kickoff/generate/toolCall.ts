@@ -10,7 +10,7 @@ type DeepSeekChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParamsNonStr
     type: 'enabled' | 'disabled';
     budget_tokens?: number;
   };
-}
+};
 
 export type ChatMessage = OpenAI.Chat.ChatCompletionMessageParam;
 

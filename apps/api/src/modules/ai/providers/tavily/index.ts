@@ -110,16 +110,49 @@ async function getResearch({ requestId }: { requestId: string }): Promise<Resear
     });
   }
 
+  const content = parseContent({ content: parsed.data.content });
+
+  if (content == null) {
+    throw new ResearchProviderError({
+      kind: 'unavailable',
+      message: 'Tavily research completed with unparseable content',
+    });
+  }
+
   return {
     status,
-    content: parsed.data.content,
+    content,
     sources: (parsed.data.sources ?? []).map((source) => ({
       title: source.title ?? source.url,
       url: source.url,
       favicon: source.favicon ?? '',
     })),
     responseTime: parsed.data.response_time == null ? null : Math.round(parsed.data.response_time),
+    creditsUsed: parsed.data.usage?.credits ?? null,
   };
+}
+
+/**
+ * Tavily returns `content` as an object when `output_schema` is used, but it can also send
+ * the same payload as a JSON string. Normalize the string form so the digest gate always
+ * receives an object.
+ */
+function parseContent({
+  content,
+}: {
+  content: Record<string, unknown> | string | undefined;
+}): Record<string, unknown> | null {
+  if (content == null) return null;
+  if (typeof content === 'object') return content;
+
+  try {
+    const parsed: unknown = JSON.parse(content);
+    return parsed != null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function createTavilyProvider(): ResearchProviderType {

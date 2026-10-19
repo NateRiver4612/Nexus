@@ -1,5 +1,6 @@
 'use client';
 import Status from '@/components/Status';
+import { EditableProjectTitle } from '@/components/project/EditableProjectTitle';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetProjectById } from '@/hooks/useProjects';
@@ -55,7 +56,7 @@ export default function ProjectLayout({
       <header>
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-4">
-            <h1 className="font-bold text-3xl">{project?.name}</h1>
+            <EditableProjectTitle projectId={projectId} name={project?.name ?? ''} />
             <Status status={status ?? 'draft'} size="sm"></Status>
           </div>
           <div className="flex items-center gap-6">

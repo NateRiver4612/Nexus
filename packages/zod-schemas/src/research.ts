@@ -28,12 +28,17 @@ export const startResearchResultSchema = z.object({
 
 /** Raw provider poll response — validated loosely at the boundary before normalizing. */
 export const researchPollResponseSchema = z.object({
-  status: researchStatusSchema,
-  content: z.record(z.string(), z.unknown()).optional(),
+  // Tavily returns aliases like "queued"/"running" — the provider normalizes them after
+  // this loose parse, so the raw status stays a plain string on purpose.
+  status: z.string(),
+  // With `output_schema` Tavily returns an object, but it can also send a JSON string.
+  content: z.union([z.record(z.string(), z.unknown()), z.string()]).optional(),
   sources: z.array(researchSourceSchema).optional(),
   request_id: z.string().min(1),
   response_time: z.number(),
   error: z.string().nullish(),
+  // Present because `getResearch` is called with `includeUsage: true`.
+  usage: z.object({ credits: z.number().optional() }).optional(),
 });
 
 /** Normalized poll result a provider returns to callers. */
@@ -47,15 +52,56 @@ export const researchPollSchema = z.discriminatedUnion('status', [
     sources: z.array(researchSourceSchema),
     /** Seconds, rounded, ready for `responseTime`. */
     responseTime: z.number().nullable(),
+    /** Provider credits this run cost; null when the provider omits usage. */
+    creditsUsed: z.number().nullable(),
   }),
   z.object({ status: z.literal('failed'), reason: z.string() }),
 ]);
 
 /**
+ * Structured digest the research provider returns when `RESEARCH_DIGEST_OUTPUT_SCHEMA` is
+ * passed as `output_schema`. The field descriptions double as the provider's structural
+ * guidance, so there is no separate prose "what I need" list to keep in sync.
+ *
+ * Deliberately permissive about array lengths: the "up to N" counts are guidance for the
+ * provider, not a validation gate that would throw away an otherwise-good digest.
+ */
+export const researchDigestSchema = z.object({
+  landscape: z
+    .string()
+    .describe(
+      'Where the field stands today: the standard tools, approaches, and conventions (a short paragraph).',
+    ),
+  bestPractices: z
+    .array(z.string())
+    .describe(
+      'The current best practices, in the order they should be applied (up to 8, one sentence each).',
+    ),
+  pitfalls: z
+    .array(z.string())
+    .describe('Common mistakes and outdated approaches to avoid (up to 6, one sentence each).'),
+  recentChanges: z
+    .array(z.string())
+    .describe(
+      'Things that changed recently that older tutorials get wrong (up to 6, one sentence each).',
+    ),
+});
+
+/**
+ * Tavily's `output_schema` accepts a JSON Schema's `properties` (plus optional `required`)
+ * and returns `content` matching it. Derived from `researchDigestSchema` so the schema sent
+ * to the provider and the Zod gate that validates the result can never drift apart.
+ */
+export const RESEARCH_DIGEST_OUTPUT_SCHEMA: Record<string, unknown> = (() => {
+  const { properties, required } = z.toJSONSchema(researchDigestSchema);
+  return { properties, required };
+})();
+
+/**
  * Structured output of the research-prompt builder. Its `composeResearchPrompt`
  * rendering becomes the string sent to the provider (`project_research.prompt`).
- * Sections map to the provider's prompting guidance: a clear task statement,
- * what the user already knows, explicit scope, and the desired output shape.
+ * These are the project-specific sections only — the desired output format and
+ * citation rules are appended deterministically by the composer.
  */
 export const researchPromptSchema = z.object({
   /** A clear, directional task statement — what to research. */
@@ -64,6 +110,4 @@ export const researchPromptSchema = z.object({
   known: z.string().max(600).default(''),
   /** Explicit in/out boundaries; state that it's exploratory when the user wants discovery. */
   scope: z.string().min(10).max(400),
-  /** The desired structure/format of the returned findings. */
-  outputFormat: z.string().min(20).max(400),
 });

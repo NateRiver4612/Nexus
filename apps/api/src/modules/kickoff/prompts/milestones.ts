@@ -3,6 +3,7 @@ import {
   buildDeliverableGuidance,
   CATEGORY_GUIDANCE,
   buildLevelGuidance,
+  buildResearchSection,
   type KickoffContext,
 } from './shared';
 
@@ -26,7 +27,7 @@ export function buildMilestonesSystemPrompt(stepData: KickoffContext['stepData']
 }
 
 export function buildMilestonesUserPrompt(context: KickoffContext): string {
-  return buildContextSections(context);
+  return `${buildContextSections(context)}${buildResearchSection(context.research)}`;
 }
 
 export const MILESTONES_SYSTEM_PROMPT = `You are Nexus's project kickoff planner. Given a user's project goal, \
@@ -36,6 +37,11 @@ Infer the user's actual starting point from their goal description — don't ass
 default, and don't impose introductory milestones on someone whose goal implies existing familiarity. \
 Structure milestones the way this work would genuinely get built or learned, with complexity increasing \
 naturally toward a real, working result — not a fixed template of phases.
+
+Use your inputs deliberately: the goal and scope decide what the plan covers — never narrow it to only \
+the topics named in the uploaded excerpts or the research digest. The excerpts decide which specific \
+resources and approaches to follow; the research digest tells you what's current and fills the gaps the \
+excerpts leave.
 
 Scale the number of milestones to the actual scope of the goal, typically 3-8. Never pad a small goal to \
 hit a target count, and never compress a broad goal into too few milestones to be concrete. Each \

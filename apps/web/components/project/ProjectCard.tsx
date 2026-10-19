@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 
 type ProjectCardProps = {
   project: ProjectDetailType;
-}
+};
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const tasks = project.numOfTasks ?? 0;
@@ -25,7 +25,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Card
       onClick={handleOnClick}
-      className="flex flex-col gap-4 max-w-87.5 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow"
+      className="flex flex-col gap-4  max-w-87 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow"
     >
       <div>
         <div className="flex size-9 items-center justify-center rounded-md bg-secondary text-secondary-foreground">

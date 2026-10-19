@@ -100,6 +100,7 @@ import {
   startResearchResultSchema,
   researchPollSchema,
   researchPromptSchema,
+  researchDigestSchema,
   taskStatusSchema,
   taskStepStatusSchema,
 } from '@nexus/zod-schemas';
@@ -217,6 +218,7 @@ export type StartResearchParamsType = z.infer<typeof startResearchParamsSchema>;
 export type StartResearchResultType = z.infer<typeof startResearchResultSchema>;
 export type ResearchPollType = z.infer<typeof researchPollSchema>;
 export type ResearchPromptType = z.infer<typeof researchPromptSchema>;
+export type ResearchDigestType = z.infer<typeof researchDigestSchema>;
 
 /** The abstract research provider the kickoff research stage depends on, so the
  *  concrete (Tavily) implementation stays swappable. */

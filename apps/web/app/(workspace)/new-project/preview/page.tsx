@@ -1,7 +1,13 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, ArrowRight, LoaderCircle, RotateCw, TriangleAlert } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
 import { KickoffPlanList } from '@/components/KickoffPlanList';
 import AISummary from '@/components/project/AISummary';
+import { RegeneratePlanDialog } from '@/components/project/RegeneratePlanDialog';
 import { Button } from '@/components/ui/button';
 import { useGetAiRun } from '@/hooks/useAi';
 import { useOnboardingDraft } from '@/hooks/useOnboardingDraft';
@@ -10,14 +16,17 @@ import {
   useGetOnboarding,
   useSubmitProjectOnboarding,
 } from '@/hooks/useProjects';
+import { onboardingKeys } from '@/hooks/queryKeys';
+import { toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, ArrowRight, LoaderCircle, RotateCw, TriangleAlert } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export default function Page() {
   const { data: onboarding } = useGetOnboarding();
 
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const [isRegenerateOpen, setIsRegenerateOpen] = useState(false);
 
   const { mutate: completeOnboarding, isPending: isCompletingOnboarding } =
     useCompleteProjectOnboarding({
@@ -59,6 +68,26 @@ export default function Page() {
       projectId,
       onboardingId: onboarding.id,
     });
+  };
+
+  const handleRegenerate = async () => {
+    if (!projectId || !onboardingId) {
+      return;
+    }
+
+    try {
+      const { runId } = await submitOnboarding({
+        projectId,
+        onboardingId,
+      });
+
+      queryClient.setQueryData(onboardingKeys.all, (prev) =>
+        prev ? { ...prev, aiRunId: runId } : prev,
+      );
+      setIsRegenerateOpen(false);
+    } catch (err) {
+      toastError(err);
+    }
   };
 
   const handleCompleteOnboarding = () => {
@@ -119,7 +148,20 @@ export default function Page() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
-        <h2 className="font-semibold text-gray-400">Summary</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-gray-400">Summary</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-8 p-0"
+            aria-label="Regenerate plan"
+            title="Regenerate plan"
+            disabled={disabled}
+            onClick={() => setIsRegenerateOpen(true)}
+          >
+            <RotateCw className={cn('size-4', isGenerating && 'animate-spin')} />
+          </Button>
+        </div>
         {kickoffPlanData?.summary && <AISummary summary={kickoffPlanData.summary}></AISummary>}
       </div>
       <div className="flex flex-col gap-3">
@@ -137,6 +179,13 @@ export default function Page() {
           Create workspace <ArrowRight size={18}></ArrowRight>
         </Button>
       </div>
+
+      <RegeneratePlanDialog
+        open={isRegenerateOpen}
+        onOpenChange={setIsRegenerateOpen}
+        onConfirm={handleRegenerate}
+        isPending={isGenerating}
+      />
     </div>
   );
 }

@@ -178,6 +178,8 @@ export const projectResearch = pgTable(
     responseTime: integer('response_time'), // in seconds
     startedAt: timestamp('started_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+
+    aiRunId: uuid('ai_run_id').references(() => aiRuns.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (table) => [index('project_research_project_idx').on(table.projectId)],

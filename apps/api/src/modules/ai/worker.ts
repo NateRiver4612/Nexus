@@ -5,6 +5,9 @@ import { AI_QUEUE, AI_QUEUE_KICKOFF, type AIKickoffJob } from './queues';
 import { aiRuns, getDb, projectOnboarding } from '@nexus/db';
 import { buildKnowledgeContext } from '../kickoff/context';
 import { generateKickoffPlan } from '../kickoff/generate';
+import { mergeUsage } from '../kickoff/generate/toolCall';
+import { runResearchStage } from '../kickoff/research';
+import { createTavilyProvider } from './providers/tavily';
 import { eq } from 'drizzle-orm';
 import { onComplete } from '../../startWorkers';
 
@@ -26,9 +29,27 @@ const AIWorker = () => {
             })
             .where(eq(aiRuns.id, runId));
 
-          const knowledgeChunks = await buildKnowledgeContext({ db, projectId, stepData });
+          const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
-          const plan = await generateKickoffPlan({ stepData, knowledgeChunks });
+          const [knowledgeChunks, research] = await Promise.all([
+            buildKnowledgeContext({ db, projectId, stepData }),
+            runResearchStage({
+              db,
+              provider: createTavilyProvider(),
+              projectId,
+              runId,
+              stepData,
+              today,
+            }),
+          ]);
+
+          const plan = await generateKickoffPlan({
+            stepData,
+            knowledgeChunks,
+            research: research.result?.digest ?? null,
+          });
+
+          const usage = mergeUsage(research.usage, plan.usage);
 
           await db
             .update(aiRuns)
@@ -36,9 +57,9 @@ const AIWorker = () => {
               status: 'completed',
               completedAt: new Date(),
               updatedAt: new Date(),
-              inputTokens: plan.usage?.prompt_tokens,
+              inputTokens: usage?.prompt_tokens,
               data: plan.data,
-              outputTokens: plan.usage?.completion_tokens,
+              outputTokens: usage?.completion_tokens,
             })
             .where(eq(aiRuns.id, runId));
 
