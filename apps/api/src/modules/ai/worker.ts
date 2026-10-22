@@ -1,6 +1,7 @@
 import { Worker } from 'bullmq';
 
 import { getRedis } from '../../redis';
+import { env } from '../../env';
 import { AI_QUEUE, AI_QUEUE_KICKOFF, type AIKickoffJob } from './queues';
 import { aiRuns, getDb, projectOnboarding } from '@nexus/db';
 import type { RunStageType } from '@nexus/types';
@@ -115,13 +116,35 @@ const AIWorker = () => {
 
     const runId = job.data.jobId;
 
-    const finalAttempt = job.attemptsMade + 1 === job.opts.attempts;
+    // BullMQ increments `attemptsMade` before emitting this event, so the final
+    // attempt has `attemptsMade === attempts` (the old `+ 1` overshot and left the
+    // run stuck on `retrying` after the last failure).
+    const maxAttempts = job.opts.attempts ?? 1;
+    const finalAttempt = job.attemptsMade >= maxAttempts;
+
+    // `startedAt` is set on the run's first attempt (coalesce), so this is a
+    // wall-clock ceiling across all retries, independent of attempt count.
+    const [run] = await db
+      .select({ startedAt: aiRuns.startedAt })
+      .from(aiRuns)
+      .where(eq(aiRuns.id, runId))
+      .limit(1);
+
+    const startedAt = run?.startedAt;
+    const timedOut =
+      startedAt != null && Date.now() - startedAt.getTime() >= env.AI_RUN_TIMEOUT_MS;
 
     await db
       .update(aiRuns)
       .set(
-        finalAttempt
-          ? { status: 'failed', errorMessage: String(err), updatedAt: new Date() }
+        finalAttempt || timedOut
+          ? {
+              status: 'failed',
+              errorMessage: timedOut
+                ? `Run timed out after ${Math.round(env.AI_RUN_TIMEOUT_MS / 60_000)} minutes.`
+                : String(err),
+              updatedAt: new Date(),
+            }
           : { stage: 'retrying', stageUpdatedAt: new Date(), updatedAt: new Date() },
       )
       .where(eq(aiRuns.id, runId));

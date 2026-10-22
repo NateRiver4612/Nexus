@@ -23,12 +23,12 @@ export const taskStepSchema = z
     taskId: idSchema,
     value: z
       .string()
-      .max(150)
+      .max(190)
       .openapi({ example: 'Create the Postgres database' })
       .describe(
         'Name the exact command, API, file, or concept the user performs — concrete enough ' +
           'to act on without going back to the source material. Keep it to a single action, ' +
-          'at most 150 characters.',
+          'at most 190 characters.',
       ),
     position: z.number().int().default(0),
     status: taskStepStatusSchema.default('todo'),
@@ -43,12 +43,12 @@ export const taskDodSchema = z
     taskId: idSchema,
     value: z
       .string()
-      .max(150)
+      .max(190)
       .openapi({ example: 'Migration runs cleanly from scratch' })
       .describe(
         'A concrete, verifiable acceptance criterion — an outcome or result the user can ' +
           'check, not an action: e.g. "migration runs cleanly from scratch" or "endpoint ' +
-          'returns 200". Keep it to a single criterion, at most 150 characters.',
+          'returns 200". Keep it to a single criterion, at most 190 characters.',
       ),
     position: z.number().int().default(0),
     status: taskStepStatusSchema.default('todo'),
@@ -60,10 +60,10 @@ export const milestoneSchema = z
   .object({
     id: idSchema,
     projectId: idSchema,
-    title: z.string().min(20).max(100).openapi({ example: 'Foundation' }),
+    title: z.string().min(20).max(120).openapi({ example: 'Foundation' }),
     description: z
       .string()
-      .max(300)
+      .max(360)
       .nullable()
       .openapi({ example: 'Core setup' })
       .describe(
@@ -79,10 +79,10 @@ export const milestoneSchema = z
 export const taskSchema = z
   .object({
     id: idSchema,
-    title: z.string().min(20).max(100).openapi({ example: 'Set up Postgres' }),
+    title: z.string().min(20).max(120).openapi({ example: 'Set up Postgres' }),
     description: z
       .string()
-      .max(200)
+      .max(260)
       .nullable()
       .openapi({ example: 'Provision the database' })
       .describe(
@@ -236,6 +236,32 @@ export const kickoffSummarySchema = z.object({
 /** Call-1 draft shape: only the milestones — the summary is generated separately. */
 export const kickoffMilestonesSchema = z.object({
   milestones: z.array(kickoffMilestoneSchema).min(1).max(8),
+});
+
+/**
+ * Tool-facing draft schemas — the shape the model is asked to produce. They omit
+ * the server-owned bookkeeping fields (`position`, `status`), which the validation
+ * schema defaults and persistence assigns from array order. Keeping them out of the
+ * tool definition stops the model hand-authoring (and mis-typing) fields it doesn't
+ * own.
+ */
+const kickoffToolTaskStepSchema = kickoffTaskStepSchema.omit({ position: true, status: true });
+const kickoffToolTaskDodSchema = kickoffTaskDodSchema.omit({ position: true, status: true });
+
+const kickoffToolTaskSchema = kickoffTaskSchema.omit({ position: true, status: true }).extend({
+  steps: z.array(kickoffToolTaskStepSchema).min(1).max(5),
+  dods: z.array(kickoffToolTaskDodSchema).min(1).max(5),
+});
+
+const kickoffToolMilestoneSchema = kickoffMilestoneSchema
+  .omit({ position: true, status: true })
+  .extend({
+    tasks: z.array(kickoffToolTaskSchema).min(1).max(5),
+  });
+
+/** What the milestones tool advertises to the model — the validation schema minus server-owned fields. */
+export const kickoffMilestonesToolSchema = z.object({
+  milestones: z.array(kickoffToolMilestoneSchema).min(1).max(8),
 });
 
 export const kickoffPlanSchema = z.object({

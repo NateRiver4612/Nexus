@@ -55,7 +55,7 @@ export async function attemptToolCall<T>({
   const response = await client.chat.completions.create({
     model: model ?? env.AI_KICKOFF_MODEL,
     messages,
-    max_completion_tokens: maxTokens,
+    max_tokens: maxTokens,
     thinking: { type: 'disabled' },
     tools: [
       {

@@ -1,6 +1,6 @@
 import type { KickoffPlanType } from '@nexus/types';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
-import { kickoffMilestonesSchema } from '@nexus/zod-schemas';
+import { kickoffMilestonesSchema, kickoffMilestonesToolSchema } from '@nexus/zod-schemas';
 import {
   buildMilestonesSystemPrompt,
   buildMilestonesUserPrompt,
@@ -39,7 +39,7 @@ function buildMilestonesCorrection({
       `Your previous response failed validation. Fix exactly these issues and \
 re-output the FULL "milestones" array (every milestone's tasks fully populated with "steps", "dods" \
 and "estimatedTimeMinutes"; shorten any over-length field to respect its limit — task descriptions \
-<=200 chars, milestone descriptions <=300 chars, step/DoD values <=150 chars, titles <=100 chars):\n` +
+<=260 chars, milestone descriptions <=360 chars, step/DoD values <=190 chars, titles <=120 chars):\n` +
       issues.map((issue) => `- ${issue}`).join('\n')
     );
   }
@@ -65,7 +65,7 @@ export async function generateMilestones(context: KickoffContext): Promise<Miles
   const { data, usage } = await attemptToolCallWithRetry({
     messages,
     toolName: MILESTONES_TOOL_NAME,
-    toolParamsSchema: kickoffMilestonesSchema,
+    toolParamsSchema: kickoffMilestonesToolSchema,
     validateSchema: kickoffMilestonesSchema,
     maxTokens: MILESTONES_MAX_TOKENS,
     maxTokensRetry: MILESTONES_MAX_TOKENS_RETRY,

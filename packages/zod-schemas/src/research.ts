@@ -111,7 +111,7 @@ export const researchPromptSchema = z.object({
   /** Prior knowledge, assumptions, and decisions already made, so research doesn't repeat them. */
   known: z.string().max(600).default(''),
   /** Explicit in/out boundaries; state that it's exploratory when the user wants discovery. */
-  scope: z.string().min(10).max(400),
+  scope: z.string().min(10).max(600),
 });
 
 /**
