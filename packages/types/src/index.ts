@@ -90,6 +90,7 @@ import {
   deliverableParamsSchema,
   deliverableKindSchema,
   aiTaskEnum,
+  runStageEnum,
   submitOnboardingOutputSchema,
   projectStatusEnum,
   projectCategoryEnum,
@@ -211,6 +212,7 @@ export type KickoffPlanType = z.infer<typeof kickoffPlanSchema>;
 export type KickoffSummaryType = z.infer<typeof kickoffSummarySchema>;
 
 export type AITaskType = z.infer<typeof aiTaskEnum>;
+export type RunStageType = z.infer<typeof runStageEnum>;
 
 export type ResearchModelType = z.infer<typeof researchModelSchema>;
 export type ResearchStatusType = z.infer<typeof researchStatusSchema>;

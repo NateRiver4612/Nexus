@@ -191,6 +191,7 @@ export async function attemptToolCallWithRetry<T>({
     maxTokens: maxTokensRetry,
     model,
   });
+
   if (retry.ok) return { data: retry.data, usage: retry.usage };
 
   if (retry.finishReason === 'length') {

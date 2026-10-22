@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   index,
   integer,
@@ -33,6 +34,23 @@ export const aiTask = pgEnum('ai_task', [
   'research',
   'artifact-generation',
   'project-health',
+]);
+
+/**
+ * Coarse progress within a run, so the UI can show what's happening instead of a
+ * blanket "processing". Kickoff uses researching → drafting_milestones →
+ * drafting_summary; artifact/project-health values are reserved for later.
+ */
+export const runStage = pgEnum('ai_run_stage', [
+  'researching',
+  'drafting_milestones',
+  'drafting_summary',
+  'gathering_context',
+  'drafting_artifact',
+  'rendering_artifact',
+  'saving_artifact',
+  'analyzing_project',
+  'retrying',
 ]);
 
 /**
@@ -80,11 +98,20 @@ export const aiRuns = pgTable(
     inputTokens: integer('input_tokens').notNull().default(0),
     outputTokens: integer('output_tokens').notNull().default(0),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    stage: runStage('stage'),
+    stageUpdatedAt: timestamp('stage_updated_at', { withTimezone: true }),
+    startedAt: timestamp('started_at', { withTimezone: true }),
     ...timestamps,
   },
-  (table) => [index('ai_runs_project_idx').on(table.projectId, table.createdAt)],
+  (table) => [
+    index('ai_runs_project_idx').on(table.projectId, table.createdAt),
+    index('ai_runs_active_idx')
+      .on(table.updatedAt)
+      .where(sql`${table.status} in ('queued', 'processing')`),
+  ],
 );
 
 export type AiRun = typeof aiRuns.$inferSelect;
 export type NewAiRun = typeof aiRuns.$inferInsert;
 export type AiTask = typeof aiTask.enumValues;
+export type AiRunStage = (typeof runStage.enumValues)[number];

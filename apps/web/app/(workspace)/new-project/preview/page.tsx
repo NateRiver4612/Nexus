@@ -1,12 +1,13 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, LoaderCircle, RotateCw, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, TriangleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { KickoffPlanList } from '@/components/KickoffPlanList';
 import AISummary from '@/components/project/AISummary';
+import { GenerationProgress } from '@/components/project/GenerationProgress';
 import { ProjectResearchSources } from '@/components/project/ProjectResearchSources';
 import { RegeneratePlanDialog } from '@/components/project/RegeneratePlanDialog';
 import { Button } from '@/components/ui/button';
@@ -110,13 +111,13 @@ export default function Page() {
 
   if (isAiRunLoading || aiRun?.status === 'processing' || aiRun?.status === 'queued') {
     return (
-      <div className="w-full flex justify-center h-[80vh]">
-        <div className="flex h-[32%] w-130 rounded-2xl shadow-xl flex-col items-center justify-center gap-4 text-center">
-          <LoaderCircle className="size-16 animate-spin text-primary" strokeWidth={1.5} />
+      <div className="w-full flex justify-center h-fit">
+        <div className="flex w-130 flex-col items-center justify-center gap-6 rounded-2xl p-10 text-center shadow-xl">
           <div className="space-y-1">
             <p className="text-base font-semibold text-gray-900">Building your project plan</p>
             <p className="text-sm text-gray-400">This usually takes a few minutes.</p>
           </div>
+          <GenerationProgress stage={aiRun?.stage ?? null} />
         </div>
       </div>
     );
@@ -124,8 +125,8 @@ export default function Page() {
 
   if (!isAiRunLoading && aiRun?.status === 'failed') {
     return (
-      <div className="w-full flex justify-center h-[80vh]">
-        <div className="flex h-[32%] w-130 rounded-2xl shadow-xl flex-col items-center justify-center gap-4 text-center">
+      <div className="w-full flex justify-center h-fit">
+        <div className="flex w-130 rounded-2xl p-10 shadow-xl flex-col items-center justify-center gap-4 text-center">
           <div className="flex size-16 items-center justify-center rounded-full bg-red-50">
             <TriangleAlert className="size-7 text-red-400" strokeWidth={2} />
           </div>

@@ -3,16 +3,23 @@ import { Worker } from 'bullmq';
 import { getRedis } from '../../redis';
 import { AI_QUEUE, AI_QUEUE_KICKOFF, type AIKickoffJob } from './queues';
 import { aiRuns, getDb, projectOnboarding } from '@nexus/db';
+import type { RunStageType } from '@nexus/types';
 import { buildKnowledgeContext } from '../kickoff/context';
 import { generateKickoffPlan } from '../kickoff/generate';
 import { mergeUsage } from '../kickoff/generate/toolCall';
 import { runResearchStage } from '../kickoff/research';
 import { createTavilyProvider } from './providers/tavily';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { onComplete } from '../../startWorkers';
 
 const AIWorker = () => {
   const db = getDb();
+
+  const setStage = (runId: string, stage: RunStageType) =>
+    db
+      .update(aiRuns)
+      .set({ stage, stageUpdatedAt: new Date(), updatedAt: new Date() })
+      .where(eq(aiRuns.id, runId));
 
   const worker = new Worker<AIKickoffJob>(
     AI_QUEUE,
@@ -26,6 +33,10 @@ const AIWorker = () => {
             .update(aiRuns)
             .set({
               status: 'processing',
+              stage: 'researching',
+              stageUpdatedAt: new Date(),
+              startedAt: sql`coalesce(${aiRuns.startedAt}, now())`,
+              updatedAt: new Date(),
             })
             .where(eq(aiRuns.id, runId));
 
@@ -43,11 +54,16 @@ const AIWorker = () => {
             }),
           ]);
 
-          const plan = await generateKickoffPlan({
-            stepData,
-            knowledgeChunks,
-            research: research.result?.digest ?? null,
-          });
+          const plan = await generateKickoffPlan(
+            {
+              stepData,
+              knowledgeChunks,
+              research: research.result?.digest ?? null,
+            },
+            {
+              onStage: (stage) => setStage(runId, stage),
+            },
+          );
 
           const usage = mergeUsage(research.usage, plan.usage);
 
@@ -95,12 +111,19 @@ const AIWorker = () => {
   worker.on('failed', async (job, err) => {
     if (!job) return;
 
+    const db = getDb();
+
     const runId = job.data.jobId;
 
-    const db = getDb();
+    const finalAttempt = job.attemptsMade + 1 === job.opts.attempts;
+
     await db
       .update(aiRuns)
-      .set({ status: 'failed', errorMessage: String(err) })
+      .set(
+        finalAttempt
+          ? { status: 'failed', errorMessage: String(err), updatedAt: new Date() }
+          : { stage: 'retrying', stageUpdatedAt: new Date(), updatedAt: new Date() },
+      )
       .where(eq(aiRuns.id, runId));
   });
 

@@ -1,4 +1,4 @@
-import type { KickoffPlanType } from '@nexus/types';
+import type { KickoffPlanType, RunStageType } from '@nexus/types';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
 import type { KickoffContext } from '../prompts';
 import { generateMilestones } from './milestones';
@@ -8,6 +8,11 @@ import { mergeUsage } from './toolCall';
 export type GeneratedKickoffPlan = {
   data: KickoffPlanType;
   usage?: CompletionUsage;
+};
+
+export type GenerateKickoffPlanOptions = {
+  /** Reports coarse progress as the plan moves through its stages. */
+  onStage?: (stage: RunStageType) => void | Promise<unknown>;
 };
 
 /**
@@ -20,8 +25,14 @@ export type GeneratedKickoffPlan = {
  * Each stage has its own budget and corrective retry, so a failure in one no
  * longer compounds into "the whole plan came back broken".
  */
-export async function generateKickoffPlan(context: KickoffContext): Promise<GeneratedKickoffPlan> {
+export async function generateKickoffPlan(
+  context: KickoffContext,
+  { onStage }: GenerateKickoffPlanOptions = {},
+): Promise<GeneratedKickoffPlan> {
+  await onStage?.('drafting_milestones');
   const milestonesResult = await generateMilestones(context);
+
+  await onStage?.('drafting_summary');
   const summaryResult = await generateSummary(context, milestonesResult.milestones);
 
   return {
