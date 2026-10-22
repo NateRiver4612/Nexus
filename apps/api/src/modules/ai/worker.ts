@@ -131,8 +131,7 @@ const AIWorker = () => {
       .limit(1);
 
     const startedAt = run?.startedAt;
-    const timedOut =
-      startedAt != null && Date.now() - startedAt.getTime() >= env.AI_RUN_TIMEOUT_MS;
+    const timedOut = startedAt != null && Date.now() - startedAt.getTime() >= env.AI_RUN_TIMEOUT_MS;
 
     await db
       .update(aiRuns)

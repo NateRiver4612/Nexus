@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, RotateCw, TriangleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { KickoffPlanList } from '@/components/KickoffPlanList';
 import AISummary from '@/components/project/AISummary';
@@ -18,7 +18,7 @@ import {
   useGetOnboarding,
   useSubmitProjectOnboarding,
 } from '@/hooks/useProjects';
-import { onboardingKeys } from '@/hooks/queryKeys';
+import { onboardingKeys, researchKeys } from '@/hooks/queryKeys';
 import { useGetProjectResearch } from '@/hooks/useResearch';
 import { toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -54,6 +54,15 @@ export default function Page() {
   const { data: projectResearch } = useGetProjectResearch({
     variables: projectId ?? '',
   });
+
+  // Research is finalized before plan generation, so once the run completes its
+  // row is guaranteed to exist. Refetch it then: the initial request can land
+  // before the worker inserts the row and the research query would stay on `null`.
+  useEffect(() => {
+    if (!projectId || aiRun?.status !== 'completed') return;
+
+    queryClient.invalidateQueries({ queryKey: researchKeys.project(projectId) });
+  }, [projectId, aiRun?.status, queryClient]);
 
   const { clear: clearDraft } = useOnboardingDraft();
   const { mutateAsync: submitOnboarding, isPending: isGenerating } = useSubmitProjectOnboarding();
