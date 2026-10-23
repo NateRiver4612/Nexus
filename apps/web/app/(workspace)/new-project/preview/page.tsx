@@ -186,6 +186,9 @@ export default function Page() {
           <KickoffPlanList milestones={kickoffPlanData.milestones}></KickoffPlanList>
         )}
         <ProjectResearchSources sources={projectResearch?.sources} />
+        <p className="px-1 text-xs text-muted-foreground">
+          Want more sources? You can generate more after creating the project.
+        </p>
       </div>
       <div className="w-full flex justify-between">
         <Button variant="outline" disabled={disabled} onClick={handleGoBack} className="border">

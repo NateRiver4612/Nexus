@@ -1,6 +1,6 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 
-import { projectResearch, type Db, type ProjectResearch } from '@nexus/db';
+import { aiRuns, projectResearch, type Db, type ProjectResearch } from '@nexus/db';
 
 /**
  * Persistence for a kickoff research run (`project_research`). Keyed by `aiRunId` so a
@@ -17,14 +17,40 @@ export const ResearchRepository = (db: Db) => ({
     return rows[0];
   },
 
-  async getLatestByProjectId(projectId: string): Promise<ProjectResearch | undefined> {
+  async getNewByProjectId(projectId: string): Promise<ProjectResearch | undefined> {
     const rows = await db
       .select()
       .from(projectResearch)
-      .where(eq(projectResearch.projectId, projectId))
+      .where(and(eq(projectResearch.projectId, projectId), eq(projectResearch.status, 'completed')))
       .orderBy(desc(projectResearch.createdAt))
       .limit(1);
     return rows[0];
+  },
+
+  /** The queued/processing research run for a project, if any. */
+  async getActiveRunByProjectId(projectId: string): Promise<{ id: string } | undefined> {
+    const rows = await db
+      .select({ id: aiRuns.id })
+      .from(aiRuns)
+      .where(
+        and(
+          eq(aiRuns.projectId, projectId),
+          eq(aiRuns.aiTask, 'research'),
+          inArray(aiRuns.status, ['queued', 'processing']),
+        ),
+      )
+      .orderBy(desc(aiRuns.createdAt))
+      .limit(1);
+    return rows[0];
+  },
+
+  /** All completed research for a project, oldest first (version order). */
+  async listCompletedByProjectId(projectId: string): Promise<ProjectResearch[]> {
+    return db
+      .select()
+      .from(projectResearch)
+      .where(and(eq(projectResearch.projectId, projectId), eq(projectResearch.status, 'completed')))
+      .orderBy(asc(projectResearch.createdAt));
   },
 
   async create(input: {
@@ -32,7 +58,7 @@ export const ResearchRepository = (db: Db) => ({
     aiRunId: string;
     provider: string;
     model: string;
-    prompt: string;
+    brief: string;
   }): Promise<ProjectResearch | undefined> {
     const rows = await db
       .insert(projectResearch)

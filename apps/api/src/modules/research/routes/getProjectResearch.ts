@@ -37,7 +37,7 @@ export const getProjectResearchRoute = defineOpenAPIRoute({
     const { projectId } = c.req.valid('param');
 
     const db = getDb();
-    const research = await ResearchService(db).getLatest(projectId);
+    const research = await ResearchService(db).getNew(projectId);
 
     return c.json(research, 200);
   },

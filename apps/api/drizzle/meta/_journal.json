@@ -169,6 +169,13 @@
       "when": 1792464923349,
       "tag": "0023_organic_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792671573935,
+      "tag": "0024_rename_research_prompt_to_brief",
+      "breakpoints": true
     }
   ]
 }

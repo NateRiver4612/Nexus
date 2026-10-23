@@ -8,7 +8,7 @@ import type { RunStageType } from '@nexus/types';
 import { buildKnowledgeContext } from '../kickoff/context';
 import { generateKickoffPlan } from '../kickoff/generate';
 import { mergeUsage } from '../kickoff/generate/toolCall';
-import { runResearchStage } from '../kickoff/research';
+import { runResearch } from '../research/stage';
 import { createTavilyProvider } from './providers/tavily';
 import { eq, sql } from 'drizzle-orm';
 import { onComplete } from '../../startWorkers';
@@ -45,13 +45,14 @@ const AIWorker = () => {
 
           const [knowledgeChunks, research] = await Promise.all([
             buildKnowledgeContext({ db, projectId, stepData }),
-            runResearchStage({
+            runResearch({
               db,
               provider: createTavilyProvider(),
               projectId,
               runId,
               stepData,
               today,
+              model: 'pro',
             }),
           ]);
 

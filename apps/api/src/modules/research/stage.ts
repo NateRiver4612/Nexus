@@ -5,6 +5,7 @@ import type {
   OnboardingDataType,
   ResearchDigestType,
   ResearchModelType,
+  ResearchOutputLengthType,
   ResearchProviderType,
   ResearchSourceType,
 } from '@nexus/types';
@@ -15,39 +16,46 @@ import {
 } from '@nexus/zod-schemas';
 
 import { env } from '../../env';
-import { ResearchRepository } from '../research/repository';
-import { buildResearchPrompt } from './generate/researchPrompt';
-
-/** Tavily research depth. 'mini' is the cheaper, faster option. */
-const RESEARCH_MODEL = 'pro' as ResearchModelType;
+import { buildResearchBrief } from '../kickoff/generate/researchBrief';
+import { ResearchRepository } from './repository';
 
 const POLL_INTERVAL_MS = 5_000;
-/** How long a user may wait for research before the plan is generated without it. */
+/** How long a user may wait for research before it is abandoned. */
 const RESEARCH_TIMEOUT_MS = 4 * 60 * 1000;
 /** Consecutive poll errors tolerated before giving up. */
 const MAX_TRANSIENT_FAILURES = 3;
+/** Hard cap on sources kept per research run (also the default). */
+const MAX_SOURCES = 20;
 
-export type ResearchStageResult = {
+export type ResearchResult = {
   digest: ResearchDigestType;
   sources: ResearchSourceType[];
 };
 
-export type ResearchStageOutcome = {
+export type ResearchOutcome = {
   /** Null when research was skipped or failed — the plan is generated without it. */
-  result: ResearchStageResult | null;
-  /** The research-prompt builder's flash usage. Undefined when a resumed row skipped the call. */
+  result: ResearchResult | null;
+  /** The research-brief builder's flash usage. Undefined when a resumed row skipped the call. */
   usage?: CompletionUsage;
 };
 
-type RunResearchStageParams = {
+type RunResearchParams = {
   db: Db;
   provider: ResearchProviderType;
   projectId: string;
   /** The aiRuns id. A resubmit gets a new one; a BullMQ retry keeps it, which is what makes resume work. */
   runId: string;
   stepData: OnboardingDataType;
-  /** YYYY-MM-DD, passed through to the research prompt. */
+  /** YYYY-MM-DD, passed through to the research brief. */
   today: string;
+  /** Optional user reason for (re)generation, fed into the research brief. */
+  reason?: string;
+  /** Tavily research depth. Defaults to 'pro' (kickoff); on-command uses 'mini'. */
+  model?: ResearchModelType;
+  /** Target report size. On-command uses 'short'; omitted uses the provider default (standard). */
+  outputLength?: ResearchOutputLengthType;
+  /** Max sources to keep (1–20). Defaults to MAX_SOURCES. */
+  sourceLimit?: number;
 };
 
 type ResearchRepo = ReturnType<typeof ResearchRepository>;
@@ -57,24 +65,28 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
- * The research stage of kickoff: build the prompt, submit it, persist the request id,
- * poll until done, validate and save the digest.
+ * Runs a research task: build the brief, submit it, persist the request id, poll until
+ * done, validate and save the digest.
  *
- * Never throws and never blocks the plan: any failure is recorded on the row and the
- * outcome carries `result: null`, so the plan is generated without research.
+ * Never throws: any failure is recorded on the row and the outcome carries `result: null`,
+ * so callers (kickoff, on-command) can continue without research.
  *
  * Resume: rows are keyed by run id. If this run already has a row, a retry picks up where
  * the previous attempt stopped (completed -> reuse, failed -> skip, in progress -> keep polling)
  * instead of submitting and paying for a second request.
  */
-export async function runResearchStage({
+export async function runResearch({
   db,
   provider,
   projectId,
   runId,
   stepData,
   today,
-}: RunResearchStageParams): Promise<ResearchStageOutcome> {
+  reason,
+  model = 'pro',
+  outputLength,
+  sourceLimit = MAX_SOURCES,
+}: RunResearchParams): Promise<ResearchOutcome> {
   // No key configured: research is simply off.
   if (!env.TAVILY_API_KEY) return { result: null };
 
@@ -98,6 +110,9 @@ export async function runResearchStage({
         runId,
         stepData,
         today,
+        reason,
+        model,
+        sourceLimit,
       });
       row = created.row;
       usage = created.usage;
@@ -115,16 +130,24 @@ export async function runResearchStage({
           rowId: row.id,
           requestId: row.requestId,
           startedAt,
+          sourceLimit,
         }),
         usage,
       };
     }
 
     const startedAt = new Date();
-    const requestId = await submit({ researchRepository, provider }, row, startedAt);
+    const requestId = await submit({ researchRepository, provider }, row, startedAt, outputLength);
 
     return {
-      result: await poll({ researchRepository, provider, rowId: row.id, requestId, startedAt }),
+      result: await poll({
+        researchRepository,
+        provider,
+        rowId: row.id,
+        requestId,
+        startedAt,
+        sourceLimit,
+      }),
       usage,
     };
   } catch (error) {
@@ -140,7 +163,7 @@ export async function runResearchStage({
   }
 }
 
-/** Builds the prompt (one flash call) and inserts the row as `pending`. */
+/** Builds the brief (one flash call) and inserts the row as `pending`. */
 async function createRow({
   researchRepository,
   provider,
@@ -148,6 +171,9 @@ async function createRow({
   runId,
   stepData,
   today,
+  reason,
+  model,
+  sourceLimit,
 }: {
   researchRepository: ResearchRepo;
   provider: ResearchProviderType;
@@ -155,15 +181,18 @@ async function createRow({
   runId: string;
   stepData: OnboardingDataType;
   today: string;
+  reason?: string;
+  model: ResearchModelType;
+  sourceLimit: number;
 }): Promise<{ row: ProjectResearch; usage?: CompletionUsage }> {
-  const { prompt, usage } = await buildResearchPrompt({ stepData, today });
+  const { brief, usage } = await buildResearchBrief({ stepData, today, reason, sourceLimit });
 
   const row = await researchRepository.create({
     projectId,
     aiRunId: runId,
     provider: provider.name,
-    model: RESEARCH_MODEL,
-    prompt,
+    model,
+    brief,
   });
 
   if (!row) throw new Error('Failed to insert project_research row');
@@ -182,10 +211,12 @@ async function submit(
   }: { researchRepository: ResearchRepo; provider: ResearchProviderType },
   row: ProjectResearch,
   startedAt: Date,
+  outputLength?: ResearchOutputLengthType,
 ): Promise<string> {
   const { requestId } = await provider.startResearch({
-    prompt: row.prompt,
+    brief: row.brief,
     model: researchModelSchema.parse(row.model),
+    outputLength,
     outputSchema: RESEARCH_DIGEST_OUTPUT_SCHEMA,
   });
 
@@ -200,13 +231,15 @@ async function poll({
   rowId,
   requestId,
   startedAt,
+  sourceLimit,
 }: {
   researchRepository: ResearchRepo;
   provider: ResearchProviderType;
   rowId: string;
   requestId: string;
   startedAt: Date;
-}): Promise<ResearchStageResult | null> {
+  sourceLimit: number;
+}): Promise<ResearchResult | null> {
   // Measured from when the request was submitted, so a resumed attempt does not restart the clock.
   const deadline = startedAt.getTime() + RESEARCH_TIMEOUT_MS;
   let transientFailures = 0;
@@ -231,7 +264,7 @@ async function poll({
 
     if (result.status !== 'completed') continue; // pending / in_progress
 
-    // `content` is untrusted: validate before it reaches the jsonb column or a prompt.
+    // `content` is untrusted: validate before it reaches the jsonb column or a brief.
     const parsed = researchDigestSchema.safeParse(result.content);
 
     if (!parsed.success) {
@@ -242,15 +275,18 @@ async function poll({
       return null;
     }
 
+    // Keep only the top `sourceLimit` sources — the rest are noise for a digest view.
+    const sources = result.sources.slice(0, sourceLimit);
+
     await researchRepository.markCompleted({
       id: rowId,
       content: parsed.data,
-      sources: result.sources,
+      sources,
       creditsUsed: result.creditsUsed,
       responseTime: result.responseTime,
     });
 
-    return { digest: parsed.data, sources: result.sources };
+    return { digest: parsed.data, sources };
   }
 
   await researchRepository.markFailed({ id: rowId, errorMessage: 'Research timed out' });
@@ -258,7 +294,7 @@ async function poll({
 }
 
 /** Re-validates a saved row on the way out, as the column comment asks. */
-function readCompleted(row: ProjectResearch): ResearchStageResult | null {
+function readCompleted(row: ProjectResearch): ResearchResult | null {
   const parsed = researchDigestSchema.safeParse(row.content);
   if (!parsed.success) return null;
 

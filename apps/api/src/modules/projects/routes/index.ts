@@ -11,6 +11,9 @@ import { getProjectDeliverablesRoute } from './getProjectDeliverables';
 import { getProjectMilestonesRoute } from '../../milestones/routes/getMilestones';
 import { updateProjectMilestonePositionsRoute } from '../../milestones/routes/updateMilestonePositions';
 import { getProjectResearchRoute } from '../../research/routes/getProjectResearch';
+import { getProjectResearchHistoryRoute } from '../../research/routes/getProjectResearchHistory';
+import { startProjectResearchRoute } from '../../research/routes/startProjectResearch';
+import { getActiveResearchRoute } from '../../research/routes/getActiveResearch';
 import { getProjectsRoute } from './getProjects';
 import { removeDeliverableRoute } from './removeDeliverable';
 import { submitProjectOnboardingRoute } from './submitOnboarding';
@@ -41,6 +44,12 @@ export function projectRoutes() {
     { route: getProjectDeliverablesRoute.route, handler: getProjectDeliverablesRoute.handler },
     { route: getProjectMilestonesRoute.route, handler: getProjectMilestonesRoute.handler },
     { route: getProjectResearchRoute.route, handler: getProjectResearchRoute.handler },
+    {
+      route: getProjectResearchHistoryRoute.route,
+      handler: getProjectResearchHistoryRoute.handler,
+    },
+    { route: startProjectResearchRoute.route, handler: startProjectResearchRoute.handler },
+    { route: getActiveResearchRoute.route, handler: getActiveResearchRoute.handler },
     {
       route: updateProjectMilestonePositionsRoute.route,
       handler: updateProjectMilestonePositionsRoute.handler,

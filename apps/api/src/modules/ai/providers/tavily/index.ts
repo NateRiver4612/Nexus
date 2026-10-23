@@ -46,17 +46,19 @@ function normalizeStatus({ value }: { value: string }): ResearchStatusType {
 }
 
 async function startResearch({
-  prompt,
+  brief,
   model,
+  outputLength,
   outputSchema,
 }: StartResearchParamsType): Promise<StartResearchResultType> {
   let response: unknown;
 
   try {
-    response = await getClient().research(prompt, {
+    response = await getClient().research(brief, {
       model,
       stream: false,
       timeout: START_TIMEOUT_SECONDS,
+      ...(outputLength ? { output_length: outputLength } : {}),
       ...(outputSchema ? { outputSchema } : {}),
     });
   } catch (error) {

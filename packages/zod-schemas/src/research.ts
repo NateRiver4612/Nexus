@@ -15,10 +15,15 @@ export const researchSourceSchema = z.object({
   favicon: z.string(),
 });
 
+/** Tavily research output size. Mirrors the `/research` `output_length` param. */
+export const researchOutputLengthSchema = z.enum(['short', 'standard', 'long']);
+
 /** Input to a provider's `startResearch`. */
 export const startResearchParamsSchema = z.object({
-  prompt: z.string(),
+  brief: z.string(),
   model: researchModelSchema,
+  /** Target output size for the research report. */
+  outputLength: researchOutputLengthSchema.optional(),
   /** JSON Schema for the structured digest. When set, `content` comes back as an object matching it. */
   outputSchema: z.record(z.string(), z.unknown()).optional(),
 });
@@ -100,12 +105,12 @@ export const RESEARCH_DIGEST_OUTPUT_SCHEMA: Record<string, unknown> = (() => {
 })();
 
 /**
- * Structured output of the research-prompt builder. Its `composeResearchPrompt`
- * rendering becomes the string sent to the provider (`project_research.prompt`).
+ * Structured output of the research-brief builder. Its `composeResearchBrief`
+ * rendering becomes the string sent to the provider (`project_research.brief`).
  * These are the project-specific sections only — the desired output format and
  * citation rules are appended deterministically by the composer.
  */
-export const researchPromptSchema = z.object({
+export const researchBriefSchema = z.object({
   /** A clear, directional task statement — what to research. */
   objective: z.string().min(20).max(300),
   /** Prior knowledge, assumptions, and decisions already made, so research doesn't repeat them. */
@@ -116,7 +121,7 @@ export const researchPromptSchema = z.object({
 
 /**
  * A project's research row as exposed by the read API. Provider internals
- * (`prompt`, `requestId`) stay server-side; `digest` is re-validated on read.
+ * (`brief`, `requestId`) stay server-side; `digest` is re-validated on read.
  */
 export const projectResearchSchema = z
   .object({
@@ -141,3 +146,36 @@ export const projectResearchSchema = z
 export const projectResearchResponseSchema = projectResearchSchema
   .nullable()
   .openapi('ProjectResearchResponse');
+
+/** Every completed research run for a project, oldest first (one entry per version). */
+export const projectResearchListSchema = z.array(projectResearchSchema).openapi('ProjectResearchList');
+
+/** Body for starting an on-demand research run. `reason` is fed into the research brief. */
+export const startProjectResearchInputSchema = z
+  .object({
+    reason: z
+      .string()
+      .max(1000)
+      .optional()
+      .openapi({ example: 'The initial research missed competitor pricing.' }),
+    sourceLimit: z
+      .number()
+      .int()
+      .min(1)
+      .max(20)
+      .optional()
+      .openapi({ example: 10, description: 'Max sources to keep (1–20). Defaults to 20.' }),
+  })
+  .openapi('StartProjectResearchInput');
+
+/** A research run reference — the aiRun id the client polls. */
+export const projectResearchRunSchema = z
+  .object({
+    runId: idSchema,
+  })
+  .openapi('ProjectResearchRun');
+
+/** Research may or may not be running, so the active endpoint returns null when idle. */
+export const projectResearchRunResponseSchema = projectResearchRunSchema
+  .nullable()
+  .openapi('ProjectResearchRunResponse');

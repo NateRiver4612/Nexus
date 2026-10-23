@@ -88,6 +88,7 @@ export const aiRunSchema = z
     inputTokens: z.number().int().nonnegative().default(0),
     outputTokens: z.number().int().nonnegative().default(0),
     completedAt: z.string().nullable().openapi({ example: '2026-08-12T00:00:01.000Z' }),
+    errorMessage: z.string().nullable().openapi({ example: 'Research timed out' }),
     stage: runStageEnum.nullable().openapi({ example: 'drafting_milestones' }),
     stageUpdatedAt: z.string().nullable().openapi({ example: '2026-08-12T00:00:00.000Z' }),
     startedAt: z.string().nullable().openapi({ example: '2026-08-12T00:00:00.000Z' }),

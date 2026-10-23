@@ -31,7 +31,11 @@ const envSchema = z.object({
   // Hard wall-clock ceiling for a single AI run (measured from its first start, across
   // BullMQ retries). Also used as the per-request timeout so a hung provider call can't
   // sit for the SDK's default.
-  AI_RUN_TIMEOUT_MS: z.coerce.number().int().positive().default(3 * 60 * 1000),
+  AI_RUN_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3 * 60 * 1000),
   BETTER_AUTH_SECRET: z.string().default('dev-only-secret-change-me'),
   BETTER_AUTH_URL: z.url().default('http://localhost:3001/api/auth'),
   GOOGLE_CLIENT_ID: z.string().default(''),
