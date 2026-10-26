@@ -102,7 +102,7 @@ export const conversationSchema = z
   .object({
     id: idSchema,
     projectId: idSchema,
-    userId: z.string().openapi({ example: 'seed@nexus.local' }),
+    userId: idSchema,
     title: z
       .string()
       .min(1)
@@ -136,10 +136,7 @@ export const messageSchema = z
   .openapi('Message');
 
 export const createMessageSchema = messageSchema.pick({
-  conversationId: true,
-  role: true,
   content: true,
-  sourceId: true,
 });
 
 export const messageListSchema = z.array(messageSchema).openapi('Messages');
