@@ -2,11 +2,8 @@ import type { KickoffPlanType } from '@nexus/types';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
 import { kickoffSummarySchema } from '@nexus/zod-schemas';
 import { buildSummarySystemPrompt, buildSummaryUserPrompt, type KickoffContext } from '../prompts';
-import {
-  attemptToolCallWithRetry,
-  type AttemptToolCallFailure,
-  type ChatMessage,
-} from './toolCall';
+import { attemptToolCallWithRetry, type AttemptToolCallFailure } from './toolCall';
+import type { ChatMessage } from '../../ai/types';
 
 export const SUMMARY_TOOL_NAME = 'generate_project_summary';
 
