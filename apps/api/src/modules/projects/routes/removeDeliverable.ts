@@ -1,6 +1,11 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { deliverableParamsSchema, errorResponseSchema, okSchema } from '@nexus/zod-schemas';
+import {
+  deliverableParamsSchema,
+  errorResponseSchema,
+  okSchema,
+  successResponseSchema,
+} from '@nexus/zod-schemas';
 
 import { getDb } from '@nexus/db';
 
@@ -15,7 +20,7 @@ export const removeDeliverableRoute = defineOpenAPIRoute({
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: okSchema } },
+        content: { 'application/json': { schema: successResponseSchema(okSchema) } },
         description: 'Deliverable detached from the project',
       },
       401: {
@@ -31,6 +36,6 @@ export const removeDeliverableRoute = defineOpenAPIRoute({
     const service = DeliverableService(db);
 
     await service.remove(projectId, deliverableId);
-    return c.json({ ok: true }, 200);
+    return c.json({ data: { ok: true }, message: 'Deliverable removed' }, 200);
   },
 });

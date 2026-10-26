@@ -47,13 +47,13 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
   } = form;
 
   const onCreateCustom = async (label: string): Promise<string> => {
-    const row = await createDeliverable.mutateAsync({
+    const res = await createDeliverable.mutateAsync({
       projectId: projectId!,
       name: label,
       kind: 'custom',
       isCustom: true,
     });
-    return `${row.id}`;
+    return `${res.data.id}`;
   };
 
   React.useImperativeHandle(ref, () => ({

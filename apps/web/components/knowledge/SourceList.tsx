@@ -41,12 +41,17 @@ export function SourceList({
   const [error, setError] = useState<string | null>(null);
   const deletingRef = useRef(false);
 
-  const confirmDelete = () => {
-    if (!target || deletingRef.current) return;
+  const deleteSource = (source: KnowledgeSourceType) => {
+    if (deletingRef.current) return;
     deletingRef.current = true;
     setError(null);
 
-    deleteKnowledgeSource({ projectId, sourceId: target.id });
+    deleteKnowledgeSource({ projectId, sourceId: source.id });
+  };
+
+  const confirmDelete = () => {
+    if (!target) return;
+    deleteSource(target);
   };
 
   if (isLoading) {
@@ -77,6 +82,7 @@ export function SourceList({
           const isYouTube = file.sourceType === 'youtube';
           const isPending = file.status === 'pending' || file.status === 'processing';
           const isCompleted = file.status === 'ready';
+          const isFailed = file.status === 'failed';
 
           const { icon, color } = fileIcon({
             name: file.name,
@@ -86,11 +92,13 @@ export function SourceList({
           return (
             <li
               key={`${file.id}`}
-              aria-disabled={isPending}
+              aria-disabled={isPending || isFailed}
+              title={isFailed ? (file.errorMessage ?? 'Processing failed') : undefined}
               className={cn(
                 'flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2',
                 {
                   'bg-gray-100 animate-pulse': isPending,
+                  'bg-destructive/4': isFailed,
                 },
               )}
             >
@@ -99,21 +107,37 @@ export function SourceList({
                   <FontAwesomeIcon icon={icon} color={color} size="xl" />
                 </span>
                 <div className="min-w-0 text-start">
-                  <p className=" text-sm text-gray-900 font-semibold">
-                    {isPending ? `Processing ${file.name}` : file.name}
+                  <p
+                    className={cn('text-sm text-gray-900 font-semibold', {
+                      'text-destructive': isFailed,
+                    })}
+                  >
+                    {isPending ? `Processing ${file.name}` : file.name} {isFailed ? '(Failed)' : ''}
                   </p>
                   {!isYouTube && (
-                    <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+                    <p
+                      className={cn('text-xs text-muted-foreground', {
+                        'text-destructive': isFailed,
+                      })}
+                    >
+                      {formatBytes(file.size)}
+                    </p>
                   )}
                 </div>
               </div>
               <div>
                 {!onlyView &&
-                  (isCompleted ? (
+                  (isCompleted || isFailed ? (
                     <Trash2
                       onClick={() => {
-                        setError(null);
-                        setTarget(file);
+                        if (isFailed) {
+                          // Failed sources are removed immediately — no
+                          // confirmation needed since they contribute nothing.
+                          deleteSource(file);
+                        } else {
+                          setError(null);
+                          setTarget(file);
+                        }
                       }}
                       strokeWidth={2}
                       className="size-5 cursor-pointer! text-destructive"

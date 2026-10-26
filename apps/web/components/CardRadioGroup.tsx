@@ -11,7 +11,7 @@ function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(' ');
 }
 
-export interface CardRadioOption {
+export type CardRadioOption = {
   value: string;
   label: string;
   isCustom?: boolean;
@@ -19,7 +19,7 @@ export interface CardRadioOption {
   description?: string;
 }
 
-interface CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> {
+type CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> = {
   /** Field name — must match a key registered in the parent FormProvider's schema */
   name: FieldPath<TFieldValues>;
   options: CardRadioOption[];

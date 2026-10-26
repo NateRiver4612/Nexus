@@ -9,7 +9,7 @@ import { FormLabel } from './ui/form';
 import { cn, slugify } from '@/lib/utils';
 import { useDeleteDeliverable } from '@/hooks/useDeliverables';
 
-export interface CardCheckboxOption {
+export type CardCheckboxOption = {
   value: string;
   label: string;
   icon?: LucideIcon;
@@ -23,7 +23,7 @@ export type CardCheckboxValue = {
   value: string;
 };
 
-interface CardCheckboxGroupProps<TFieldValues extends FieldValues = FieldValues> {
+type CardCheckboxGroupProps<TFieldValues extends FieldValues = FieldValues> = {
   /** Field name — must match a key registered in the parent FormProvider's schema */
   name: FieldPath<TFieldValues>;
   options: CardCheckboxOption[];

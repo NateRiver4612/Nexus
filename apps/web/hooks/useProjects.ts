@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type {
   KickoffPlanType,
+  ProjectDetailType,
   UpdateOnboardingInputType,
   UpdateProjectInputType,
 } from '@nexus/types';
@@ -21,6 +22,8 @@ import {
 import { onboardingKeys, plannerKeys, projectKeys } from './queryKeys';
 import { createMutationHook } from '@/hooks/createMutation';
 import { createDetailQueryHook, createQueryHook } from '@/hooks/createQuery';
+import { toastError } from '@/lib/toast';
+import { toast } from 'sonner';
 
 export function useGetProjects() {
   return useQuery({
@@ -32,7 +35,11 @@ export function useGetProjects() {
 export const useGetProjectById = createDetailQueryHook(getProject, (id) => projectKeys.detail(id));
 
 export const useCreateProject = createMutationHook(createProject, (queryClient) => ({
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+  onSuccess: (res) => {
+    queryClient.invalidateQueries({ queryKey: projectKeys.all });
+    toast.success(res.message);
+  },
+  onError: toastError,
 }));
 
 export const useGetOnboarding = createQueryHook(getOnboarding, () => onboardingKeys.all, {
@@ -83,11 +90,40 @@ export const useCompleteProjectOnboarding = createMutationHook(
 export function useUpdateProject(id: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<
+    Awaited<ReturnType<typeof updateProject>>,
+    unknown,
+    UpdateProjectInputType,
+    { previous: ProjectDetailType | undefined }
+  >({
     mutationFn: (input: UpdateProjectInputType) => updateProject(id, input),
-    onSuccess: () => {
+    onMutate: async (input) => {
+      const queryKey = projectKeys.detail(id);
+
+      await queryClient.cancelQueries({ queryKey });
+
+      const previous = queryClient.getQueryData<ProjectDetailType>(queryKey);
+      const nextName = input.name;
+
+      if (nextName !== undefined) {
+        queryClient.setQueryData<ProjectDetailType>(queryKey, (prev) =>
+          prev ? { ...prev, name: nextName } : prev,
+        );
+      }
+
+      return { previous };
+    },
+    onError: (err, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(projectKeys.detail(id), context.previous);
+      }
+
+      toastError(err);
+    },
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success(res.message);
     },
   });
 }
@@ -97,6 +133,10 @@ export function useDeleteProject() {
 
   return useMutation({
     mutationFn: (id: string) => deleteProject(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success(res.message);
+    },
+    onError: toastError,
   });
 }

@@ -9,13 +9,9 @@ import type {
 } from '@nexus/types';
 import { projectCategoryEnum, kickoffSummarySchema } from '@nexus/zod-schemas';
 
-import { HttpError } from '../../errors';
-import {
-  OnboardingRepository,
-  ProjectsRepository,
-  type NewProjectRow,
-  type ProjectDetailsRow,
-} from './repository';
+import { ensure, ValidationError } from '../../errors';
+import { OnboardingRepository } from '../onboarding/repository';
+import { ProjectsRepository, type NewProjectRow, type ProjectDetailsRow } from './repository';
 
 type ProjectRow = typeof projects.$inferSelect;
 type OnboardingRow = typeof projectOnboarding.$inferSelect;
@@ -189,11 +185,12 @@ function slugify(input: string) {
  * values aren't supported yet (AI category support comes later) — reject them. */
 export function toProjectCategory(value: string): ProjectCategoryType {
   const parsed = projectCategoryEnum.safeParse(value);
-  if (!parsed.success) {
-    throw HttpError.validation(
+  ensure(
+    parsed.success,
+    ValidationError(
       `Category "${value}" is not supported yet. Pick one of: ${projectCategoryEnum.options.join(', ')}.`,
-    );
-  }
+    ),
+  );
   return parsed.data;
 }
 
@@ -208,9 +205,10 @@ function assertOnboardingOrder(existing: OnboardingRow, step: number) {
   const stepData = (existing.stepData ?? {}) as Record<string, unknown>;
 
   for (const required of stepPrerequisites[step] ?? []) {
-    if (!stepData[`step${required}`]) {
-      throw HttpError.validation(`Complete step ${required} before continuing.`);
-    }
+    ensure(
+      stepData[`step${required}`] != null,
+      ValidationError(`Complete step ${required} before continuing.`),
+    );
   }
 }
 

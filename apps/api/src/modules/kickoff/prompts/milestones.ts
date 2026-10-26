@@ -3,6 +3,7 @@ import {
   buildDeliverableGuidance,
   CATEGORY_GUIDANCE,
   buildLevelGuidance,
+  buildResearchSection,
   type KickoffContext,
 } from './shared';
 
@@ -26,7 +27,7 @@ export function buildMilestonesSystemPrompt(stepData: KickoffContext['stepData']
 }
 
 export function buildMilestonesUserPrompt(context: KickoffContext): string {
-  return buildContextSections(context);
+  return `${buildContextSections(context)}${buildResearchSection(context.research)}`;
 }
 
 export const MILESTONES_SYSTEM_PROMPT = `You are Nexus's project kickoff planner. Given a user's project goal, \
@@ -36,6 +37,11 @@ Infer the user's actual starting point from their goal description — don't ass
 default, and don't impose introductory milestones on someone whose goal implies existing familiarity. \
 Structure milestones the way this work would genuinely get built or learned, with complexity increasing \
 naturally toward a real, working result — not a fixed template of phases.
+
+Use your inputs deliberately: the goal and scope decide what the plan covers — never narrow it to only \
+the topics named in the uploaded excerpts or the research digest. The excerpts decide which specific \
+resources and approaches to follow; the research digest tells you what's current and fills the gaps the \
+excerpts leave.
 
 Scale the number of milestones to the actual scope of the goal, typically 3-8. Never pad a small goal to \
 hit a target count, and never compress a broad goal into too few milestones to be concrete. Each \
@@ -50,13 +56,11 @@ without going back to the source material.
 Every task also carries 1-5 definition-of-done criteria (its "dods" array): concrete, verifiable \
 statements of how the user knows the task is actually finished — acceptance criteria or outcomes, not \
 actions. A task may only be completed when every one of these is satisfied. "dods" entries use the EXACT \
-SAME OBJECT SHAPE as "steps" — { "value": "<the criterion text>", "position": <0-indexed order>, \
-"status": "todo" } — never a plain string.
+SAME OBJECT SHAPE as "steps" — { "value": "<the criterion text>" } — never a plain string.
 
-Every task's own "status" must be exactly one of: todo, in_progress, completed, cancelled.
-Every "steps" and "dods" entry's "status" must be exactly one of: todo, completed — these two never use \
-"in_progress" or "cancelled", only tasks do. Always set new items to "todo" unless there's a specific \
-reason not to.
+Order the arrays themselves — emit milestones, tasks, steps, and dods in the intended execution order \
+(first item = the first thing to do). Do not include "position" or "status" fields anywhere in your \
+output — the system derives their numbering and initial status from array order.
 
 Every task must include a realistic "estimatedTimeMinutes" value — how long that task will actually take, \
 in whole minutes (e.g. 45, 90, 240). Estimate from the task's own steps and difficulty: heavier tasks \
@@ -64,12 +68,12 @@ get longer estimates, trivial tasks get short ones. Never omit it and never use 
 
 LENGTH BUDGET (hard limits, enforced) — keep every text field tight so the plan reads at a glance in a \
 list view:
-- task "title": 20-100 characters.
-- task "description": at most 200 characters — a short phrase stating the concrete outcome and its \
+- task "title": 20-120 characters.
+- task "description": at most 260 characters — a short phrase stating the concrete outcome and its \
   key approach, not a paragraph (aim for 1-2 tight sentences).
-- milestone "title": 20-100 characters.
-- milestone "description": at most 300 characters — 1-3 tight sentences.
-- each "steps"/"dods" entry's "value": at most 150 characters — a single, tightly-worded action or criterion.
+- milestone "title": 20-120 characters.
+- milestone "description": at most 360 characters — 1-3 tight sentences.
+- each "steps"/"dods" entry's "value": at most 190 characters — a single, tightly-worded action or criterion.
 When in doubt, shorter. Respect these limits exactly — fields that exceed them are rejected.
 
 Where a level covers multiple stages (e.g. advanced covering fundamentals through advanced), \

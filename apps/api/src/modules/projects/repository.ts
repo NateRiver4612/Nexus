@@ -1,4 +1,4 @@
-import { asc, eq, and, ne, sql } from 'drizzle-orm';
+import { asc, eq, and, sql } from 'drizzle-orm';
 
 import {
   artifacts,
@@ -6,7 +6,6 @@ import {
   knowledgeSources,
   milestones,
   projectMembers,
-  projectOnboarding,
   projectProgress,
   projects,
   tasks,
@@ -16,8 +15,9 @@ import {
 } from '@nexus/db';
 import type { TaskType } from '@nexus/types';
 
+import { taskJsonObject } from '../../lib/taskJson';
+
 export type NewProjectRow = typeof projects.$inferInsert;
-export type NewOnboardingRow = typeof projectOnboarding.$inferInsert;
 
 /** Project fields + live aggregates, shared by the list and detail queries. */
 const projectDetailsFields = {
@@ -48,7 +48,7 @@ const projectDetailsFields = {
 
   // full current task as a nested object, not flattened columns
   currentTask: sql<TaskType | null>`(
-    select to_jsonb(${tasks}) from ${tasks} where ${tasks.id} = ${projectProgress.currentTaskId}
+    select ${taskJsonObject} from ${tasks} where ${tasks.id} = ${projectProgress.currentTaskId}
   )`,
 
   // counts — correlated subqueries too, but scalar instead of row
@@ -145,33 +145,3 @@ export const ProjectsRepository = (db: Db) => ({
 export type ProjectDetailsRow = Awaited<
   ReturnType<ReturnType<typeof ProjectsRepository>['listByWorkspace']>
 >[number];
-
-export const OnboardingRepository = (db: Db) => ({
-  async getByUserId(userId: string) {
-    const rows = await db
-      .select()
-      .from(projectOnboarding)
-      .where(and(eq(projectOnboarding.userId, userId), ne(projectOnboarding.status, 'completed')))
-      .limit(1);
-    return rows[0];
-  },
-
-  async getById(id: string) {
-    const rows = await db
-      .select()
-      .from(projectOnboarding)
-      .where(eq(projectOnboarding.id, id))
-      .limit(1);
-    return rows[0];
-  },
-
-  async create(values: NewOnboardingRow) {
-    return (await db.insert(projectOnboarding).values(values).returning())[0];
-  },
-
-  async update(id: string, patch: Partial<NewOnboardingRow>) {
-    return (
-      await db.update(projectOnboarding).set(patch).where(eq(projectOnboarding.id, id)).returning()
-    )[0];
-  },
-});

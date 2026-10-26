@@ -155,6 +155,27 @@
       "when": 1791776992727,
       "tag": "0021_heavy_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792385540694,
+      "tag": "0022_needy_zuras",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792464923349,
+      "tag": "0023_organic_screwball",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792671573935,
+      "tag": "0024_rename_research_prompt_to_brief",
+      "breakpoints": true
     }
   ]
 }

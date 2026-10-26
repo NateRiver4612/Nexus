@@ -13,10 +13,10 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface FormInputProps<
+type FormInputProps<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
-> extends Omit<React.ComponentProps<typeof Input>, 'name' | 'defaultValue'> {
+> = Omit<React.ComponentProps<typeof Input>, 'name' | 'defaultValue'> & {
   name: TName;
   label?: string;
   description?: string;

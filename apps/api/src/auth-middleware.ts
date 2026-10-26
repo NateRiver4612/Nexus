@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 
 import auth from './auth';
-import { HttpError } from './errors';
+import { UnauthorizedError } from './errors';
 
 export type AuthenticatedUser = {
   id: string;
@@ -14,7 +14,7 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
 
   if (!session?.user) {
-    throw HttpError.unauthorized();
+    throw UnauthorizedError();
   }
 
   const user: AuthenticatedUser = {
@@ -45,6 +45,6 @@ export const optionalAuth: MiddlewareHandler = async (c, next) => {
 
 export function getUser(c: { get: (key: 'user') => unknown }): AuthenticatedUser {
   const user = c.get('user');
-  if (!user) throw HttpError.unauthorized();
+  if (!user) throw UnauthorizedError();
   return user as AuthenticatedUser;
 }

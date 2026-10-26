@@ -4,11 +4,12 @@ import {
   errorResponseSchema,
   projectIdParamsSchema,
   projectSchema,
+  successResponseSchema,
   updateProjectSchema,
 } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 import { ProjectService } from '../service';
 
 export const updateProjectRoute = defineOpenAPIRoute({
@@ -26,7 +27,7 @@ export const updateProjectRoute = defineOpenAPIRoute({
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: projectSchema } },
+        content: { 'application/json': { schema: successResponseSchema(projectSchema) } },
         description: 'Project updated',
       },
       401: {
@@ -46,14 +47,7 @@ export const updateProjectRoute = defineOpenAPIRoute({
     const db = getDb();
     const projectService = ProjectService(db);
 
-    const project = await projectService.update(projectId, {
-      name: body.name,
-      slug: body.slug,
-      status: body.status,
-      description: body.description,
-      category: body.category,
-    });
-    if (!project) throw HttpError.notFound('Project not found');
-    return c.json(project, 200);
+    const project = ensureExists(await projectService.update(projectId, body));
+    return c.json({ data: project, message: 'Project updated' }, 200);
   },
 });
