@@ -3,6 +3,7 @@
 import DifficultyIndicator from '@/components/DifficultyIndicator';
 import Status, { taskStatusExplain } from '@/components/Status';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetTask } from '@/hooks/useTasks';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,29 @@ const tabs = [
   { href: 'note', label: 'Note' },
 ];
 
+const TaskHeaderSkeleton = () => {
+  return (
+    <div className="flex flex-col gap-6">
+      <Skeleton className="h-5 w-1/3" />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-6">
+          <Skeleton className="h-9 w-1/2" />
+          <Skeleton className="h-5 w-16" />
+        </div>
+        <div className="flex items-center gap-6">
+          <Skeleton className="h-1 flex-1 rounded-full" />
+          <Skeleton className="h-5 w-10" />
+        </div>
+        <div className="flex items-center gap-6">
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-20" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const layout = ({
   children,
   params,
@@ -25,7 +49,7 @@ const layout = ({
 }) => {
   const { taskId } = use(params);
 
-  const { data: task } = useGetTask({
+  const { data: task, isLoading } = useGetTask({
     variables: taskId,
   });
 
@@ -38,60 +62,66 @@ const layout = ({
   const segments = pathname.split('/');
   const activeTab = tabs.find((t) => segments.includes(t.href))?.href ?? 'overview';
 
-  if (!task || !project) {
-    return <></>;
-  }
-
-  const isCompleted = task.status === 'completed';
+  const isCompleted = task?.status === 'completed';
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <div className="flex text-sm flex-wrap items-center text-gray-400 gap-1">
-        <Link
-          href={`/projects/${project.id}`}
-          className="cursor-pointer whitespace-nowrap text-gray-400 font-normal hover:underline"
-        >
-          {project?.name}
-        </Link>
-        <ChevronRight size={18}></ChevronRight>
-        <p className="cursor-pointer whitespace-nowrap text-gray-400 font-normal hover:underline">
-          {milestone?.title}
-        </p>
-        <ChevronRight size={18}></ChevronRight>
-        <p className="text-foreground break-all">{task?.title}</p>
-      </div>
-      <header className="flex flex-col gap-2">
-        <div className="flex items-center gap-6">
-          <h1
-            className={cn('text-3xl font-bold', {
-              'line-through text-gray-300': isCompleted,
-            })}
-          >
-            {task?.title}
-          </h1>
-          <div>
-            <DifficultyIndicator difficulty={task.difficulty} />
+      {isLoading || !task || !project ? (
+        <TaskHeaderSkeleton />
+      ) : (
+        <>
+          <div className="flex text-sm flex-wrap items-center text-gray-400 gap-1">
+            <Link
+              href={`/projects/${project.id}`}
+              className="cursor-pointer whitespace-nowrap text-gray-400 font-normal hover:underline"
+            >
+              {project?.name}
+            </Link>
+            <ChevronRight size={18}></ChevronRight>
+            <p className="cursor-pointer whitespace-nowrap text-gray-400 font-normal hover:underline">
+              {milestone?.title}
+            </p>
+            <ChevronRight size={18}></ChevronRight>
+            <p className="text-foreground break-all">{task?.title}</p>
           </div>
-        </div>
+          <header className="flex flex-col gap-2">
+            <div className="flex items-center gap-6">
+              <h1
+                className={cn('text-3xl font-bold', {
+                  'line-through text-gray-300': isCompleted,
+                })}
+              >
+                {task?.title}
+              </h1>
+              <div>
+                <DifficultyIndicator difficulty={task.difficulty} />
+              </div>
+            </div>
 
-        <div className="flex items-center gap-6">
-          <Progress value={task.progress}></Progress>
-          <p className="text-sm whitespace-nowrap">{task.progress} %</p>
-        </div>
+            <div className="flex items-center gap-6">
+              <Progress value={task.progress}></Progress>
+              <p className="text-sm whitespace-nowrap">{task.progress} %</p>
+            </div>
 
-        <div className="flex items-center gap-6">
-          <Status size="sm" status={task.status} explain={taskStatusExplain(task.status)}></Status>
+            <div className="flex items-center gap-6">
+              <Status
+                size="sm"
+                status={task.status}
+                explain={taskStatusExplain(task.status)}
+              ></Status>
 
-          <div className="flex text-sm text-gray-400 items-center gap-2">
-            <Clock size={16}></Clock>
-            <p>{task.estimatedTimeMinutes ?? '--'} mins</p>
-          </div>
-          <div className="flex text-sm text-gray-400 items-center gap-2">
-            <User size={16}></User>
-            <p>{task.createdBy.name ?? '--'}</p>
-          </div>
-        </div>
-      </header>
+              <div className="flex text-sm text-gray-400 items-center gap-2">
+                <Clock size={16}></Clock>
+                <p>{task.estimatedTimeMinutes ?? '--'} mins</p>
+              </div>
+              <div className="flex text-sm text-gray-400 items-center gap-2">
+                <User size={16}></User>
+                <p>{task.createdBy.name ?? '--'}</p>
+              </div>
+            </div>
+          </header>
+        </>
+      )}
       <Tabs value={activeTab}>
         <TabsList>
           {tabs.map((item) => (

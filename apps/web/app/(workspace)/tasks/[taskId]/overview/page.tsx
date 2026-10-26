@@ -13,11 +13,11 @@ const page = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const router = useRouter();
 
-  const { data: task } = useGetTask({
+  const { data: task, isLoading: isTaskLoading } = useGetTask({
     variables: taskId,
   });
 
-  const { data: notes } = useGetTaskNotes({
+  const { data: notes, isLoading: isNotesLoading } = useGetTaskNotes({
     variables: taskId,
   });
 
@@ -34,15 +34,12 @@ const page = () => {
     },
   });
 
-  if (!task) {
-    return <></>;
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      <TaskSummarySection task={task}></TaskSummarySection>
+      <TaskSummarySection task={task} isLoading={isTaskLoading}></TaskSummarySection>
       <TaskNotesSection
         notes={notes}
+        isLoading={isNotesLoading}
         onAddNote={() => router.push(`/tasks/${taskId}/note`)}
         onNoteClick={(note) => router.push(`/tasks/${taskId}/note/${note.id}`)}
         onDeleteNote={(note) => {

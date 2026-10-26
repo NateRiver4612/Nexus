@@ -53,12 +53,12 @@ export type BlockOption = {
   prefix?: string;
   isActive?: (editor: Editor) => boolean;
   onSelect?: (editor: Editor) => void;
-}
+};
 
 export type SkillsListProps = {
   aiPrompt: string;
   setAiPrompt: (prompt: string) => void;
-}
+};
 
 const BLOCK_OPTIONS: BlockOption[] = [
   {
@@ -149,7 +149,7 @@ function getActiveBlockLabel(editor: Editor): string {
 export type TextTypeDropdownProps = {
   editor: Editor;
   onClose: () => void;
-}
+};
 
 export const TextTypeDropdown: React.FC<TextTypeDropdownProps> = ({ editor, onClose }) => {
   const activeLabel = useEditorState({
@@ -232,7 +232,7 @@ export type FormattingToolbarProps = {
   editor: Editor;
   isDropdownOpen: boolean;
   onToggleDropdown: () => void;
-}
+};
 
 export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   editor,
@@ -476,7 +476,7 @@ export const SkillsList: React.FC<SkillsListProps> = ({ aiPrompt, setAiPrompt })
 
 export type EditorPopupMenuProps = {
   editor: Editor;
-}
+};
 
 export default function EditorPopupMenu({ editor }: EditorPopupMenuProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);

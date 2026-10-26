@@ -23,7 +23,7 @@ type FormInputProps<
   trailingIcon?: LucideIcon;
   onTrailingIconClick?: () => void;
   trailingIconLabel?: string;
-}
+};
 
 export function FormInput<
   TFieldValues extends FieldValues = FieldValues,

@@ -2,6 +2,7 @@
 import Status from '@/components/Status';
 import { EditableProjectTitle } from '@/components/project/EditableProjectTitle';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetProjectById } from '@/hooks/useProjects';
 import Link from 'next/link';
@@ -17,6 +18,27 @@ const tabs = [
   { href: 'settings', label: 'Settings' },
 ];
 
+const ProjectNameSkeleton = () => {
+  return <Skeleton className="h-5 w-40" />;
+};
+
+const ProjectHeaderSkeleton = () => {
+  return (
+    <header>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-5 w-16" />
+        </div>
+        <div className="flex items-center gap-6">
+          <Skeleton className="h-1 flex-1 rounded-full" />
+          <Skeleton className="h-5 w-10" />
+        </div>
+      </div>
+    </header>
+  );
+};
+
 export default function ProjectLayout({
   children,
   params,
@@ -26,7 +48,7 @@ export default function ProjectLayout({
 }) {
   const { projectId } = use(params);
 
-  const { data: project } = useGetProjectById({
+  const { data: project, isLoading } = useGetProjectById({
     variables: projectId,
   });
 
@@ -35,9 +57,6 @@ export default function ProjectLayout({
 
   const segments = pathname.split('/');
   const activeTab = tabs.find((t) => segments.includes(t.href))?.href ?? 'overview';
-
-  const progress = project?.progressPercentage;
-  const status = project?.status;
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -50,21 +69,25 @@ export default function ProjectLayout({
             Projects
           </p>
           <p>/</p>
-          <p>{project?.name}</p>
+          {isLoading || !project ? <ProjectNameSkeleton /> : <p>{project.name}</p>}
         </div>
       </div>
-      <header>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-4">
-            <EditableProjectTitle projectId={projectId} name={project?.name ?? ''} />
-            <Status status={status ?? 'draft'} size="sm"></Status>
+      {isLoading || !project ? (
+        <ProjectHeaderSkeleton />
+      ) : (
+        <header>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <EditableProjectTitle projectId={projectId} name={project.name} />
+              <Status status={project.status} size="sm"></Status>
+            </div>
+            <div className="flex items-center gap-6">
+              <Progress value={project.progressPercentage}></Progress>
+              <p className="text-sm whitespace-nowrap">{project.progressPercentage} %</p>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <Progress value={progress}></Progress>
-            <p className="text-sm whitespace-nowrap">{progress} %</p>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
       <Tabs value={activeTab}>
         <TabsList>
           {tabs.map((item) => (

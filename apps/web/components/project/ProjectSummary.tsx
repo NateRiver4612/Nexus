@@ -1,13 +1,42 @@
 import type { KickoffPlanType } from '@nexus/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type AISummaryProps = {
   summary: Omit<KickoffPlanType['summary'], 'overview'> | null;
+  isLoading?: boolean;
 };
 
-const ProjectSummary = ({ summary }: AISummaryProps) => {
-  if (!summary) {
-    // @todo: Return skeleton instead
-    return <></>;
+const ProjectSummarySkeleton = () => {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Key topics
+        </h3>
+        <ul className="mt-2 space-y-2">
+          {[0, 1].map((index) => (
+            <li key={index} className="flex flex-col gap-2">
+              <Skeleton className="h-5 w-1/3" />
+              <Skeleton className="h-5 w-full" />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-4">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-black">Highlights</h3>
+        <div className="mt-2 space-y-1">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-3/4" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProjectSummary = ({ summary, isLoading }: AISummaryProps) => {
+  if (isLoading || !summary) {
+    return <ProjectSummarySkeleton />;
   }
 
   return (
