@@ -32,6 +32,7 @@ import {
   useUpdateTaskNote,
 } from '@/hooks/useTasks';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import { useEffect, useRef, useState } from 'react';
 import type { TaskNoteType } from '@nexus/types';
@@ -100,6 +101,24 @@ type TaskNoteEditorProps = {
   onCreated?: (noteId: string) => void;
   /** Called after the note is deleted so the caller can navigate away. */
   onDeleted?: () => void;
+};
+
+const TaskNoteEditorSkeleton = () => {
+  return (
+    <div className="flex h-full flex-col w-full overflow-hidden">
+      <div className="relative h-screen rounded-2xl w-full bg-white">
+        <div className="flex items-center justify-between px-6 pt-4">
+          <Skeleton className="size-5 rounded" />
+          <Skeleton className="size-5 rounded" />
+        </div>
+        <div className="w-full px-6 pt-8">
+          <Skeleton className="h-6 w-2/3" />
+          <Skeleton className="mt-4 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-3/4" />
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditorProps) => {
@@ -283,7 +302,7 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
   };
 
   if (!editor || !editorState) {
-    return null;
+    return <TaskNoteEditorSkeleton />;
   }
 
   const isSaving = noteId ? isUpdatingTaskNote : isCreatingTaskNote;

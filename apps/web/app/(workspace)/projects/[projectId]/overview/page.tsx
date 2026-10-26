@@ -36,21 +36,31 @@ import { useReopenTask, useUpdateTask } from '@/hooks/useTasks';
 import { toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
+const ResearchSkeleton = () => {
+  return (
+    <div className="flex flex-col gap-2">
+      {[0, 1].map((index) => (
+        <Skeleton key={index} className="h-12 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+};
+
 export default function Page() {
   const { projectId } = useParams<{ projectId: string }>();
 
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: project } = useGetProjectById({
+  const { data: project, isLoading: isProjectLoading } = useGetProjectById({
     variables: projectId,
   });
 
-  const { data: milestones } = useGetMilestones({
+  const { data: milestones, isLoading: isMilestonesLoading } = useGetMilestones({
     variables: projectId,
   });
 
-  const { data: researchHistory } = useGetProjectResearchHistory({
+  const { data: researchHistory, isLoading: isHistoryLoading } = useGetProjectResearchHistory({
     variables: projectId,
   });
 
@@ -99,17 +109,6 @@ export default function Page() {
   const { mutate: updateTask } = useUpdateTask();
   const { mutate: reopenTask } = useReopenTask();
 
-  if (!project || !milestones) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
-
   // The component hands us the complete, authoritative order after every drag —
   // we persist it as-is. No local mirror/ref, no debounce: each callback is a
   // single consistent snapshot, so a cross-milestone move can never send a task
@@ -154,13 +153,17 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ProjectGeneral data={project}></ProjectGeneral>
-      <ProjectSummary summary={project.summary}></ProjectSummary>
+      <ProjectGeneral data={project} isLoading={isProjectLoading}></ProjectGeneral>
+      <ProjectSummary
+        summary={project?.summary ?? null}
+        isLoading={isProjectLoading}
+      ></ProjectSummary>
       <ProjectMilestonesTasks
         milestones={milestones}
+        isLoading={isMilestonesLoading}
         onContinueTask={handleContinueTask}
         onOrderChange={handleOrderChange}
-        currentTaskId={project.currentTask?.id ?? null}
+        currentTaskId={project?.currentTask?.id ?? null}
         onActivateTask={handleActivateTask}
         onReopenTask={handleReopenTask}
       />
@@ -186,7 +189,9 @@ export default function Page() {
           </div>
         )}
 
-        {!isGenerating && versions.length === 0 && (
+        {isHistoryLoading && versions.length === 0 && !isGenerating && <ResearchSkeleton />}
+
+        {!isHistoryLoading && !isGenerating && versions.length === 0 && (
           <div className="rounded-lg border border-gray-200 p-4 text-sm text-muted-foreground">
             No research yet — generate sources for this project.
           </div>

@@ -50,6 +50,8 @@ export const knowledgeKeys = {
 export const researchKeys = {
   all: ['research'] as const,
   project: (projectId: string) => ['research', 'project', projectId] as const,
+  history: (projectId: string) => ['research', 'history', projectId] as const,
+  active: (projectId: string) => ['research', 'active', projectId] as const,
 };
 
 export const notificationKeys = {

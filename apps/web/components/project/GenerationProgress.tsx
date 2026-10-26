@@ -36,7 +36,10 @@ export const GenerationProgress = ({ stage, className }: GenerationProgressProps
                   <Check className="size-3.5 text-primary" strokeWidth={2.5} />
                 </span>
               ) : isActive ? (
-                <LoaderCircle className="size-6 shrink-0 animate-spin text-primary" strokeWidth={1.5} />
+                <LoaderCircle
+                  className="size-6 shrink-0 animate-spin text-primary"
+                  strokeWidth={1.5}
+                />
               ) : (
                 <span className="size-6 shrink-0 rounded-full border-2 border-muted" />
               )}
@@ -54,9 +57,7 @@ export const GenerationProgress = ({ stage, className }: GenerationProgressProps
         })}
       </ol>
 
-      {isRetrying && (
-        <p className="text-xs text-amber-600">Something went wrong — retrying…</p>
-      )}
+      {isRetrying && <p className="text-xs text-amber-600">Something went wrong — retrying…</p>}
     </div>
   );
 };

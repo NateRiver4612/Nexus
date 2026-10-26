@@ -1,5 +1,6 @@
 import type { MilestoneWithTasksListType, MilestoneWithTasksType, TaskType } from '@nexus/types';
 import { Card } from '../ui/card';
+import { Skeleton } from '../ui/skeleton';
 import { cn } from '@/lib/utils';
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react';
 import { useEffect, useRef, useState } from 'react';
@@ -44,8 +45,9 @@ function withMilestoneTarget<T extends { operation: { target?: { id: unknown } |
 }
 
 type ProjectMilestonesTasksProps = {
-  milestones: MilestoneWithTasksListType;
+  milestones?: MilestoneWithTasksListType;
   className?: string;
+  isLoading?: boolean;
   onContinueTask?: (milestone: PlanMilestone, task: PlanTask) => void;
   onMilestoneReorder?: (orderedMilestones: PlanMilestone[]) => void;
   onTaskReorder?: (milestone: PlanMilestone, orderedTasks: PlanTask[]) => void;
@@ -92,9 +94,21 @@ function buildTasksByMilestone(list: PlanMilestone[]) {
   ) as Record<string, PlanTask[]>;
 }
 
+const ProjectMilestonesTasksSkeleton = ({ className }: { className?: string }) => {
+  return (
+    <Card className={cn('p-6 flex border border-gray-200 flex-col gap-4 bg-white', className)}>
+      <h1 className="text-lg font-bold">Milestones & Tasks</h1>
+      {[0, 1, 2].map((index) => (
+        <Skeleton key={index} className="h-14 w-full rounded-lg" />
+      ))}
+    </Card>
+  );
+};
+
 const ProjectMilestonesTasks = ({
-  milestones,
+  milestones = [],
   className,
+  isLoading,
   onContinueTask,
   onMilestoneReorder,
   onTaskMove,
@@ -126,6 +140,10 @@ const ProjectMilestonesTasks = ({
     setMilestoneOrder([...milestones].sort((a, b) => a.position - b.position));
     setTasksByMilestone(buildTasksByMilestone(milestones));
   }, [milestones]);
+
+  if (isLoading) {
+    return <ProjectMilestonesTasksSkeleton className={className} />;
+  }
 
   // The milestone that should render its accordion open by default: the one
   // holding the current task, falling back to the first non-completed milestone.

@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useIsRestoring } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
   useSubmitProjectOnboarding,
@@ -43,6 +44,26 @@ const steps = [
     description: "Everything looks good. Let's generate your plan.",
   },
 ];
+
+const OnboardingSkeleton = () => {
+  return (
+    <div className="mx-auto w-full max-w-3xl rounded-xl border-border bg-card p-8">
+      <Skeleton className="h-5 w-24" />
+      <div className="mt-3 flex gap-1.5">
+        {steps.map((_, index) => (
+          <Skeleton key={index} className="h-1 flex-1 rounded-full" />
+        ))}
+      </div>
+      <Skeleton className="mt-6 h-7 w-64" />
+      <Skeleton className="mt-1 h-6 w-3/4" />
+      <Skeleton className="mt-8 min-h-40 rounded-lg" />
+      <div className="mt-8 flex items-center justify-between">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-32" />
+      </div>
+    </div>
+  );
+};
 
 export function Onboarding() {
   const router = useRouter();
@@ -85,13 +106,7 @@ export function Onboarding() {
   const mergedData = { ...onboarding?.stepData, ...draftStepData };
 
   if (notReady) {
-    return (
-      <div className="mx-auto w-full max-w-3xl rounded-xl border-border bg-card p-8">
-        <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-        <div className="mt-6 h-8 w-64 animate-pulse rounded bg-muted" />
-        <div className="mt-10 min-h-40 animate-pulse rounded-lg bg-muted/50" />
-      </div>
-    );
+    return <OnboardingSkeleton />;
   }
 
   async function handleFinish() {

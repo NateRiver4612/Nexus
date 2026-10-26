@@ -32,7 +32,7 @@ export type SuggestionMenuItem = {
   shortcut?: string;
   icon: React.ComponentType<{ className?: string }>;
   command: (editor: Editor) => void;
-}
+};
 
 export type SuggestionMenuProps = {
   editor: Editor | null;
@@ -40,7 +40,7 @@ export type SuggestionMenuProps = {
   onOpenChange?: (open: boolean) => void;
   children?: React.ReactNode;
   className?: string;
-}
+};
 
 export const BASIC_BLOCK_ITEMS: SuggestionMenuItem[] = [
   {

@@ -3,7 +3,7 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { milestones, tasks, type Db } from '@nexus/db';
 import type { MilestoneWithTasksType } from '@nexus/types';
 
-import { taskJsonObject } from '../../lib/taskJson';
+import { taskJsonObject } from '../../lib/toJson';
 
 const milestoneWithTasksFields = {
   id: milestones.id,

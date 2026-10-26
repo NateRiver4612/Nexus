@@ -1,9 +1,11 @@
 import type { KickoffPlanType } from '@nexus/types';
 import Overview from '../Overview';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Skeleton } from '../ui/skeleton';
 
 type AISummaryProps = {
-  summary: KickoffPlanType['summary'];
+  summary?: KickoffPlanType['summary'];
+  isLoading?: boolean;
 };
 
 function AccordionItemHeader({ title, description }: { title: string; description: string }) {
@@ -19,7 +21,45 @@ function AccordionItemHeader({ title, description }: { title: string; descriptio
   );
 }
 
-const AISummary = ({ summary }: AISummaryProps) => {
+const AISummarySkeleton = () => {
+  return (
+    <div className="rounded-lg border border-border bg-white p-4">
+      <div>
+        <h2 className="text-base font-semibold tracking-tight text-foreground">Overview</h2>
+        <div className="mt-1 space-y-1">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-2/3" />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Key topics
+        </h3>
+        <div className="mt-2 space-y-2">
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Highlights
+        </h3>
+        <div className="mt-2 space-y-1">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-3/4" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AISummary = ({ summary, isLoading }: AISummaryProps) => {
+  if (isLoading || !summary) {
+    return <AISummarySkeleton />;
+  }
+
   return (
     <div className=" rounded-lg border border-border bg-white p-4">
       <Overview data={summary?.overview}></Overview>

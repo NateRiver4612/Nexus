@@ -15,7 +15,7 @@ import {
 } from '@nexus/db';
 import type { TaskType } from '@nexus/types';
 
-import { taskJsonObject } from '../../lib/taskJson';
+import { taskJsonObject } from '../../lib/toJson';
 
 export type NewProjectRow = typeof projects.$inferInsert;
 
