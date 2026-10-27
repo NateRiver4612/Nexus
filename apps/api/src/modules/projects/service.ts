@@ -1,4 +1,4 @@
-import { projectOnboarding, projects, type Db } from '@nexus/db';
+import { projectOnboarding, projects, workspaceMembers, type Db } from '@nexus/db';
 import type {
   CreateProjectInputType,
   OnboardingStateType,
@@ -9,9 +9,10 @@ import type {
 } from '@nexus/types';
 import { projectCategoryEnum, kickoffSummarySchema } from '@nexus/zod-schemas';
 
-import { ensure, ValidationError } from '../../errors';
+import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
 import { OnboardingRepository } from '../onboarding/repository';
 import { ProjectsRepository, type NewProjectRow, type ProjectDetailsRow } from './repository';
+import { eq, isNull, and } from 'drizzle-orm';
 
 type ProjectRow = typeof projects.$inferSelect;
 type OnboardingRow = typeof projectOnboarding.$inferSelect;
@@ -210,6 +211,23 @@ function assertOnboardingOrder(existing: OnboardingRow, step: number) {
       ValidationError(`Complete step ${required} before continuing.`),
     );
   }
+}
+
+export async function assertProjectAccess(db: Db, userId: string, projectId: string) {
+  const rows = await db
+    .select({ id: projects.id, workspaceId: projects.workspaceId })
+    .from(projects)
+    .innerJoin(
+      workspaceMembers,
+      and(
+        eq(workspaceMembers.workspaceId, projects.workspaceId),
+        eq(workspaceMembers.userId, userId),
+      ),
+    )
+    .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+    .limit(1);
+
+  return ensureExists(rows[0], NotFoundError('Project not found'));
 }
 
 async function ensureWorkspace(db: Db, userId: string) {

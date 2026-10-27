@@ -102,7 +102,7 @@ export const conversationSchema = z
   .object({
     id: idSchema,
     projectId: idSchema,
-    userId: z.string().openapi({ example: 'seed@nexus.local' }),
+    userId: idSchema,
     title: z
       .string()
       .min(1)
@@ -113,33 +113,60 @@ export const conversationSchema = z
   })
   .openapi('Conversation');
 
-export const createConversationSchema = conversationSchema.pick({
-  projectId: true,
-  title: true,
+export const createConversationSchema = z.object({
+  title: z
+    .string()
+    .min(1)
+    .max(255)
+    .default('New conversation')
+    .openapi({ example: 'Scope the AI module' }),
 });
-export const updateConversationSchema = createConversationSchema.partial();
+
+/** Renaming is the only conversation update; project ownership comes from the row. */
+export const updateConversationSchema = z.object({
+  title: z.string().min(1).max(255).openapi({ example: 'Scope the AI module' }),
+});
 
 export const conversationListSchema = z.array(conversationSchema).openapi('Conversations');
+
+/** Tool trace + citations land here. Step 5 narrows this. */
+export const messageMetadataSchema = z.record(z.string(), z.unknown()).openapi('MessageMetadata');
 
 export const messageSchema = z
   .object({
     id: idSchema,
     conversationId: idSchema,
     role: z.enum(['user', 'assistant', 'system']).openapi({ example: 'user' }),
-    content: z.string().min(1).openapi({ example: 'How should we scope AI runs?' }),
+    content: z.string().openapi({ example: 'How should we scope AI runs?' }),
     sourceId: z
       .string()
       .nullable()
       .openapi({ example: 'artifact:3fa85f64-5717-4562-b3fc-2c963f66afa6' }),
-    ...timestampSchema,
+    metadata: messageMetadataSchema.nullable(),
+    createdAt: timestampSchema.createdAt,
   })
   .openapi('Message');
 
-export const createMessageSchema = messageSchema.pick({
-  conversationId: true,
-  role: true,
-  content: true,
-  sourceId: true,
+/** The client sends text only; role and conversation come from the server and the path. */
+export const createMessageSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(1)
+    .max(20_000)
+    .openapi({ example: 'How should we scope AI runs?' }),
 });
 
-export const messageListSchema = z.array(messageSchema).openapi('Messages');
+export const messagePageQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  /** `seq` of the oldest message already loaded; returns the page before it. */
+  cursor: z.coerce.number().int().positive().optional(),
+});
+
+export const messagePageSchema = z
+  .object({
+    messages: z.array(messageSchema),
+    hasMore: z.boolean(),
+    nextCursor: z.number().int().positive().nullable(),
+  })
+  .openapi('MessagePage');

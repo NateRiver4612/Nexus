@@ -1,8 +1,20 @@
-import { index, pgEnum, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
 import { idColumn, timestamps } from './columns';
 import { projects } from './projects';
 import { users } from './users';
+
+export type MessageMetadata = Record<string, unknown>;
 
 export const messageRole = pgEnum('message_role', ['user', 'assistant', 'system']);
 
@@ -22,7 +34,9 @@ export const conversations = pgTable(
     title: varchar('title', { length: 255 }).notNull().default('New conversation'),
     ...timestamps,
   },
-  (table) => [index('conversations_project_idx').on(table.projectId)],
+  (table) => [
+    index('conversations_project_user_idx').on(table.projectId, table.userId, table.updatedAt),
+  ],
 );
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -38,9 +52,12 @@ export const messages = pgTable(
     role: messageRole('role').notNull(),
     content: text('content').notNull(),
     sourceId: text('source_id'), // optional reference to an artifact/document
+    // Insertion order. created_at ties inside a transaction and uuids are random, so page on this.
+    seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
+    metadata: jsonb('metadata').$type<MessageMetadata>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('messages_conversation_idx').on(table.conversationId)],
+  (table) => [index('messages_conversation_seq_idx').on(table.conversationId, table.seq)],
 );
 
 export type Message = typeof messages.$inferSelect;

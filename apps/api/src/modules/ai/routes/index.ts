@@ -4,6 +4,7 @@ import { requireAuth } from '../../../auth-middleware';
 import { createAiSuggestionRoute } from './createAiSuggestion';
 import { createConversationRoute } from './createConversation';
 import { deleteAiSuggestionRoute } from './deleteAiSuggestion';
+import { deleteConversationRoute } from './deleteConversation';
 import { getAiRunRoute } from './getAiRun';
 import { getAiSuggestionsRoute } from './getAiSuggestions';
 import { getConversationsRoute } from './getConversations';
@@ -26,6 +27,7 @@ export function aiRoutes() {
     { route: getConversationsRoute.route, handler: getConversationsRoute.handler },
     { route: createConversationRoute.route, handler: createConversationRoute.handler },
     { route: updateConversationRoute.route, handler: updateConversationRoute.handler },
+    { route: deleteConversationRoute.route, handler: deleteConversationRoute.handler },
     { route: getMessagesRoute.route, handler: getMessagesRoute.handler },
     { route: postMessageRoute.route, handler: postMessageRoute.handler },
   ] as const);

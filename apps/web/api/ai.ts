@@ -64,22 +64,25 @@ export async function createConversation(projectId: string, input: CreateConvers
 
 export async function updateConversation(id: string, input: UpdateConversationInputType) {
   return handleResponse(
-    await apiClient.api.v1.ai.conversations.items[':id'].$patch({ param: { id }, json: input }),
+    await apiClient.api.v1.ai.conversations[':conversationId'].$patch({
+      param: { conversationId: id },
+      json: input,
+    }),
   );
 }
 
 export async function getMessages(conversationId: string) {
   return handleResponse(
-    await apiClient.api.v1.ai.conversations.items[':id'].messages.$get({
-      param: { id: conversationId },
+    await apiClient.api.v1.ai.conversations[':conversationId'].messages.$get({
+      param: { conversationId },
     }),
   );
 }
 
 export async function postMessage(conversationId: string, input: CreateMessageInputType) {
   return handleResponse(
-    await apiClient.api.v1.ai.conversations.items[':id'].messages.$post({
-      param: { id: conversationId },
+    await apiClient.api.v1.ai.conversations[':conversationId'].messages.$post({
+      param: { conversationId },
       json: input,
     }),
   );

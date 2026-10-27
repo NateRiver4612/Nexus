@@ -6,8 +6,10 @@ import {
   errorResponseSchema,
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
-import type { ConversationType } from '@nexus/types';
+import { getUser } from '../../../auth-middleware';
+import { ConversationService } from '../conversations/service';
 
 export const createConversationRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -39,19 +41,17 @@ export const createConversationRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
+  handler: async (c) => {
     const { projectId } = c.req.valid('param');
-    const body = c.req.valid('json');
-    return c.json(
-      {
-        id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        projectId,
-        userId: 'seed@nexus.local',
-        title: body.title ?? 'New conversation',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } satisfies ConversationType,
-      201,
-    );
+    const { title } = c.req.valid('json');
+    const user = getUser(c);
+
+    const conversation = await ConversationService(getDb()).create({
+      projectId,
+      userId: user.id,
+      title,
+    });
+
+    return c.json(conversation, 201);
   },
 });
