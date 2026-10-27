@@ -1,20 +1,22 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
+  conversationIdParamsSchema,
   createMessageSchema,
   errorResponseSchema,
-  idParamsSchema,
   messageSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
-import type { MessageType } from '@nexus/types';
+import { getUser } from '../../../auth-middleware';
+import { ConversationService } from '../conversations/service';
 
 export const postMessageRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
-    path: '/conversations/items/{id}/messages',
+    path: '/conversations/{conversationId}/messages',
     request: {
-      params: idParamsSchema,
+      params: conversationIdParamsSchema,
       body: {
         content: {
           'application/json': { schema: createMessageSchema.openapi('CreateMessage') },
@@ -37,20 +39,17 @@ export const postMessageRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
-    const { id } = c.req.valid('param');
-    const body = c.req.valid('json');
-    return c.json(
-      {
-        id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        conversationId: body.conversationId ?? id,
-        role: body.role,
-        content: body.content,
-        sourceId: body.sourceId ?? null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } satisfies MessageType,
-      201,
-    );
+  handler: async (c) => {
+    const { conversationId } = c.req.valid('param');
+    const { content } = c.req.valid('json');
+    const user = getUser(c);
+
+    const message = await ConversationService(getDb()).appendUserMessage({
+      conversationId,
+      userId: user.id,
+      content,
+    });
+
+    return c.json(message, 201);
   },
 });

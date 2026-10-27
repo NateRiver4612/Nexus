@@ -9,6 +9,13 @@ export const idParamsSchema = z.object({
   }),
 });
 
+export const conversationIdParamsSchema = z.object({
+  conversationId: idSchema.openapi({
+    param: { name: 'conversationId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
+
 export const projectIdParamsSchema = z.object({
   projectId: idSchema.openapi({
     param: { name: 'projectId', in: 'path' },

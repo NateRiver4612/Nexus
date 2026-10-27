@@ -1,17 +1,27 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { errorResponseSchema, idParamsSchema, messageListSchema } from '@nexus/zod-schemas';
+import {
+  conversationIdParamsSchema,
+  errorResponseSchema,
+  messagePageQuerySchema,
+  messagePageSchema,
+} from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
+
+import { getUser } from '../../../auth-middleware';
+import { ConversationService } from '../conversations/service';
 
 export const getMessagesRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/conversations/items/{id}/messages',
+    path: '/conversations/{conversationId}/messages',
     request: {
-      params: idParamsSchema,
+      params: conversationIdParamsSchema,
+      query: messagePageQuerySchema,
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: messageListSchema } },
+        content: { 'application/json': { schema: messagePageSchema } },
         description: 'List messages in a conversation',
       },
       401: {
@@ -24,5 +34,18 @@ export const getMessagesRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => c.json([], 200),
+  handler: async (c) => {
+    const { conversationId } = c.req.valid('param');
+    const { limit, cursor } = c.req.valid('query');
+    const user = getUser(c);
+
+    const page = await ConversationService(getDb()).getMessages({
+      conversationId,
+      userId: user.id,
+      limit,
+      cursor,
+    });
+
+    return c.json(page, 200);
+  },
 });

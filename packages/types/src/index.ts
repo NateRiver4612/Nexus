@@ -27,7 +27,8 @@ import {
   knowledgeItemSchema,
   knowledgeSourceListSchema,
   knowledgeSourceSchema,
-  messageListSchema,
+  messagePageQuerySchema,
+  messagePageSchema,
   messageSchema,
   notificationListSchema,
   notificationSchema,
@@ -141,7 +142,8 @@ export type CreateConversationInputType = z.infer<typeof createConversationSchem
 export type UpdateConversationInputType = z.infer<typeof updateConversationSchema>;
 
 export type MessageType = z.infer<typeof messageSchema>;
-export type MessageListType = z.infer<typeof messageListSchema>;
+export type MessagePageType = z.infer<typeof messagePageSchema>;
+export type MessagePageQueryType = z.infer<typeof messagePageQuerySchema>;
 export type CreateMessageInputType = z.infer<typeof createMessageSchema>;
 
 export type ProjectType = z.infer<typeof projectSchema>;
