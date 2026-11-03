@@ -9,7 +9,8 @@
 import z from 'zod';
 import { getDeepSeekClient, modelForTask } from '../src/lib/client';
 import { DeepSeekProvider } from '../src/modules/ai/providers/deepseek';
-import type { ChatMessage, ToolCall, ToolDef, Usage } from '../src/modules/ai/types';
+import type { Usage } from '@nexus/types';
+import type { ChatMessage, ToolCall, ToolDef } from '../src/modules/ai/types';
 
 const rest = process.argv.slice(2);
 const flag = (name: string, fallback: string) => {

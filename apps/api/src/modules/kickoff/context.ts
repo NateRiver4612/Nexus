@@ -3,7 +3,7 @@ import type { OnboardingDataType } from '@nexus/types';
 import { generateEmbeddings } from '../../embeddings';
 import { env } from '../../env';
 import { KnowledgeRepository } from '../knowledge/repository';
-import { KnowledgeChunkService } from '../knowledgeChunk/service';
+import { KnowledgeChunkService, type KnowledgeChunkServiceType } from '../knowledgeChunk/service';
 
 export type KnowledgeChunkGroup = {
   title: string;
@@ -84,7 +84,7 @@ function truncateExcerpt(content: string, max = MAX_EXCERPT_CHARS): string {
 }
 
 async function searchWithFloorAndFill(
-  knowledgeChunkService: ReturnType<typeof KnowledgeChunkService>,
+  knowledgeChunkService: KnowledgeChunkServiceType,
   projectId: string,
   sources: Array<{ id: string }>,
   stepData: OnboardingDataType,

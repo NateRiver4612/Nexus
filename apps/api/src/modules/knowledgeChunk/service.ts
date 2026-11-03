@@ -48,3 +48,5 @@ export function KnowledgeChunkService(db: Db) {
     searchChunksByEmbeddingForSource,
   };
 }
+
+export type KnowledgeChunkServiceType = ReturnType<typeof KnowledgeChunkService>;

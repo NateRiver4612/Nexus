@@ -138,3 +138,5 @@ export function KnowledgeService(db: Db) {
 
   return { createSources, listSources, getUploadUrl, processSource, deleteSource };
 }
+
+export type KnowledgeServiceType = ReturnType<typeof KnowledgeService>;

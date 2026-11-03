@@ -289,3 +289,6 @@ function toProjectDetailView(row: ProjectDetailsRow): ProjectDetailType {
     updatedAt: row.updatedAt.toISOString(),
   };
 }
+
+export type ProjectServiceType = ReturnType<typeof ProjectService>;
+export type OnboardingServiceType = ReturnType<typeof OnboardingService>;

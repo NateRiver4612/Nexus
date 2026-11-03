@@ -5,6 +5,8 @@ import { ensureExists, InternalError, NotFoundError } from '../../../errors';
 import { assertProjectAccess } from '../../projects/service';
 import { ConversationRepository } from './repository';
 
+export const DEFAULT_CONVERSATION_TITLE = 'New conversation';
+
 function toConversationView(row: Conversation): ConversationType {
   return {
     id: row.id,
@@ -43,6 +45,10 @@ export function ConversationService(db: Db) {
 
     await assertProjectAccess(db, userId, conversation.projectId);
     return conversation;
+  }
+
+  async function get({ id, userId }: { id: string; userId: string }): Promise<ConversationType> {
+    return toConversationView(await requireOwned({ id, userId }));
   }
 
   async function list({
@@ -124,12 +130,14 @@ export function ConversationService(db: Db) {
     role,
     content,
     sourceId,
+    metadata,
   }: {
     conversationId: string;
     userId: string;
     role: 'user' | 'assistant' | 'system';
     content: string;
     sourceId?: string | null;
+    metadata?: Record<string, unknown> | null;
   }): Promise<MessageType> {
     return db.transaction(async (tx) => {
       const txRepository = ConversationRepository(tx);
@@ -138,6 +146,7 @@ export function ConversationService(db: Db) {
         conversationId,
         role,
         content,
+        metadata: metadata ?? null,
         sourceId: sourceId ?? null,
       });
 
@@ -170,18 +179,28 @@ export function ConversationService(db: Db) {
     userId,
     content,
     sourceId,
+    metadata,
   }: {
     conversationId: string;
     userId: string;
     content: string;
     sourceId?: string | null;
+    metadata?: Record<string, unknown>;
   }): Promise<MessageType> {
     await requireOwned({ id: conversationId, userId });
 
-    return appendMessage({ conversationId, userId, role: 'assistant', content, sourceId });
+    return appendMessage({
+      conversationId,
+      userId,
+      role: 'assistant',
+      content,
+      sourceId,
+      metadata,
+    });
   }
 
   return {
+    get,
     list,
     create,
     rename,
@@ -191,3 +210,5 @@ export function ConversationService(db: Db) {
     appendAssistantMessage,
   };
 }
+
+export type ConversationServiceType = ReturnType<typeof ConversationService>;
