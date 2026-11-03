@@ -170,3 +170,38 @@ export const messagePageSchema = z
     nextCursor: z.number().int().positive().nullable(),
   })
   .openapi('MessagePage');
+
+/**
+ * Payloads of the project-chat SSE stream (POST /conversations/{id}/messages).
+ * The protocol is locked to `text-delta | tool | sources | done | error`; `tool` and `sources`
+ * arrive in Steps 5 and 8. Shared so the API emits and the web client parses the same shapes.
+ */
+export const chatTextDeltaEventSchema = z.object({ text: z.string() });
+
+export const chatDoneEventSchema = z.object({
+  /** The saved assistant message. */
+  messageId: idSchema,
+  runId: idSchema,
+  /** Present only when this reply generated the thread's title. */
+  title: z.string().optional(),
+});
+
+export const chatErrorEventSchema = z.object({ kind: z.string(), message: z.string() });
+
+/** A source the answer drew on. Streamed in `sources` and stored in `messages.metadata.citations`. */
+export const chatCitationSchema = z.object({ sourceId: idSchema, name: z.string() });
+export const chatCitationsSchema = z.array(chatCitationSchema);
+
+export const chatToolEventSchema = z.object({
+  /** Pairs the `running` event with its `done` / `error` event. */
+  id: z.string(),
+  name: z.string(),
+  /** What the UI shows while it runs, e.g. "Searching knowledge…". */
+  label: z.string(),
+  status: z.enum(['running', 'done', 'error']),
+});
+
+/** Tool calls persisted in `messages.metadata.tools`, so history keeps the trace. */
+export const chatToolTraceSchema = z.array(chatToolEventSchema);
+
+export const chatSourcesEventSchema = z.object({ sources: chatCitationsSchema });

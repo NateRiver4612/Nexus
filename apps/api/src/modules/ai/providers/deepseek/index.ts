@@ -2,7 +2,7 @@ import type OpenAI from 'openai';
 import z from 'zod';
 import { jsonrepair } from 'jsonrepair';
 
-import { AIProviderError, toAIProviderError } from './errors';
+import { AIProviderError, toAIProviderError, type AIProviderErrorKind } from './errors';
 import type {
   AIProvider,
   ChatInput,
@@ -11,8 +11,8 @@ import type {
   StreamEvent,
   ToolCall,
   ToolDef,
-  Usage,
 } from '../../types';
+import type { Usage } from '@nexus/types';
 
 type Streaming = OpenAI.Chat.ChatCompletionCreateParamsStreaming;
 type NonStreaming = OpenAI.Chat.ChatCompletionCreateParamsNonStreaming;
@@ -102,6 +102,61 @@ export function mapFinish(reason: string | null): 'stop' | 'tool_calls' | 'lengt
   return 'stop';
 }
 
+/** Transient upstream failures are worth another attempt; bad requests/config are not. */
+const isRetryable = (kind: AIProviderErrorKind) => kind === 'unavailable' || kind === 'rate_limited';
+
+const BASE_RETRY_DELAY_MS = 500;
+
+/** Abort-aware sleep so a pending retry can't outlive a cancelled turn. */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+}
+
+/**
+ * Retries only while opening the request (429/5xx/network). Once the stream is returned we stop:
+ * replaying it would duplicate output. Callers opt in via `retries`; queued workflows leave it at 0
+ * because BullMQ owns their attempts/backoff.
+ */
+async function withRetries<T>({
+  retries,
+  signal,
+  run,
+}: {
+  retries: number;
+  signal?: AbortSignal;
+  run: () => Promise<T>;
+}): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      const failure = toAIProviderError(err);
+
+      if (signal?.aborted || attempt >= retries || !isRetryable(failure.kind)) {
+        throw failure;
+      }
+
+      // 500ms, 1s, 2s… plus jitter so simultaneous turns don't retry in lockstep.
+      await sleep(BASE_RETRY_DELAY_MS * 2 ** attempt + Math.random() * 100, signal);
+    }
+  }
+}
+
 export class DeepSeekProvider implements AIProvider {
   constructor(private readonly getClient: () => OpenAI) {}
 
@@ -109,10 +164,14 @@ export class DeepSeekProvider implements AIProvider {
 
   async generateText(input: Omit<ChatInput, 'tools'>) {
     try {
-      const res = await this.getClient().chat.completions.create(
-        buildParams(input) as NonStreaming,
-        { signal: input.signal },
-      );
+      const res = await withRetries({
+        retries: input.retries ?? 0,
+        signal: input.signal,
+        run: () =>
+          this.getClient().chat.completions.create(buildParams(input) as NonStreaming, {
+            signal: input.signal,
+          }),
+      });
       return {
         text: res.choices[0]?.message?.content ?? '',
         usage: toUsage(res.usage) ?? { inputTokens: 0, outputTokens: 0 },
@@ -123,39 +182,55 @@ export class DeepSeekProvider implements AIProvider {
   }
 
   async *streamChat(input: ChatInput): AsyncIterable<StreamEvent> {
-    // Tool-call deltas arrive in pieces keyed by `index`; accumulate until the stream ends.
+    // Tool-call deltas arrive in pieces keyed by `index`; several calls can be interleaved, and
+    // nothing marks one complete until the stream ends. Half-finished JSON can't be run, so collect
+    // every piece here and emit complete calls only after the loop (see flush below). Example:
+    //   { index: 0, id: 'call_1', function: { name: 'searchKnowledge', arguments: '{"qu' } }
+    //   { index: 0, function: { arguments: 'ery":"auth"}' } }
     const pending = new Map<number, { id: string; name: string; args: string }>();
+    // finish_reason / usage only appear on the last chunks, so capture them in the loop.
     let finishReason: string | null = null;
     let usage: Usage | undefined;
 
     try {
-      const stream = (await this.getClient().chat.completions.create(
-        {
-          ...buildParams(input),
-          stream: true,
-          stream_options: { include_usage: true },
-        } as Streaming,
-        { signal: input.signal },
-      )) as AsyncIterable<DeepSeekChunk>;
+      // `include_usage` makes DeepSeek send a final empty-choices chunk carrying token counts.
+      const stream = (await withRetries({
+        retries: input.retries ?? 0,
+        signal: input.signal,
+        run: () =>
+          this.getClient().chat.completions.create(
+            {
+              ...buildParams(input),
+              stream: true,
+              stream_options: { include_usage: true },
+            } as Streaming,
+            { signal: input.signal },
+          ),
+      })) as AsyncIterable<DeepSeekChunk>;
 
       for await (const chunk of stream) {
         usage = toUsage(chunk.usage) ?? usage; // usage rides on a final chunk with empty `choices`
 
+        // Usage-only chunks have no choices; everything else carries a delta.
         const choice = chunk.choices[0];
 
         if (!choice) continue;
 
         if (choice.delta.content) {
+          // Chat text arrives incrementally → one `text-delta` per chunk.
           yield { type: 'text-delta', text: choice.delta.content };
         }
 
+        // Same call can span many chunks; keyed by index. Only `arguments` is cumulative.
         for (const tc of choice.delta.tool_calls ?? []) {
           const slot = pending.get(tc.index) ?? { id: '', name: '', args: '' };
           if (tc.id) slot.id = tc.id;
           if (tc.function?.name) slot.name = tc.function.name;
+          // Arguments are cumulative: append each fragment.
           if (tc.function?.arguments) slot.args += tc.function.arguments;
           pending.set(tc.index, slot);
         }
+        // 'tool_calls' → more work next turn; 'stop' → the answer is complete.
         if (choice.finish_reason) finishReason = choice.finish_reason;
       }
     } catch (err) {
@@ -163,16 +238,21 @@ export class DeepSeekProvider implements AIProvider {
       throw toAIProviderError(err);
     }
 
-    // 1.5 flush accumulated tool calls, in index order, one event each
+    // Stream is over, so every call is complete and its JSON parseable. Flush them sorted by index
+    // to match the model's request order.
     const calls: ToolCall[] = [...pending.entries()]
       .sort(([a], [b]) => a - b)
       .map(([, slot]) => {
+        // A truncated stream can leave a call without id/name — treat it as a provider error.
         if (!slot.id || !slot.name) {
           throw new AIProviderError('unknown', 'Stream ended with an incomplete tool call');
         }
+        // `slot.args` is a JSON string (possibly malformed); parseArgs repairs or throws.
         return { id: slot.id, name: slot.name, args: parseArgs(slot.args) };
       });
 
+    // Emit in a fixed order so callers can rely on it:
+    //   { type: 'tool-call', call }* → { type: 'usage' }? → { type: 'finish', reason }
     for (const call of calls) yield { type: 'tool-call', call };
 
     if (usage) yield { type: 'usage', usage };

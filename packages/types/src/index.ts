@@ -110,7 +110,16 @@ import {
   projectResearchListSchema,
   taskStatusSchema,
   taskStepStatusSchema,
+  chatDoneEventSchema,
+  chatTextDeltaEventSchema,
+  chatErrorEventSchema,
+  chatCitationSchema,
+  chatToolEventSchema,
+  chatToolTraceSchema,
+  chatSourcesEventSchema,
 } from '@nexus/zod-schemas';
+
+export type Usage = { inputTokens: number; outputTokens: number };
 
 export type OnboardingStatusType = z.infer<typeof onboardingStatusSchema>;
 export type OnboardingLevelType = z.infer<typeof onboardingLevelEnum>;
@@ -145,6 +154,19 @@ export type MessageType = z.infer<typeof messageSchema>;
 export type MessagePageType = z.infer<typeof messagePageSchema>;
 export type MessagePageQueryType = z.infer<typeof messagePageQuerySchema>;
 export type CreateMessageInputType = z.infer<typeof createMessageSchema>;
+export type ChatTextDeltaEventType = z.infer<typeof chatTextDeltaEventSchema>;
+export type ChatDoneEventType = z.infer<typeof chatDoneEventSchema>;
+export type ChatErrorEventType = z.infer<typeof chatErrorEventSchema>;
+export type ChatToolEventType = z.infer<typeof chatToolEventSchema>;
+export type ChatToolTraceType = z.infer<typeof chatToolTraceSchema>;
+export type ChatSourcesEventType = z.infer<typeof chatSourcesEventSchema>;
+export type ChatCitationType = z.infer<typeof chatCitationSchema>;
+export type ChatStreamEvent =
+  | ({ type: 'text-delta' } & ChatTextDeltaEventType)
+  | ({ type: 'tool' } & ChatToolEventType)
+  | ({ type: 'sources' } & ChatSourcesEventType)
+  | ({ type: 'done' } & ChatDoneEventType)
+  | ({ type: 'error' } & ChatErrorEventType);
 
 export type ProjectType = z.infer<typeof projectSchema>;
 export type ProjectStatusType = z.infer<typeof projectStatusEnum>;
