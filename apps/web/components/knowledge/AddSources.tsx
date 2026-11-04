@@ -12,8 +12,8 @@ import { isYouTubeUrl } from '@/lib/youtube';
 type SourceStatus = 'idle' | 'submitting' | 'error';
 
 export function AddSources({ projectId }: { projectId: string }) {
-  const createSources = useCreateKnowledgeSources(projectId);
-  const uploadUrl = useCreateKnowledgeUploadUrl(projectId);
+  const { mutateAsync: createSources } = useCreateKnowledgeSources(projectId);
+  const { mutateAsync: getUploadUrl } = useCreateKnowledgeUploadUrl(projectId);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<SourceStatus>('idle');
@@ -38,7 +38,7 @@ export function AddSources({ projectId }: { projectId: string }) {
 
   async function handleFile(file: File) {
     await start(async () => {
-      const { key, url } = await uploadUrl.mutateAsync({
+      const { key, url } = await getUploadUrl({
         name: file.name,
         mimeType: file.type,
         size: file.size,
@@ -49,7 +49,7 @@ export function AddSources({ projectId }: { projectId: string }) {
         headers: { 'Content-Type': file.type },
       });
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-      await createSources.mutateAsync([
+      await createSources([
         {
           sourceType: 'file',
           name: file.name,
@@ -64,9 +64,7 @@ export function AddSources({ projectId }: { projectId: string }) {
   async function handleLink() {
     if (!link) return;
     await start(async () => {
-      await createSources.mutateAsync([
-        { sourceType: isYouTubeUrl(link) ? 'youtube' : 'url', url: link },
-      ]);
+      await createSources([{ sourceType: isYouTubeUrl(link) ? 'youtube' : 'url', url: link }]);
       setLink('');
     });
   }
@@ -78,7 +76,7 @@ export function AddSources({ projectId }: { projectId: string }) {
       return;
     }
     await start(async () => {
-      await createSources.mutateAsync([{ sourceType: 'copied_text', textTitle, textContent }]);
+      await createSources([{ sourceType: 'copied_text', textTitle, textContent }]);
       setTextTitle('');
       setTextContent('');
     });

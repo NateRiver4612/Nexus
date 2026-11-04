@@ -2,7 +2,7 @@ import type { ProjectDetailType } from '@nexus/types';
 import { BookOpenText, Flag, Newspaper, Package, SquareCheckBig } from 'lucide-react';
 import Overview from '../Overview';
 
-interface ProjectSummaryProps {
+type ProjectSummaryProps = {
   data: ProjectDetailType;
   className?: string;
 }

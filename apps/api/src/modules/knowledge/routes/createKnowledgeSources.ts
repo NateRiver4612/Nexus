@@ -5,6 +5,7 @@ import {
   errorResponseSchema,
   knowledgeSourceListSchema,
   projectIdParamsSchema,
+  successResponseSchema,
 } from '@nexus/zod-schemas';
 
 import { getDb } from '@nexus/db';
@@ -27,7 +28,9 @@ export const createKnowledgeSourcesRoute = defineOpenAPIRoute({
     },
     responses: {
       201: {
-        content: { 'application/json': { schema: knowledgeSourceListSchema } },
+        content: {
+          'application/json': { schema: successResponseSchema(knowledgeSourceListSchema) },
+        },
         description: 'Knowledge sources created and enqueued for ingestion',
       },
       401: {
@@ -49,6 +52,6 @@ export const createKnowledgeSourcesRoute = defineOpenAPIRoute({
     const knowledgeService = KnowledgeService(db);
 
     const items = await knowledgeService.createSources({ projectId, userId: user.id, inputs });
-    return c.json(items, 201);
+    return c.json({ data: items, message: 'Source added' }, 201);
   },
 });

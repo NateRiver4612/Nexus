@@ -125,8 +125,8 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
   });
 
   const { mutate: createTaskNote, isPending: isCreatingTaskNote } = useCreateTaskNote({
-    onSuccess: (data: TaskNoteType) => {
-      onCreated?.(data.id);
+    onSuccess: (res) => {
+      onCreated?.(res.data.id);
     },
   });
 

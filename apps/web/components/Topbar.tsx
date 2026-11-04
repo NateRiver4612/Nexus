@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 
 import { cn } from '@/lib/utils';
 
-interface TopbarProps {
+type TopbarProps = {
   collapsed: boolean;
   onToggle: () => void;
 }

@@ -10,6 +10,8 @@ import {
 import { createMutationHook } from '@/hooks/createMutation';
 import { createDetailQueryHook } from '@/hooks/createQuery';
 import { deliverableKeys } from './queryKeys';
+import { toastError } from '@/lib/toast';
+import { toast } from 'sonner';
 
 /** Available catalog — optional project scoping includes that project's own deliverables. */
 export const useGetDeliverables = createDetailQueryHook(getDeliverables, (projectId) =>
@@ -23,19 +25,33 @@ export const useGetProjectDeliverables = createDetailQueryHook(
 );
 
 export const useCreateDeliverable = createMutationHook(createDeliverable, (queryClient) => ({
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: deliverableKeys.all }),
+  onSuccess: (res) => {
+    queryClient.invalidateQueries({ queryKey: deliverableKeys.all });
+    toast.success(res.message);
+  },
+  onError: toastError,
 }));
 
 export const useAssignDeliverables = createMutationHook(assignDeliverables, (queryClient) => ({
-  onSuccess: (_, variables) =>
-    queryClient.invalidateQueries({ queryKey: deliverableKeys.assigned(variables.projectId) }),
+  onSuccess: (res, variables) => {
+    queryClient.invalidateQueries({ queryKey: deliverableKeys.assigned(variables.projectId) });
+    toast.success(res.message);
+  },
+  onError: toastError,
 }));
 
 export const useDeleteDeliverable = createMutationHook(deleteDeliverable, (queryClient) => ({
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: deliverableKeys.all }),
+  onSuccess: (res) => {
+    queryClient.invalidateQueries({ queryKey: deliverableKeys.all });
+    toast.success(res.message);
+  },
+  onError: toastError,
 }));
 
 export const useRemoveDeliverable = createMutationHook(removeDeliverable, (queryClient) => ({
-  onSuccess: (_, variables) =>
-    queryClient.invalidateQueries({ queryKey: deliverableKeys.assigned(variables.projectId) }),
+  onSuccess: (res, variables) => {
+    queryClient.invalidateQueries({ queryKey: deliverableKeys.assigned(variables.projectId) });
+    toast.success(res.message);
+  },
+  onError: toastError,
 }));

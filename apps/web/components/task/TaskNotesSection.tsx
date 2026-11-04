@@ -3,14 +3,14 @@ import { Edit, Plus, Trash2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import type { TaskNoteType } from '@nexus/types';
 
-export interface TaskNotesProps {
+export type TaskNotesProps = {
   notes?: TaskNoteType[];
   onAddNote?: () => void;
   onNoteClick?: (note: TaskNoteType) => void;
   onDeleteNote?: (note: TaskNoteType) => void;
 }
 
-interface NoteCardProps {
+type NoteCardProps = {
   note: TaskNoteType;
   onClick?: () => void;
   onDelete?: (note: TaskNoteType) => void;
@@ -67,7 +67,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onClick, onDelete }) => {
   );
 };
 
-interface AddNoteCardProps {
+type AddNoteCardProps = {
   onClick?: () => void;
 }
 

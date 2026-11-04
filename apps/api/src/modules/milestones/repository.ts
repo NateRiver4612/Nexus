@@ -3,6 +3,8 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { milestones, tasks, type Db } from '@nexus/db';
 import type { MilestoneWithTasksType } from '@nexus/types';
 
+import { taskJsonObject } from '../../lib/taskJson';
+
 const milestoneWithTasksFields = {
   id: milestones.id,
   projectId: milestones.projectId,
@@ -15,7 +17,7 @@ const milestoneWithTasksFields = {
   tasks: sql<MilestoneWithTasksType['tasks']>`
     coalesce(
       jsonb_agg(
-        to_jsonb(${tasks})
+        ${taskJsonObject}
         order by ${tasks.position}
       ) filter (where ${tasks.id} is not null),
       '[]'::jsonb

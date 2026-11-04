@@ -46,8 +46,9 @@ export function MilestoneService(db: Db) {
 }
 
 /**
- * The repository query already aliases task columns to the DTO's keys inside
- * the JSON; only the milestone's outer columns need the row → string mapping.
+ * The `tasks` array is already the camelCase DTO shape (built by
+ * `taskJsonObject` in the repository); only the milestone's outer columns need
+ * the row → string mapping.
  */
 function toView(row: MilestoneWithTasksRow): MilestoneWithTasksType {
   return {

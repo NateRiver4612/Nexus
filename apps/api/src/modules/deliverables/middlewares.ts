@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from 'hono';
 import { getDb } from '@nexus/db';
-import { HttpError } from '../../errors';
+import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
 import { DeliverableRepository } from './repository';
 
 /**
@@ -17,15 +17,15 @@ export const requireCustomDeliverable: MiddlewareHandler = async (c, next) => {
   const projectId = c.req.param('projectId')!;
   const deliverableId = c.req.param('deliverableId')!;
 
-  const deliverable = await DeliverableRepository(db).getById(deliverableId);
+  const deliverable = ensureExists(
+    await DeliverableRepository(db).getById(deliverableId),
+    NotFoundError('Deliverable not found.'),
+  );
 
-  if (!deliverable) {
-    throw HttpError.notFound('Deliverable not found.');
-  }
-
-  if (!deliverable.isCustom || deliverable.projectId !== projectId) {
-    throw HttpError.validation('Only custom deliverables created in this project can be deleted.');
-  }
+  ensure(
+    deliverable.isCustom && deliverable.projectId === projectId,
+    ValidationError('Only custom deliverables created in this project can be deleted.'),
+  );
 
   c.set('deliverable', deliverable);
   await next();

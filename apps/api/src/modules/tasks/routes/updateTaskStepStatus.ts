@@ -2,6 +2,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
   errorResponseSchema,
+  successResponseSchema,
   taskItemStatusUpdateSchema,
   taskStepSchema,
   taskStepParamsSchema,
@@ -10,7 +11,7 @@ import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';
 import { TaskRepository } from '../repository';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 
 export const updateTaskStepStatusRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -26,7 +27,7 @@ export const updateTaskStepStatusRoute = defineOpenAPIRoute({
     middleware: [requireTaskAccess],
     responses: {
       200: {
-        content: { 'application/json': { schema: taskStepSchema } },
+        content: { 'application/json': { schema: successResponseSchema(taskStepSchema) } },
         description: 'Task step status updated',
       },
       400: {
@@ -50,18 +51,20 @@ export const updateTaskStepStatusRoute = defineOpenAPIRoute({
     const db = getDb();
     const repository = TaskRepository(db);
 
-    const [step] = await repository.updateStepStatus(taskId, stepId, status);
-    if (!step) throw HttpError.notFound('Task step not found.');
+    const step = ensureExists((await repository.updateStepStatus(taskId, stepId, status))[0]);
 
     return c.json(
       {
-        id: step.id,
-        taskId: step.taskId,
-        value: step.value,
-        position: step.position,
-        status: step.status,
-        createdAt: step.createdAt.toISOString(),
-        updatedAt: step.updatedAt.toISOString(),
+        data: {
+          id: step.id,
+          taskId: step.taskId,
+          value: step.value,
+          position: step.position,
+          status: step.status,
+          createdAt: step.createdAt.toISOString(),
+          updatedAt: step.updatedAt.toISOString(),
+        },
+        message: 'Step updated',
       },
       200,
     );

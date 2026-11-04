@@ -5,6 +5,7 @@ import {
   milestonesWithTasksSchema,
   projectIdParamsSchema,
   projectMilestonesTasksSchema,
+  successResponseSchema,
 } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
@@ -23,7 +24,9 @@ export const updateProjectMilestonePositionsRoute = defineOpenAPIRoute({
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: milestonesWithTasksSchema } },
+        content: {
+          'application/json': { schema: successResponseSchema(milestonesWithTasksSchema) },
+        },
         description: 'Milestones and tasks reordered',
       },
       401: {
@@ -44,6 +47,6 @@ export const updateProjectMilestonePositionsRoute = defineOpenAPIRoute({
     const service = MilestoneService(db);
 
     const milestones = await service.updateMilestonesPositions(projectId, body);
-    return c.json(milestones, 200);
+    return c.json({ data: milestones, message: 'Milestones reordered' }, 200);
   },
 });

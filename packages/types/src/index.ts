@@ -213,6 +213,9 @@ export type AITaskResultMap = {
 export type UserType = z.infer<typeof userSchema>;
 
 export type OkType = z.infer<typeof okSchema>;
+/** Success responses wrapped as `{ data, message }` — the message is surfaced
+ *  to the user (e.g. sonner toasts) and is not part of the DTO itself. */
+export type SuccessResponse<T> = { data: T; message: string };
 export type ApiErrorType = z.infer<typeof errorSchema>;
 export type ErrorResponseType = z.infer<typeof errorResponseSchema>;
 

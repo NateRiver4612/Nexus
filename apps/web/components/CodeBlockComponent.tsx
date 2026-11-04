@@ -2,7 +2,7 @@ import type { NodeViewProps } from '@tiptap/react';
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
 import '@/styles/styles.scss';
 
-interface CodeBlockLowlightOptions {
+type CodeBlockLowlightOptions = {
   lowlight: {
     listLanguages: () => string[];
   };

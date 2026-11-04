@@ -6,7 +6,7 @@ export type StatusType = ProjectStatusType | TaskStatusEnum;
 
 export type StatusSize = 'sm' | 'md' | 'lg';
 
-interface StatusProps extends HTMLAttributes<HTMLSpanElement> {
+type StatusProps = HTMLAttributes<HTMLSpanElement> & {
   status: StatusType;
   size?: StatusSize;
   /** Optional tooltip text explaining why the status is what it is. */

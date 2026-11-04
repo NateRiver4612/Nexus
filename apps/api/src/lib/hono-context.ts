@@ -3,7 +3,7 @@ import type { Context } from 'hono';
 import type { deliverables, projects, tasks } from '@nexus/db';
 import type { OnboardingDataType } from '@nexus/types';
 import type { AuthenticatedUser } from '../auth-middleware';
-import { HttpError } from '../errors';
+import { InternalError } from '../errors';
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -19,7 +19,7 @@ export function createContextGetter<K extends keyof import('hono').ContextVariab
   return (c: Context): import('hono').ContextVariableMap[K] => {
     const value = c.get(key);
     if (value == null) {
-      throw HttpError.internal(
+      throw InternalError(
         `Context variable "${key}" is not set — check that the required middleware ran for this route.`,
       );
     }

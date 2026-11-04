@@ -8,6 +8,7 @@ import type {
   ProjectDetailListType,
   ProjectDetailType,
   ProjectType,
+  SuccessResponse,
   UpdateOnboardingInputType,
   UpdateProjectInputType,
   SubmitOnboardingOutputType,
@@ -25,25 +26,27 @@ export async function getProject(id: string): Promise<ProjectDetailType> {
   )) as ProjectDetailType;
 }
 
-export async function createProject(input: CreateProjectInputType): Promise<ProjectType> {
+export async function createProject(
+  input: CreateProjectInputType,
+): Promise<SuccessResponse<ProjectType>> {
   return (await handleResponse(
     await apiClient.api.v1.projects.$post({ json: input }),
-  )) as ProjectType;
+  )) as SuccessResponse<ProjectType>;
 }
 
 export async function updateProject(
   projectId: string,
   input: UpdateProjectInputType,
-): Promise<ProjectType> {
+): Promise<SuccessResponse<ProjectType>> {
   return (await handleResponse(
     await apiClient.api.v1.projects[':projectId'].$patch({ param: { projectId }, json: input }),
-  )) as ProjectType;
+  )) as SuccessResponse<ProjectType>;
 }
 
-export async function deleteProject(id: string): Promise<OkType> {
+export async function deleteProject(id: string): Promise<SuccessResponse<OkType>> {
   return (await handleResponse(
     await apiClient.api.v1.projects[':id'].$delete({ param: { id } }),
-  )) as OkType;
+  )) as SuccessResponse<OkType>;
 }
 
 export async function getOnboarding(): Promise<OnboardingStateType> {

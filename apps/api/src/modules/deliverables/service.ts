@@ -5,7 +5,7 @@ import type {
   DeliverableType,
 } from '@nexus/types';
 
-import { HttpError } from '../../errors';
+import { ensure, NotFoundError } from '../../errors';
 import { DeliverableRepository } from './repository';
 
 type DeliverableRow = typeof deliverables.$inferSelect;
@@ -53,9 +53,10 @@ export function DeliverableService(db: Db) {
 
     for (const deliverableId of unique) {
       const row = found.get(deliverableId);
-      if (!row || (row.projectId && row.projectId !== projectId)) {
-        throw HttpError.notFound(`Deliverable ${deliverableId} is not available for this project.`);
-      }
+      ensure(
+        row != null && (!row.projectId || row.projectId === projectId),
+        NotFoundError(`Deliverable ${deliverableId} is not available for this project.`),
+      );
     }
   }
 

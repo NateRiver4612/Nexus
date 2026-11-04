@@ -4,13 +4,14 @@ import {
   deliverableParamsSchema,
   deliverableSchema,
   errorResponseSchema,
+  successResponseSchema,
 } from '@nexus/zod-schemas';
 
 import { getDb } from '@nexus/db';
 
 import { requireCustomDeliverable } from '../../deliverables/middlewares';
 import { DeliverableService } from '../../deliverables/service';
-import { HttpError } from '../../../errors';
+import { ensureExists, InternalError } from '../../../errors';
 
 export const deleteDeliverableRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -22,7 +23,7 @@ export const deleteDeliverableRoute = defineOpenAPIRoute({
     middleware: [requireCustomDeliverable],
     responses: {
       200: {
-        content: { 'application/json': { schema: deliverableSchema } },
+        content: { 'application/json': { schema: successResponseSchema(deliverableSchema) } },
         description: 'Custom deliverable deleted',
       },
       400: {
@@ -45,9 +46,11 @@ export const deleteDeliverableRoute = defineOpenAPIRoute({
     const db = getDb();
     const service = DeliverableService(db);
 
-    const deleted = await service.removeCustom(projectId, deliverableId);
-    if (!deleted) throw HttpError.internal('Deliverable could not be deleted');
+    const deleted = ensureExists(
+      await service.removeCustom(projectId, deliverableId),
+      InternalError('Deliverable could not be deleted'),
+    );
 
-    return c.json(deleted, 200);
+    return c.json({ data: deleted, message: 'Deliverable deleted' }, 200);
   },
 });

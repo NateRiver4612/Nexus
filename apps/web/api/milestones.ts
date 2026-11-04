@@ -1,4 +1,8 @@
-import type { MilestoneWithTasksListType, ProjectMilestonesTasksInputType } from '@nexus/types';
+import type {
+  MilestoneWithTasksListType,
+  ProjectMilestonesTasksInputType,
+  SuccessResponse,
+} from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
@@ -14,11 +18,11 @@ export async function updateMilestonesPositions({
 }: {
   projectId: string;
   input: ProjectMilestonesTasksInputType;
-}) {
-  return handleResponse(
+}): Promise<SuccessResponse<MilestoneWithTasksListType>> {
+  return (await handleResponse(
     await apiClient.api.v1.projects[':projectId'].milestones.positions.$patch({
       param: { projectId },
       json: input,
     }),
-  );
+  )) as SuccessResponse<MilestoneWithTasksListType>;
 }

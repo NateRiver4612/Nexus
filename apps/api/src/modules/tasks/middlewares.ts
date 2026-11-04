@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 import { getDb } from '@nexus/db';
 
-import { HttpError } from '../../errors';
+import { ensure, ensureExists, NotFoundError } from '../../errors';
 import { getUser } from '../../auth-middleware';
 import { ProjectsRepository } from '../projects/repository';
 import { TaskRepository } from './repository';
@@ -21,20 +21,19 @@ export const requireTaskAccess: MiddlewareHandler = async (c, next) => {
 
   const taskId = c.req.param('taskId')!;
 
-  const task = await TaskRepository(db).getById(taskId);
-  if (!task) {
-    throw HttpError.notFound('Task not found.');
-  }
+  const task = ensureExists(
+    await TaskRepository(db).getById(taskId),
+    NotFoundError('Task not found.'),
+  );
+  const project = ensureExists(
+    await ProjectsRepository(db).getByIdRaw(task.projectId),
+    NotFoundError('Task not found.'),
+  );
 
-  const project = await ProjectsRepository(db).getByIdRaw(task.projectId);
-  if (!project) {
-    throw HttpError.notFound('Task not found.');
-  }
-
-  const isMember = await ProjectsRepository(db).isWorkspaceMember(user.id, project.workspaceId);
-  if (!isMember) {
-    throw HttpError.notFound('Task not found.');
-  }
+  ensure(
+    await ProjectsRepository(db).isWorkspaceMember(user.id, project.workspaceId),
+    NotFoundError('Task not found.'),
+  );
 
   c.set('task', task);
   await next();

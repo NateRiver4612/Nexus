@@ -31,6 +31,7 @@
     "@nexus/db": "workspace:*",
     "@nexus/types": "workspace:*",
     "@nexus/zod-schemas": "workspace:*",
+    "@tavily/core": "^0.7.14",
     "@types/node": "^26.4.1",
     "better-auth": "^1.3.0",
     "bullmq": "^6.2.0",

@@ -8,7 +8,7 @@ import type {
 } from '@nexus/types';
 
 import { TaskRepository, type TaskDetailRow } from './repository';
-import { HttpError } from '../../errors';
+import { ensure, ValidationError } from '../../errors';
 
 /** The first non-completed task of the batch, in plan order — or undefined. */
 function firstActiveTask(
@@ -40,11 +40,10 @@ export function TaskService(db: Db) {
 
       // The "definition of done" gates completion: every DOD must be satisfied.
       const dods = await txRepository.listDods(id);
-      if (dods.some((dod) => dod.status !== 'completed')) {
-        throw HttpError.validation(
-          'Complete every definition-of-done item before completing the task.',
-        );
-      }
+      ensure(
+        dods.every((dod) => dod.status === 'completed'),
+        ValidationError('Complete every definition-of-done item before completing the task.'),
+      );
 
       await txRepository.completeTask(id);
 
@@ -191,8 +190,9 @@ function calculateDodProgress(dods: Array<{ status: TaskStepStatus }>): number {
 }
 
 /**
- * Task columns map row → string; the FK rows arrive as `to_jsonb` objects whose
- * timestamps are already ISO strings, so they pass through to the DTO.
+ * Task columns map row → string; the FK rows arrive as `json_build_object`
+ * objects whose timestamps are already ISO strings, so they pass through to the
+ * DTO.
  */
 function toDetailView(row: TaskDetailRow): TaskDetailType {
   return {

@@ -1,6 +1,11 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { createProjectSchema, errorResponseSchema, projectSchema } from '@nexus/zod-schemas';
+import {
+  createProjectSchema,
+  errorResponseSchema,
+  projectSchema,
+  successResponseSchema,
+} from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
@@ -20,7 +25,7 @@ export const createProjectRoute = defineOpenAPIRoute({
     },
     responses: {
       201: {
-        content: { 'application/json': { schema: projectSchema } },
+        content: { 'application/json': { schema: successResponseSchema(projectSchema) } },
         description: 'Project created',
       },
       401: {
@@ -37,6 +42,6 @@ export const createProjectRoute = defineOpenAPIRoute({
     const projectService = ProjectService(db);
 
     const project = await projectService.create(user.id, body);
-    return c.json(project, 201);
+    return c.json({ data: project, message: 'Project created' }, 201);
   },
 });

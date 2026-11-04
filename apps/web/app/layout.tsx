@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Providers } from '@/lib/providers';
 import './globals.css';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'Nexus',
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TooltipProvider>
           <Providers>{children}</Providers>
         </TooltipProvider>
+        <Toaster richColors position="bottom-right" />
       </body>
     </html>
   );

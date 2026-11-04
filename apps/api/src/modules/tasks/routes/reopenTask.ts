@@ -2,6 +2,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
   errorResponseSchema,
+  successResponseSchema,
   taskDetailSchema,
   taskCompleteParamsSchema,
 } from '@nexus/zod-schemas';
@@ -10,7 +11,7 @@ import { getDb } from '@nexus/db';
 import { requireTaskAccess } from '../middlewares';
 import { TaskRepository } from '../repository';
 import { TaskService } from '../service';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 
 export const reopenTaskRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -22,7 +23,7 @@ export const reopenTaskRoute = defineOpenAPIRoute({
     middleware: [requireTaskAccess],
     responses: {
       200: {
-        content: { 'application/json': { schema: taskDetailSchema } },
+        content: { 'application/json': { schema: successResponseSchema(taskDetailSchema) } },
         description: 'Task re-opened',
       },
       401: {
@@ -42,10 +43,10 @@ export const reopenTaskRoute = defineOpenAPIRoute({
     const repository = TaskRepository(db);
 
     const [task] = await repository.reopenTask(taskId);
-    if (!task) throw HttpError.notFound('Task not found.');
+    ensureExists(task);
 
     const taskService = TaskService(db);
-    const detail = await taskService.getDetail(taskId);
-    return c.json(detail!, 200);
+    const detail = ensureExists(await taskService.getDetail(taskId));
+    return c.json({ data: detail, message: 'Task reopened' }, 200);
   },
 });

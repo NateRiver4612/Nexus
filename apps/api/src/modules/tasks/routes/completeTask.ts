@@ -2,6 +2,7 @@ import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
   errorResponseSchema,
+  successResponseSchema,
   taskDetailSchema,
   taskCompleteParamsSchema,
 } from '@nexus/zod-schemas';
@@ -9,7 +10,7 @@ import { getDb } from '@nexus/db';
 
 import { requireTaskAccess } from '../middlewares';
 import { TaskService } from '../service';
-import { HttpError } from '../../../errors';
+import { ensureExists } from '../../../errors';
 
 export const completeTaskRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -21,7 +22,7 @@ export const completeTaskRoute = defineOpenAPIRoute({
     middleware: [requireTaskAccess],
     responses: {
       200: {
-        content: { 'application/json': { schema: taskDetailSchema } },
+        content: { 'application/json': { schema: successResponseSchema(taskDetailSchema) } },
         description: 'Task completed',
       },
       400: {
@@ -46,9 +47,8 @@ export const completeTaskRoute = defineOpenAPIRoute({
 
     // Completes the task (DoD-gated) and auto-advances the current task to the
     // next non-completed task in the milestone — or the next milestone.
-    const detail = await taskService.complete(taskId);
-    if (!detail) throw HttpError.notFound('Task not found.');
+    const detail = ensureExists(await taskService.complete(taskId));
 
-    return c.json(detail, 200);
+    return c.json({ data: detail, message: 'Task completed' }, 200);
   },
 });

@@ -28,7 +28,11 @@ export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
   });
   const [error, setError] = React.useState<string | null>(null);
 
-  const serverFiles: SourceFileMeta[] = (sources ?? [])
+  // Failed sources can't contribute to the knowledge base and shouldn't
+  // count toward the "at least one source" requirement.
+  const activeSources = (sources ?? []).filter((row) => row.status !== 'failed');
+
+  const serverFiles: SourceFileMeta[] = activeSources
     .filter((row) => row.sourceType === 'file')
     .map((row) => ({ name: row.name, size: row.size, mimeType: row.mimeType ?? null }));
 
@@ -39,7 +43,7 @@ export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
 
   React.useImperativeHandle(ref, () => ({
     save: async () => {
-      const rows = sources ?? [];
+      const rows = activeSources;
 
       const files = rows
         .filter((row) => row.sourceType === 'file')

@@ -28,7 +28,7 @@ const nav = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-interface SidebarProps {
+type SidebarProps = {
   collapsed: boolean;
   onToggle: () => void;
 }

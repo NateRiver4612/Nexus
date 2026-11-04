@@ -26,7 +26,7 @@ import {
   DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu'; // adjust import path to your file location
 
-export interface SuggestionMenuItem {
+export type SuggestionMenuItem = {
   id: string;
   label: string;
   shortcut?: string;
@@ -34,7 +34,7 @@ export interface SuggestionMenuItem {
   command: (editor: Editor) => void;
 }
 
-export interface SuggestionMenuProps {
+export type SuggestionMenuProps = {
   editor: Editor | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

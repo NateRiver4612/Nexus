@@ -21,6 +21,8 @@ import {
 import { onboardingKeys, plannerKeys, projectKeys } from './queryKeys';
 import { createMutationHook } from '@/hooks/createMutation';
 import { createDetailQueryHook, createQueryHook } from '@/hooks/createQuery';
+import { toastError } from '@/lib/toast';
+import { toast } from 'sonner';
 
 export function useGetProjects() {
   return useQuery({
@@ -32,7 +34,11 @@ export function useGetProjects() {
 export const useGetProjectById = createDetailQueryHook(getProject, (id) => projectKeys.detail(id));
 
 export const useCreateProject = createMutationHook(createProject, (queryClient) => ({
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+  onSuccess: (res) => {
+    queryClient.invalidateQueries({ queryKey: projectKeys.all });
+    toast.success(res.message);
+  },
+  onError: toastError,
 }));
 
 export const useGetOnboarding = createQueryHook(getOnboarding, () => onboardingKeys.all, {
@@ -85,10 +91,12 @@ export function useUpdateProject(id: string) {
 
   return useMutation({
     mutationFn: (input: UpdateProjectInputType) => updateProject(id, input),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success(res.message);
     },
+    onError: toastError,
   });
 }
 
@@ -97,6 +105,10 @@ export function useDeleteProject() {
 
   return useMutation({
     mutationFn: (id: string) => deleteProject(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success(res.message);
+    },
+    onError: toastError,
   });
 }

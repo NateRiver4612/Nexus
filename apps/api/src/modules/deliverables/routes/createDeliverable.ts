@@ -4,6 +4,7 @@ import {
   createDeliverableSchema,
   deliverableSchema,
   errorResponseSchema,
+  successResponseSchema,
 } from '@nexus/zod-schemas';
 
 import { getDb } from '@nexus/db';
@@ -25,7 +26,7 @@ export const createDeliverableRoute = defineOpenAPIRoute({
     },
     responses: {
       201: {
-        content: { 'application/json': { schema: deliverableSchema } },
+        content: { 'application/json': { schema: successResponseSchema(deliverableSchema) } },
         description: 'Deliverable created',
       },
       401: {
@@ -42,6 +43,6 @@ export const createDeliverableRoute = defineOpenAPIRoute({
     const service = DeliverableService(db);
 
     const item = await service.create(input, user.id);
-    return c.json(item, 201);
+    return c.json({ data: item, message: 'Deliverable created' }, 201);
   },
 });

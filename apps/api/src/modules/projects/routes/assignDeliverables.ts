@@ -5,6 +5,7 @@ import {
   deliverableListSchema,
   errorResponseSchema,
   projectIdParamsSchema,
+  successResponseSchema,
 } from '@nexus/zod-schemas';
 
 import { getDb } from '@nexus/db';
@@ -23,7 +24,9 @@ export const assignDeliverablesRoute = defineOpenAPIRoute({
     },
     responses: {
       200: {
-        content: { 'application/json': { schema: deliverableListSchema } },
+        content: {
+          'application/json': { schema: successResponseSchema(deliverableListSchema) },
+        },
         description: 'Deliverables attached to the project',
       },
       400: {
@@ -51,6 +54,6 @@ export const assignDeliverablesRoute = defineOpenAPIRoute({
     await service.assign(projectId, deliverableIds);
 
     const items = await service.listAssigned(projectId);
-    return c.json(items, 200);
+    return c.json({ data: items, message: 'Deliverables assigned' }, 200);
   },
 });

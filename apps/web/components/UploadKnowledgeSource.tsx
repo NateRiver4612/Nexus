@@ -19,7 +19,11 @@ import { Label } from './ui/label';
 import { FormInput } from './FormInput';
 import { FormTextArea } from './FormTextArea';
 import { createKnowledgeSourcesSchema, fileSchema } from '@nexus/zod-schemas';
-import type { CreateKnowledgeSourcesInputType, KnowledgeSourceListType } from '@nexus/types';
+import type {
+  CreateKnowledgeSourcesInputType,
+  KnowledgeSourceListType,
+  SuccessResponse,
+} from '@nexus/types';
 import {
   useCreateKnowledgeSources,
   useCreateKnowledgeUploadUrl,
@@ -48,7 +52,7 @@ type Mode = 'file' | 'link' | 'text';
 
 type CreateCallback = (
   entries: CreateKnowledgeSourcesInputType,
-) => Promise<KnowledgeSourceListType>;
+) => Promise<SuccessResponse<KnowledgeSourceListType>>;
 
 const ACCEPTED_EXTENSIONS = '.pdf,.docx,.xlsx,.csv,.txt,.md,.jpg,.jpeg,.png,.webp';
 
@@ -88,13 +92,13 @@ export function UploadKnowledgeSource({ projectId: projectIdProp }: { projectId?
   const { projectId: paramProjectId } = useParams<{ projectId: string }>();
   const projectId = projectIdProp ?? paramProjectId ?? '';
 
-  const createKnowledgeSources = useCreateKnowledgeSources(projectId);
+  const { mutateAsync: createKnowledgeSources } = useCreateKnowledgeSources(projectId);
 
   const { data: knowledgeSources } = useGetKnowledgeSources({ variables: projectId });
 
   const onCreate: CreateCallback = (entries) => {
     if (!projectId) throw new Error('Project not ready yet.');
-    return createKnowledgeSources.mutateAsync(entries);
+    return createKnowledgeSources(entries);
   };
 
   const files = knowledgeSources?.filter((k) => k.sourceType === 'file');
@@ -451,7 +455,7 @@ function TextMode({
     try {
       const res = await onCreate(result.data);
 
-      const errorMessage = res?.[0]?.errorMessage;
+      const errorMessage = res.data?.[0]?.errorMessage;
 
       if (errorMessage) {
         setError(errorMessage);
