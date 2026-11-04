@@ -33,19 +33,29 @@ export const startResearchResultSchema = z.object({
   requestId: z.string().min(1),
 });
 
+/** A source item in the raw payload. Tavily marks none of its fields as required. */
+const rawResearchSourceSchema = z.object({
+  title: z.string().nullish(),
+  url: z.string().nullish(),
+  favicon: z.string().nullish(),
+});
+
 /** Raw provider poll response — validated loosely at the boundary before normalizing. */
 export const researchPollResponseSchema = z.object({
   // Tavily returns aliases like "queued"/"running" — the provider normalizes them after
   // this loose parse, so the raw status stays a plain string on purpose.
   status: z.string(),
   // With `output_schema` Tavily returns an object, but it can also send a JSON string.
-  content: z.union([z.record(z.string(), z.unknown()), z.string()]).optional(),
-  sources: z.array(researchSourceSchema).optional(),
+  // Only present on completed responses; pending/failed omit it.
+  content: z.union([z.record(z.string(), z.unknown()), z.string()]).nullish(),
+  sources: z.array(rawResearchSourceSchema).nullish(),
+  created_at: z.string().nullish(),
+  // Required by Tavily's documented 202, completed, and failed shapes.
   request_id: z.string().min(1),
   response_time: z.number(),
   error: z.string().nullish(),
   // Present because `getResearch` is called with `includeUsage: true`.
-  usage: z.object({ credits: z.number().optional() }).optional(),
+  usage: z.object({ credits: z.number().optional() }).nullish(),
 });
 
 /** Normalized poll result a provider returns to callers. */

@@ -17,11 +17,12 @@ export const ResearchRepository = (db: Db) => ({
     return rows[0];
   },
 
-  async getNewByProjectId(projectId: string): Promise<ProjectResearch | undefined> {
+  /** The latest research attempt for a project, whatever its status. */
+  async getLatestByProjectId(projectId: string): Promise<ProjectResearch | undefined> {
     const rows = await db
       .select()
       .from(projectResearch)
-      .where(and(eq(projectResearch.projectId, projectId), eq(projectResearch.status, 'completed')))
+      .where(eq(projectResearch.projectId, projectId))
       .orderBy(desc(projectResearch.createdAt))
       .limit(1);
     return rows[0];

@@ -46,6 +46,10 @@ export async function enqueueResearch({
       removeOnFail: {
         count: 5000,
       },
+      // Crash-safety only. Provider failures are retried inside runResearch, not by BullMQ:
+      // a queue retry would replay the whole kickoff job (plan + LLM calls) just to retry
+      // research. This retry only covers the worker dying mid-run; the row's resume logic
+      // picks up where it left off.
       attempts: 2,
       backoff: {
         type: 'exponential',

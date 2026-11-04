@@ -25,11 +25,16 @@ const KnowledgeWorker = () => {
           console.log(`[worker] knowledge-remove ${job.id} key=${storageKey}`);
           await deleteKnowledgeObject(storageKey);
           return;
-        case KNOWLEDGE_QUEUE_PROCESS:
+        case KNOWLEDGE_QUEUE_PROCESS: {
           const { sourceId } = job.data as KnowledgeProcessJob;
+          const maxAttempts = job.opts.attempts ?? 1;
+          // `attemptsMade` counts completed failures, so +1 is the attempt now running.
+          // Only the last attempt is allowed to leave the source in `failed`.
+          const isFinalAttempt = job.attemptsMade + 1 >= maxAttempts;
           console.log(`[worker] knowledge-ingest ${job.id} source=${sourceId} start`);
-          await knowledgeService.processSource(sourceId);
+          await knowledgeService.processSource({ sourceId, isFinalAttempt });
           return;
+        }
         default:
           throw new Error(`Unknonw job type: ${job.name}`);
       }
