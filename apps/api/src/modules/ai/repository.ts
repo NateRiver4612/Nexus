@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { aiRuns, type Db } from '@nexus/db';
 

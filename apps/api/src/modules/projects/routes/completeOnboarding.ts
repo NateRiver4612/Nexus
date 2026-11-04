@@ -67,14 +67,15 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
     await db.transaction(async (tx) => {
       const newTasks = (
         await Promise.all(
-          plan.milestones.map(async (milestone) => {
+          plan.milestones.map(async (milestone, milestoneIndex) => {
             const [createdMilestone] = await tx
               .insert(milestones)
               .values({
                 projectId,
                 title: milestone.title,
                 description: milestone.description,
-                position: milestone.position,
+                // Position is server-owned: the model no longer emits it.
+                position: milestoneIndex,
                 status: milestone.status,
               })
               .returning();
@@ -84,7 +85,7 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
             const createdTasks = await tx
               .insert(tasks)
               .values(
-                milestone.tasks.map((task) => ({
+                milestone.tasks.map((task, taskIndex) => ({
                   projectId,
                   milestoneId: createdMilestone.id,
                   title: task.title,
@@ -92,7 +93,7 @@ export const completeProjectOnboardingRoute = defineOpenAPIRoute({
                   status: task.status,
                   difficulty: task.difficulty,
                   estimatedTimeMinutes: task.estimatedTimeMinutes ?? null,
-                  position: task.position,
+                  position: taskIndex,
                   createdBy: user.id,
                 })),
               )

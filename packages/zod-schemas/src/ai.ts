@@ -14,6 +14,19 @@ export const aiTaskEnum = z.enum([
   'project-health',
 ]);
 
+/** Coarse progress within a run — the DTO twin of the `ai_run_stage` DB enum. */
+export const runStageEnum = z.enum([
+  'researching',
+  'drafting_milestones',
+  'drafting_summary',
+  'gathering_context',
+  'drafting_artifact',
+  'rendering_artifact',
+  'saving_artifact',
+  'analyzing_project',
+  'retrying',
+]);
+
 /**
  * Per-task result schemas — the zod-side twin of `AITaskResultMap` in
  * @nexus/types. Adding a task means adding a member here; both
@@ -75,6 +88,10 @@ export const aiRunSchema = z
     inputTokens: z.number().int().nonnegative().default(0),
     outputTokens: z.number().int().nonnegative().default(0),
     completedAt: z.string().nullable().openapi({ example: '2026-08-12T00:00:01.000Z' }),
+    errorMessage: z.string().nullable().openapi({ example: 'Research timed out' }),
+    stage: runStageEnum.nullable().openapi({ example: 'drafting_milestones' }),
+    stageUpdatedAt: z.string().nullable().openapi({ example: '2026-08-12T00:00:00.000Z' }),
+    startedAt: z.string().nullable().openapi({ example: '2026-08-12T00:00:00.000Z' }),
     ...timestampSchema,
   })
   .openapi('AiRun');

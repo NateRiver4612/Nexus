@@ -2,6 +2,7 @@ import { Worker } from 'bullmq';
 import { getRedis } from './redis';
 import KnowledgeWorker from './modules/knowledge/worker';
 import AIWorker from './modules/ai/worker';
+import ResearchWorker from './modules/research/worker';
 
 const globalForWorkers = globalThis as unknown as {
   nexusWorkers?: Worker[] & {
@@ -38,11 +39,15 @@ export function startWorkers() {
 
   const knowledgeWorkder = KnowledgeWorker();
   const aiWorker = AIWorker();
+  const researchWorker = ResearchWorker();
 
   pingWorker.on('completed', onComplete);
   pingWorker.on('failed', onFailed);
 
-  globalForWorkers.nexusWorkers = Object.assign([pingWorker, knowledgeWorkder, aiWorker], {
-    startedAt: new Date().toISOString(),
-  });
+  globalForWorkers.nexusWorkers = Object.assign(
+    [pingWorker, knowledgeWorkder, aiWorker, researchWorker],
+    {
+      startedAt: new Date().toISOString(),
+    },
+  );
 }

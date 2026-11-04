@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type {
   KickoffPlanType,
+  ProjectDetailType,
   UpdateOnboardingInputType,
   UpdateProjectInputType,
 } from '@nexus/types';
@@ -89,14 +90,41 @@ export const useCompleteProjectOnboarding = createMutationHook(
 export function useUpdateProject(id: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<
+    Awaited<ReturnType<typeof updateProject>>,
+    unknown,
+    UpdateProjectInputType,
+    { previous: ProjectDetailType | undefined }
+  >({
     mutationFn: (input: UpdateProjectInputType) => updateProject(id, input),
+    onMutate: async (input) => {
+      const queryKey = projectKeys.detail(id);
+
+      await queryClient.cancelQueries({ queryKey });
+
+      const previous = queryClient.getQueryData<ProjectDetailType>(queryKey);
+      const nextName = input.name;
+
+      if (nextName !== undefined) {
+        queryClient.setQueryData<ProjectDetailType>(queryKey, (prev) =>
+          prev ? { ...prev, name: nextName } : prev,
+        );
+      }
+
+      return { previous };
+    },
+    onError: (err, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(projectKeys.detail(id), context.previous);
+      }
+
+      toastError(err);
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: projectKeys.all });
       toast.success(res.message);
     },
-    onError: toastError,
   });
 }
 

@@ -47,6 +47,11 @@ export const knowledgeKeys = {
   detail: (id: string) => ['knowledge', id] as const,
 };
 
+export const researchKeys = {
+  all: ['research'] as const,
+  project: (projectId: string) => ['research', 'project', projectId] as const,
+};
+
 export const notificationKeys = {
   all: ['notifications'] as const,
 };

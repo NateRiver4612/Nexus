@@ -10,12 +10,8 @@ import type {
 import { projectCategoryEnum, kickoffSummarySchema } from '@nexus/zod-schemas';
 
 import { ensure, ValidationError } from '../../errors';
-import {
-  OnboardingRepository,
-  ProjectsRepository,
-  type NewProjectRow,
-  type ProjectDetailsRow,
-} from './repository';
+import { OnboardingRepository } from '../onboarding/repository';
+import { ProjectsRepository, type NewProjectRow, type ProjectDetailsRow } from './repository';
 
 type ProjectRow = typeof projects.$inferSelect;
 type OnboardingRow = typeof projectOnboarding.$inferSelect;

@@ -1,5 +1,5 @@
 import { knowledgeSourceChunks, type Db } from '@nexus/db';
-import { cosineDistance, eq, and, isNotNull, gt } from 'drizzle-orm';
+import { cosineDistance, eq, and, isNotNull, gt, sql } from 'drizzle-orm';
 
 export const KnowledgeChunkRepository = (db: Db) => ({
   search({
@@ -11,7 +11,7 @@ export const KnowledgeChunkRepository = (db: Db) => ({
     queryEmbedding: number[];
     limit: number;
   }) {
-    const similarity = cosineDistance(knowledgeSourceChunks.embedding, queryEmbedding);
+    const similarity = sql<number>`1 - (${cosineDistance(knowledgeSourceChunks.embedding, queryEmbedding)})`;
 
     return db
       .select({
@@ -54,7 +54,7 @@ export const KnowledgeChunkRepository = (db: Db) => ({
     queryEmbedding: number[];
     limit: number;
   }) {
-    const similarity = cosineDistance(knowledgeSourceChunks.embedding, queryEmbedding);
+    const similarity = sql<number>`1 - (${cosineDistance(knowledgeSourceChunks.embedding, queryEmbedding)})`;
 
     return db
       .select({

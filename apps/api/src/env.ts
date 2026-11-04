@@ -26,10 +26,21 @@ const envSchema = z.object({
   AI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
   AI_KICKOFF_MODEL: z.string().default('deepseek-v4-flash'),
   AI_KICKOFF_MODE: z.string().default('deep'),
+  // The research-prompt builder is a small, cheap call; the heavy lifting is Tavily's.
+  AI_RESEARCH_MODEL: z.string().default('deepseek-v4-flash'),
+  // Hard wall-clock ceiling for a single AI run (measured from its first start, across
+  // BullMQ retries). Also used as the per-request timeout so a hung provider call can't
+  // sit for the SDK's default.
+  AI_RUN_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3 * 60 * 1000),
   BETTER_AUTH_SECRET: z.string().default('dev-only-secret-change-me'),
   BETTER_AUTH_URL: z.url().default('http://localhost:3001/api/auth'),
   GOOGLE_CLIENT_ID: z.string().default(''),
   GOOGLE_CLIENT_SECRET: z.string().default(''),
+  TAVILY_API_KEY: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

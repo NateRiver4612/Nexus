@@ -15,7 +15,7 @@ import { idColumn, timestamps } from './columns';
 import { users } from './users';
 import { workspaces } from './workspaces';
 import { tasks } from './planner';
-import { type OnboardingDataType } from '@nexus/types';
+import { type OnboardingDataType, type ResearchSourceType } from '@nexus/types';
 import { aiRuns } from './ai';
 
 export const projectStatus = pgEnum('project_status', [
@@ -41,6 +41,13 @@ export const projectOnboardingStatus = pgEnum('project_onboarding_status', [
 ]);
 
 export const projectRole = pgEnum('project_role', ['owner', 'manager', 'member', 'viewer']);
+
+export const researchStatus = pgEnum('research_status', [
+  'completed',
+  'in_progress',
+  'failed',
+  'pending',
+]);
 
 export const projects = pgTable(
   'projects',
@@ -140,3 +147,42 @@ export const projectProgress = pgTable('project_progress', {
 });
 
 export type ProjectProgress = typeof projectProgress.$inferSelect;
+
+export const projectResearch = pgTable(
+  'project_research',
+  {
+    id: idColumn(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+
+    status: researchStatus('status').notNull().default('pending'),
+
+    provider: varchar('provider', { length: 50 }).notNull().default('tavily'),
+    model: varchar('model', { length: 20 }).notNull(), // 'mini' | 'pro'
+
+    // Saved as soon as the provider accepts the request, so a restarted worker can resume
+    // polling the same request instead of submitting (and paying for) a new one.
+    requestId: varchar('request_id', { length: 100 }),
+
+    prompt: text('prompt').notNull(), // exactly what was sent to the provider
+
+    // Both are loosely typed on purpose: a jsonb column can't enforce a shape, so validate with
+    // Zod on the way in (before saving) and again on the way out (when reading).
+    content: jsonb('content').$type<Record<string, unknown>>(), // structured research digest
+    sources: jsonb('sources').$type<ResearchSourceType[]>(),
+
+    creditsUsed: integer('credits_used'),
+    errorMessage: text('error_message'),
+
+    responseTime: integer('response_time'), // in seconds
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+
+    aiRunId: uuid('ai_run_id').references(() => aiRuns.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('project_research_project_idx').on(table.projectId)],
+);
+
+export type ProjectResearch = typeof projectResearch.$inferSelect;

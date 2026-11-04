@@ -2,7 +2,11 @@ import type { KickoffPlanType } from '@nexus/types';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
 import { kickoffSummarySchema } from '@nexus/zod-schemas';
 import { buildSummarySystemPrompt, buildSummaryUserPrompt, type KickoffContext } from '../prompts';
-import { attemptToolCall, type ChatMessage } from './toolCall';
+import {
+  attemptToolCallWithRetry,
+  type AttemptToolCallFailure,
+  type ChatMessage,
+} from './toolCall';
 
 export const SUMMARY_TOOL_NAME = 'generate_project_summary';
 
@@ -11,6 +15,30 @@ export const SUMMARY_MAX_TOKENS = 4000;
 export const SUMMARY_MAX_TOKENS_RETRY = 6000;
 
 export type SummaryResult = { summary: KickoffPlanType['summary']; usage?: CompletionUsage };
+
+function buildSummaryCorrection({
+  issues = [],
+  missingKeys = [],
+}: AttemptToolCallFailure): string | null {
+  if (issues.length > 0) {
+    return (
+      `Your previous response failed validation. Fix exactly these issues and re-output the FULL ` +
+      `summary object — overview, keyTopics, highlights — grounded in the plan above, respecting ` +
+      `each field's length limit:\n` +
+      issues.map((issue) => `- ${issue}`).join('\n')
+    );
+  }
+
+  if (missingKeys.length > 0) {
+    return (
+      `Your previous response was incomplete: it was missing required field(s): ` +
+      `${missingKeys.join(', ')}. Re-generate the FULL summary object — overview, keyTopics, ` +
+      `highlights — grounded in the plan above.`
+    );
+  }
+
+  return null;
+}
 
 export async function generateSummary(
   context: KickoffContext,
@@ -21,53 +49,16 @@ export async function generateSummary(
     { role: 'user', content: buildSummaryUserPrompt(context, milestones) },
   ];
 
-  const first = await attemptToolCall({
+  const { data, usage } = await attemptToolCallWithRetry({
     messages,
     toolName: SUMMARY_TOOL_NAME,
     toolParamsSchema: kickoffSummarySchema,
     validateSchema: kickoffSummarySchema,
     maxTokens: SUMMARY_MAX_TOKENS,
+    maxTokensRetry: SUMMARY_MAX_TOKENS_RETRY,
+    label: 'summary generation',
+    buildCorrection: buildSummaryCorrection,
   });
-  if (first.ok) return { summary: first.data, usage: first.usage };
 
-  const missingKeys = first.missingKeys ?? [];
-  if (first.finishReason === 'length' || missingKeys.length > 0) {
-    const reason =
-      first.finishReason === 'length'
-        ? 'truncated (finish_reason: length)'
-        : `missing required fields: ${missingKeys.join(', ')}`;
-    console.error(
-      `[kickoff] summary first attempt ${reason} — retrying with ${SUMMARY_MAX_TOKENS_RETRY} tokens.`,
-    );
-
-    const correction =
-      missingKeys.length > 0
-        ? `Your previous response was incomplete: it was missing required field(s): ` +
-          `${missingKeys.join(', ')}. Re-generate the FULL summary object — overview, keyTopics, ` +
-          `highlights — grounded in the plan above.`
-        : undefined;
-
-    const retry = await attemptToolCall({
-      messages: [
-        ...messages,
-        ...(correction ? [{ role: 'user' as const, content: correction }] : []),
-      ],
-      toolName: SUMMARY_TOOL_NAME,
-      toolParamsSchema: kickoffSummarySchema,
-      validateSchema: kickoffSummarySchema,
-      maxTokens: SUMMARY_MAX_TOKENS_RETRY,
-    });
-    if (retry.ok) return { summary: retry.data, usage: retry.usage };
-
-    // A truncated summary is a straightforward "write less" problem.
-    if (retry.finishReason === 'length') {
-      throw new Error(
-        `AI summary generation exceeded the token limit even after a retry (${SUMMARY_MAX_TOKENS_RETRY} completion tokens). ` +
-          `The plan is too large — trim the project scope or lower per-task requirements.`,
-      );
-    }
-    throw retry.error;
-  }
-
-  throw first.error;
+  return { summary: data, usage };
 }

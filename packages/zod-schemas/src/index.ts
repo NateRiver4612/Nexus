@@ -6,5 +6,6 @@ export * from './knowledge';
 export * from './notifications';
 export * from './planner';
 export * from './projects';
+export * from './research';
 export * from './search';
 export * from './users';

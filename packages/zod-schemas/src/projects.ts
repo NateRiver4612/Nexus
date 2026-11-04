@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-import { idSchema, timestampSchema } from './common';
+import { idSchema, partialWithoutDefaults, timestampSchema } from './common';
 import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from './constants';
 
 export const fileSchema = z
@@ -248,6 +248,6 @@ export const createProjectSchema = projectSchema.pick({
   category: true,
 });
 
-export const updateProjectSchema = createProjectSchema.partial();
+export const updateProjectSchema = partialWithoutDefaults(createProjectSchema);
 
 export const projectListSchema = z.array(projectSchema).openapi('Projects');
