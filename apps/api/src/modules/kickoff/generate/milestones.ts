@@ -6,11 +6,8 @@ import {
   buildMilestonesUserPrompt,
   type KickoffContext,
 } from '../prompts';
-import {
-  attemptToolCallWithRetry,
-  type AttemptToolCallFailure,
-  type ChatMessage,
-} from './toolCall';
+import { attemptToolCallWithRetry, type AttemptToolCallFailure } from './toolCall';
+import type { ChatMessage } from '../../ai/types';
 
 export const MILESTONES_TOOL_NAME = 'generate_project_milestones';
 

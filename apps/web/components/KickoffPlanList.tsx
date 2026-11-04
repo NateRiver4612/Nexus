@@ -6,15 +6,17 @@ import { cn, formatTimeMinutes, totalEstimatedMinutes } from '@/lib/utils';
 
 import type { KickoffPlanType } from '@nexus/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Skeleton } from './ui/skeleton';
 import DifficultyIndicator from './DifficultyIndicator';
 
 type Milestone = KickoffPlanType['milestones'][number];
 type Task = Milestone['tasks'][number];
 
 type KickoffPlanListProps = {
-  milestones: KickoffPlanType['milestones'];
+  milestones?: KickoffPlanType['milestones'];
   className?: string;
-}
+  isLoading?: boolean;
+};
 
 function TaskRow({ task }: { task: Task }) {
   const isCompleted = task.status === 'completed';
@@ -85,7 +87,26 @@ function MilestoneHeader({ index, milestone }: { index: number; milestone: Miles
   );
 }
 
-export function KickoffPlanList({ milestones, className }: KickoffPlanListProps) {
+const KickoffPlanListSkeleton = ({ className }: { className?: string }) => {
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm',
+        className,
+      )}
+    >
+      {[0, 1, 2].map((index) => (
+        <Skeleton key={index} className="h-10 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+};
+
+export function KickoffPlanList({ milestones = [], className, isLoading }: KickoffPlanListProps) {
+  if (isLoading) {
+    return <KickoffPlanListSkeleton className={className} />;
+  }
+
   return (
     <Accordion
       type="multiple"

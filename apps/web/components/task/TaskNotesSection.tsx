@@ -2,19 +2,21 @@ import React from 'react';
 import { Edit, Plus, Trash2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import type { TaskNoteType } from '@nexus/types';
+import { Skeleton } from '../ui/skeleton';
 
 export type TaskNotesProps = {
   notes?: TaskNoteType[];
+  isLoading?: boolean;
   onAddNote?: () => void;
   onNoteClick?: (note: TaskNoteType) => void;
   onDeleteNote?: (note: TaskNoteType) => void;
-}
+};
 
 type NoteCardProps = {
   note: TaskNoteType;
   onClick?: () => void;
   onDelete?: (note: TaskNoteType) => void;
-}
+};
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, onClick, onDelete }) => {
   return (
@@ -67,9 +69,35 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onClick, onDelete }) => {
   );
 };
 
+const NoteCardSkeleton = () => {
+  return (
+    <div className="flex h-40 w-57 flex-col justify-between rounded-2xl border border-gray-200/90 bg-[#FAF9F6]/80 p-5">
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="size-6 shrink-0 rounded-full" />
+        </div>
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+      <Skeleton className="h-4 w-24" />
+    </div>
+  );
+};
+
+const TaskNotesSectionSkeleton = () => {
+  return (
+    <>
+      {[0, 1].map((index) => (
+        <NoteCardSkeleton key={index} />
+      ))}
+    </>
+  );
+};
+
 type AddNoteCardProps = {
   onClick?: () => void;
-}
+};
 
 const AddNoteCard: React.FC<AddNoteCardProps> = ({ onClick }) => {
   return (
@@ -88,6 +116,7 @@ const AddNoteCard: React.FC<AddNoteCardProps> = ({ onClick }) => {
 
 export default function TaskNotesSection({
   notes,
+  isLoading,
   onAddNote,
   onNoteClick,
   onDeleteNote,
@@ -110,14 +139,18 @@ export default function TaskNotesSection({
 
         {/* Grid Section */}
         <div className="flex flex-wrap gap-4">
-          {notes?.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              onClick={() => onNoteClick?.(note)}
-              onDelete={() => onDeleteNote?.(note)}
-            />
-          ))}
+          {isLoading ? (
+            <TaskNotesSectionSkeleton />
+          ) : (
+            notes?.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                onClick={() => onNoteClick?.(note)}
+                onDelete={() => onDeleteNote?.(note)}
+              />
+            ))
+          )}
 
           {/* Add a note button card */}
           <AddNoteCard onClick={onAddNote} />

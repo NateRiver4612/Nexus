@@ -2,7 +2,9 @@ import type { ResearchSourceType } from '@nexus/types';
 import { Globe } from 'lucide-react';
 import { useState } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 type ProjectResearchSourcesProps = {
   sources?: ResearchSourceType[];
@@ -11,6 +13,7 @@ type ProjectResearchSourcesProps = {
   version?: number;
   /** Render just the list (no card/header) — for use inside an accordion. */
   bare?: boolean;
+  isLoading?: boolean;
 };
 
 const getDomain = (url: string) => {
@@ -41,12 +44,58 @@ const SourceFavicon = ({ favicon }: { favicon: string }) => {
   );
 };
 
+const SourceSkeletonRow = () => {
+  return (
+    <div className="flex flex-col justify-center rounded-xl border border-border bg-background px-4 py-3">
+      <div className="flex items-center gap-3">
+        <Skeleton className="size-4 shrink-0 rounded-sm" />
+        <Skeleton className="h-5 w-3/4" />
+      </div>
+      <Skeleton className="mt-1 ml-7 h-3 w-1/3" />
+    </div>
+  );
+};
+
+const ProjectResearchSourcesSkeleton = ({
+  bare,
+  className,
+}: {
+  bare: boolean;
+  className?: string;
+}) => {
+  if (bare) {
+    return (
+      <div className={cn('flex flex-col gap-2.5', className)}>
+        <SourceSkeletonRow />
+        <SourceSkeletonRow />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn('w-full rounded-xl border border-border bg-card p-5', className)}>
+      <div className="mb-4 flex items-center gap-1.5 px-1">
+        <Skeleton className="h-5 w-24" />
+      </div>
+      <div className="flex flex-col gap-2.5">
+        <SourceSkeletonRow />
+        <SourceSkeletonRow />
+      </div>
+    </div>
+  );
+};
+
 export const ProjectResearchSources = ({
   sources = [],
   className,
   version,
   bare = false,
+  isLoading = false,
 }: ProjectResearchSourcesProps) => {
+  if (isLoading) {
+    return <ProjectResearchSourcesSkeleton bare={bare} className={className} />;
+  }
+
   if (sources.length === 0) {
     return null;
   }
@@ -58,7 +107,7 @@ export const ProjectResearchSources = ({
           const domain = getDomain(source.url);
 
           return (
-            <a
+            <Link
               key={`${source.url}-${index}`}
               href={source.url}
               target="_blank"
@@ -67,13 +116,13 @@ export const ProjectResearchSources = ({
             >
               <div className="flex items-center gap-3">
                 <SourceFavicon favicon={source.favicon} />
-                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-primary group-hover:underline">
+                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-primary">
                   {source.title}
                 </span>
               </div>
 
               <span className="mt-1 truncate pl-7 text-xs text-muted-foreground">{domain}</span>
-            </a>
+            </Link>
           );
         })}
       </div>
@@ -92,22 +141,22 @@ export const ProjectResearchSources = ({
           const domain = getDomain(source.url);
 
           return (
-            <a
+            <Link
               key={`${source.url}-${index}`}
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col justify-center rounded-xl border border-border bg-background px-4 py-3 transition-colors hover:bg-accent"
+              className=" flex flex-col no-underline! justify-center rounded-xl border border-border bg-background px-4 py-3 transition-colors hover:bg-accent"
             >
               <div className="flex items-center gap-3">
                 <SourceFavicon favicon={source.favicon} />
-                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-primary group-hover:underline">
+                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-primary">
                   {source.title}
                 </span>
               </div>
 
               <span className="mt-1 truncate pl-7 text-xs text-muted-foreground">{domain}</span>
-            </a>
+            </Link>
           );
         })}
       </div>

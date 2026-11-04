@@ -51,7 +51,7 @@ export default function Page() {
     variables: runId,
   });
 
-  const { data: projectResearch } = useGetProjectResearch({
+  const { data: projectResearch, isLoading: isResearchLoading } = useGetProjectResearch({
     variables: projectId ?? '',
   });
 
@@ -178,14 +178,15 @@ export default function Page() {
             <RotateCw className={cn('size-4', isGenerating && 'animate-spin')} />
           </Button>
         </div>
-        {kickoffPlanData?.summary && <AISummary summary={kickoffPlanData.summary}></AISummary>}
+        <AISummary summary={kickoffPlanData?.summary} isLoading={isAiRunLoading}></AISummary>
       </div>
       <div className="flex flex-col gap-3">
         <h2 className="font-semibold text-gray-400">Milestones & Tasks</h2>
-        {kickoffPlanData && (
-          <KickoffPlanList milestones={kickoffPlanData.milestones}></KickoffPlanList>
-        )}
-        <ProjectResearchSources sources={projectResearch?.sources} />
+        <KickoffPlanList
+          milestones={kickoffPlanData?.milestones}
+          isLoading={isAiRunLoading}
+        ></KickoffPlanList>
+        <ProjectResearchSources sources={projectResearch?.sources} isLoading={isResearchLoading} />
         <p className="px-1 text-xs text-muted-foreground">
           Want more sources? You can generate more after creating the project.
         </p>

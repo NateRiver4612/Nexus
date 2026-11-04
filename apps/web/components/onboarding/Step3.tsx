@@ -11,6 +11,7 @@ import {
   type SourceFileMeta,
   type SourceFormValues,
 } from '../UploadKnowledgeSource';
+import { Skeleton } from '../ui/skeleton';
 import { useGetKnowledgeSources } from '@/hooks/useKnowledge';
 
 import type { StepHandle } from './shared';
@@ -22,8 +23,24 @@ type Step3Props = {
   onSave: (data: OnboardingStep3InputType) => Promise<unknown>;
 };
 
+const Step3Skeleton = () => {
+  return (
+    <div className="space-y-2 text-left">
+      <div className="mb-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-background/50 px-6 py-10">
+        <Skeleton className="h-5 w-64" />
+        <Skeleton className="mt-1 h-4 w-48" />
+        <div className="flex flex-wrap justify-center gap-2 pt-6">
+          {[0, 1, 2].map((index) => (
+            <Skeleton key={index} className="h-8 w-28 rounded-full" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
-  const { data: sources } = useGetKnowledgeSources({
+  const { data: sources, isLoading } = useGetKnowledgeSources({
     variables: projectId ?? '',
   });
   const [error, setError] = React.useState<string | null>(null);
@@ -96,6 +113,10 @@ export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
         <p>Finish step 1 first — the project has to exist before sources can be added.</p>
       </div>
     );
+  }
+
+  if (isLoading) {
+    return <Step3Skeleton />;
   }
 
   return (

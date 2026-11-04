@@ -5,9 +5,10 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { GitBranch, Sparkle } from 'lucide-react';
+import { GitBranch, Loader2, Sparkle } from 'lucide-react';
 import { FormInput } from './FormInput';
 import { authClient } from '@/lib/authClient';
+import Link from 'next/link';
 // ^ Assumes FormInput follows the same pattern as FormTextArea:
 //   { name, label?, placeholder?, type?, description?, disabled? }
 //   self-controlled via useFormContext(). Adjust prop names below if yours differ.
@@ -58,7 +59,7 @@ type SocialButtonProps = {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
-}
+};
 
 function SocialButton({ icon, label, onClick }: SocialButtonProps) {
   return (
@@ -121,9 +122,9 @@ function LoginForm({
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <label className="text-sm text-gray-700">Password</label>
-            <a href="#" className="text-xs text-blue-600 hover:underline">
+            <Link href="#" className="text-xs text-blue-600 hover:underline">
               Forgot password?
-            </a>
+            </Link>
           </div>
           <FormInput name="password" type="password" placeholder="••••••••" />
         </div>
@@ -133,8 +134,9 @@ function LoginForm({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-gray-900 py-2.5 text-sm text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 py-2.5 text-sm text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
+          {submitting && <Loader2 className="size-4 animate-spin" />}
           {submitting ? 'Logging in…' : 'Log in'}
         </button>
       </form>
@@ -162,7 +164,7 @@ function RegisterForm({
         onSubmit={form.handleSubmit((values) => onSubmit?.(values))}
         className="flex flex-col gap-4"
       >
-        <FormInput name="fullName" label="Full name" placeholder="Jordan Tran" />
+        <FormInput name="fullName" label="Full name" placeholder="Your full name" />
         <FormInput name="email" label="Email" type="email" placeholder="you@company.com" />
         <FormInput name="password" label="Password" type="password" placeholder="••••••••" />
 
@@ -171,20 +173,21 @@ function RegisterForm({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-gray-900 py-2.5 text-sm text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 py-2.5 text-sm text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
+          {submitting && <Loader2 className="size-4 animate-spin" />}
           {submitting ? 'Creating account…' : 'Create account'}
         </button>
 
         <p className="text-center text-xs text-gray-500">
           By continuing you agree to Nexus&apos;s{' '}
-          <a href="#" className="text-blue-600 hover:underline">
+          <Link href="#" className="text-blue-600 hover:underline">
             Terms
-          </a>{' '}
-          and{' '}
-          <a href="#" className="text-blue-600 hover:underline">
+          </Link>
+          and
+          <Link href="#" className="text-blue-600 hover:underline">
             Privacy Policy
-          </a>
+          </Link>
           .
         </p>
       </form>
@@ -197,7 +200,7 @@ export type AuthCardProps = {
   className?: string;
   onGoogleClick?: () => void;
   onGithubClick?: () => void;
-}
+};
 
 export function AuthCard({
   defaultTab = 'login',
@@ -230,9 +233,17 @@ export function AuthCard({
       email: values.email,
       password: values.password,
     });
-    setSubmitting(false);
     if (authError) {
+      setSubmitting(false);
       setError(authError.message ?? 'Unable to create account.');
+      return;
+    }
+    // signUp auto-signs-in by default (server `emailAndPassword.autoSignIn` defaults to true),
+    // but confirm a session actually exists before navigating away.
+    const { data: session } = await authClient.getSession();
+    setSubmitting(false);
+    if (!session?.user) {
+      setError('Account created. Please log in to continue.');
       return;
     }
     router.push('/');

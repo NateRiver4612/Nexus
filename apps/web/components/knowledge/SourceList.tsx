@@ -12,6 +12,28 @@ import DeleteConfirmDialog from '../DeleteConfirmDialog';
 import { Trash2 } from 'lucide-react';
 import { Spinner } from '../ui/spinner';
 
+const SourceListSkeleton = () => {
+  return (
+    <div className="space-y-2">
+      {[0, 1].map((index) => (
+        <div
+          key={index}
+          className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <Skeleton className="size-6 shrink-0 rounded" />
+            <div className="min-w-0 space-y-1">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+          <Skeleton className="size-5 shrink-0 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export function SourceList({
   projectId,
   showEmptyText = true,
@@ -55,12 +77,7 @@ export function SourceList({
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-      </div>
-    );
+    return <SourceListSkeleton />;
   }
 
   if (!sources?.length) {

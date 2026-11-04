@@ -4,13 +4,62 @@ import { Checkbox } from '../ui/checkbox';
 import { Check } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
+import { Skeleton } from '../ui/skeleton';
 
-const TaskSummarySection = ({ task }: { task: TaskDetailType }) => {
-  const taskId = task.id;
+const TaskSummarySectionSkeleton = () => {
+  return (
+    <Card className="bg-white w-full flex flex-col gap-6">
+      <div className="flex flex-col gap-2 text-sm">
+        <span className="text-gray-400 text-sm font-semibold uppercase">Goal</span>
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-2/3" />
+      </div>
 
+      <div className="flex flex-col gap-2">
+        <span className="text-gray-400 text-sm font-semibold uppercase">Requirements</span>
+        <ul className="space-y-3 text-sm">
+          {[0, 1, 2].map((index) => (
+            <li key={index} className="flex items-center gap-2">
+              <Skeleton className="size-4 shrink-0 rounded-sm" />
+              <Skeleton className="h-5 flex-1" />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-gray-400 text-sm font-semibold uppercase">Definition of done</span>
+        <ul className="space-y-3 text-sm">
+          {[0, 1].map((index) => (
+            <li key={index} className="flex items-center gap-2">
+              <Skeleton className="size-4 shrink-0 rounded-sm" />
+              <Skeleton className="h-5 flex-1" />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <Skeleton className="h-8 w-32 rounded-lg" />
+    </Card>
+  );
+};
+
+const TaskSummarySection = ({
+  task,
+  isLoading,
+}: {
+  task?: TaskDetailType;
+  isLoading?: boolean;
+}) => {
   const { mutate: updateDodStatus } = useUpdateTaskDodStatus();
   const { mutate: updateStepStatus } = useUpdateTaskStepStatus();
   const { mutate: completeTask, isPending: isCompleting } = useCompleteTask();
+
+  if (isLoading || !task) {
+    return <TaskSummarySectionSkeleton />;
+  }
+
+  const taskId = task.id;
 
   const steps = task.steps;
   const dods = task.dods;
@@ -18,7 +67,7 @@ const TaskSummarySection = ({ task }: { task: TaskDetailType }) => {
   const isTaskDone = task.status === 'completed';
 
   return (
-    <Card className="bg-white w-fit flex flex-col gap-6">
+    <Card className="bg-white w-full flex flex-col gap-6">
       <div className="flex flex-col gap-2 text-sm">
         <span className="text-gray-400 text-sm font-semibold uppercase">Goal</span>
         <p>{task.description}</p>

@@ -5,13 +5,41 @@ import { Boxes } from 'lucide-react';
 import type { ProjectDetailType } from '@nexus/types';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 
 type ProjectCardProps = {
-  project: ProjectDetailType;
+  project?: ProjectDetailType;
+  isLoading?: boolean;
 };
 
-export function ProjectCard({ project }: ProjectCardProps) {
+const ProjectCardSkeleton = () => {
+  return (
+    <Card className="flex w-87 shrink-0 flex-col gap-4 p-5 bg-gray-100 shadow-sm">
+      <div>
+        <Skeleton className="size-9 rounded-md" />
+      </div>
+      <div>
+        <Skeleton className="h-6 w-2/3" />
+      </div>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-1 flex-1 rounded-full" />
+        <Skeleton className="h-4 w-8" />
+      </div>
+      <div className="space-y-1">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-5 w-3/4" />
+      </div>
+      <Skeleton className="mt-auto h-4 w-full" />
+    </Card>
+  );
+};
+
+export function ProjectCard({ project, isLoading }: ProjectCardProps) {
+  if (isLoading || !project) {
+    return <ProjectCardSkeleton />;
+  }
+
   const tasks = project.numOfTasks ?? 0;
   const completed = project.numOfCompletedTasks ?? 0;
   const percent = tasks > 0 ? Math.round((completed / tasks) * 100) : 0;
@@ -25,7 +53,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Card
       onClick={handleOnClick}
-      className="flex flex-col gap-4  max-w-87 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow"
+      className="flex w-87 shrink-0 flex-col gap-4 p-5 cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-shadow"
     >
       <div>
         <div className="flex size-9 items-center justify-center rounded-md bg-secondary text-secondary-foreground">

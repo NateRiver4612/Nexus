@@ -165,7 +165,7 @@ export const projectResearch = pgTable(
     // polling the same request instead of submitting (and paying for) a new one.
     requestId: varchar('request_id', { length: 100 }),
 
-    prompt: text('prompt').notNull(), // exactly what was sent to the provider
+    brief: text('brief').notNull(), // the research brief sent to the provider
 
     // Both are loosely typed on purpose: a jsonb column can't enforce a shape, so validate with
     // Zod on the way in (before saving) and again on the way out (when reading).

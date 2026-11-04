@@ -7,7 +7,7 @@ type CodeBlockLowlightOptions = {
     listLanguages: () => string[];
   };
   [key: string]: unknown;
-}
+};
 
 export default function CodeBlockComponent({ node, updateAttributes, extension }: NodeViewProps) {
   const defaultLanguage = node.attrs.language as string | null;

@@ -11,7 +11,7 @@ type StatusProps = HTMLAttributes<HTMLSpanElement> & {
   size?: StatusSize;
   /** Optional tooltip text explaining why the status is what it is. */
   explain?: string;
-}
+};
 
 const statusStyles: Record<StatusType, { label: string; className: string; dotClassName: string }> =
   {

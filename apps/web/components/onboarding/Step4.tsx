@@ -26,6 +26,19 @@ type Step4Props = {
 // The card group keeps { label, value: rowId }; stepData stores { id, name } — mapped on save.
 type Step4Form = { deliverables: CardCheckboxValue[] };
 
+const Step4Skeleton = () => {
+  return (
+    <div className="space-y-3 text-left">
+      <Skeleton className="h-5 w-56" />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {[0, 1, 2, 3].map((index) => (
+          <Skeleton key={index} className="min-h-[50px] rounded-lg border border-border" />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
   const { data: deliverables, isLoading } = useGetDeliverables({
     variables: projectId,
@@ -87,12 +100,7 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
   }));
 
   if (isLoading) {
-    return (
-      <div className="space-y-2 text-left">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-      </div>
-    );
+    return <Step4Skeleton />;
   }
 
   if (!projectId) {

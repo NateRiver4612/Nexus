@@ -15,7 +15,7 @@ export type CardCheckboxOption = {
   icon?: LucideIcon;
   description?: string;
   isCustom?: boolean;
-}
+};
 
 /** The field value kept in the form — value matches an option's value, label for display. */
 export type CardCheckboxValue = {
@@ -43,7 +43,7 @@ type CardCheckboxGroupProps<TFieldValues extends FieldValues = FieldValues> = {
 
   /** Fired after each change with the full next value — lets the parent sync to the server. */
   onValueChange?: (values: CardCheckboxValue[]) => void;
-}
+};
 
 /**
  * Multi-select card grid bound to a `string[]` field, built on the shared

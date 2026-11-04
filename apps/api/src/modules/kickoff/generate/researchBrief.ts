@@ -9,11 +9,8 @@ import {
   buildResearchOutputRules,
   type ResearchBriefContext,
 } from '../prompts';
-import {
-  attemptToolCallWithRetry,
-  type AttemptToolCallFailure,
-  type ChatMessage,
-} from './toolCall';
+import { attemptToolCallWithRetry, type AttemptToolCallFailure } from './toolCall';
+import type { ChatMessage } from '../../ai/types';
 
 export const RESEARCH_BRIEF_TOOL_NAME = 'build_research_brief';
 

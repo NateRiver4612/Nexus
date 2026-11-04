@@ -96,13 +96,17 @@ import {
   projectCategoryEnum,
   projectResearchSchema,
   researchModelSchema,
+  researchOutputLengthSchema,
   researchStatusSchema,
   researchSourceSchema,
   startResearchParamsSchema,
   startResearchResultSchema,
   researchPollSchema,
-  researchPromptSchema,
+  researchBriefSchema,
   researchDigestSchema,
+  startProjectResearchInputSchema,
+  projectResearchRunSchema,
+  projectResearchListSchema,
   taskStatusSchema,
   taskStepStatusSchema,
 } from '@nexus/zod-schemas';
@@ -215,14 +219,18 @@ export type AITaskType = z.infer<typeof aiTaskEnum>;
 export type RunStageType = z.infer<typeof runStageEnum>;
 
 export type ResearchModelType = z.infer<typeof researchModelSchema>;
+export type ResearchOutputLengthType = z.infer<typeof researchOutputLengthSchema>;
 export type ResearchStatusType = z.infer<typeof researchStatusSchema>;
 export type ResearchSourceType = z.infer<typeof researchSourceSchema>;
 export type StartResearchParamsType = z.infer<typeof startResearchParamsSchema>;
 export type StartResearchResultType = z.infer<typeof startResearchResultSchema>;
 export type ResearchPollType = z.infer<typeof researchPollSchema>;
-export type ResearchPromptType = z.infer<typeof researchPromptSchema>;
+export type ResearchBriefType = z.infer<typeof researchBriefSchema>;
 export type ResearchDigestType = z.infer<typeof researchDigestSchema>;
 export type ProjectResearchType = z.infer<typeof projectResearchSchema>;
+export type ProjectResearchListType = z.infer<typeof projectResearchListSchema>;
+export type StartProjectResearchInputType = z.infer<typeof startProjectResearchInputSchema>;
+export type ProjectResearchRunType = z.infer<typeof projectResearchRunSchema>;
 
 /** The abstract research provider the kickoff research stage depends on, so the
  *  concrete (Tavily) implementation stays swappable. */

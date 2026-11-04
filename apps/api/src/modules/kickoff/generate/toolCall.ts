@@ -4,6 +4,7 @@ import z from 'zod';
 import type OpenAI from 'openai';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
 import { jsonrepair } from 'jsonrepair';
+import type { ChatMessage } from '../../ai/types';
 
 type DeepSeekChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParamsNonStreaming & {
   thinking?: {
@@ -11,8 +12,6 @@ type DeepSeekChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParamsNonStr
     budget_tokens?: number;
   };
 };
-
-export type ChatMessage = OpenAI.Chat.ChatCompletionMessageParam;
 
 export type AttemptToolCallInput<T> = {
   messages: ChatMessage[];

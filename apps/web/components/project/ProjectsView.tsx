@@ -21,7 +21,7 @@ export function ProjectsView() {
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState('active');
 
-  const { data: projects } = useGetProjects();
+  const { data: projects, isLoading } = useGetProjects();
 
   const { data: onboarding } = useGetOnboarding();
 
@@ -63,9 +63,11 @@ export function ProjectsView() {
         </TabsList>
         <TabsContent value="active">
           <div className="flex flex-wrap gap-6">
-            {projects?.map((project, index) => (
-              <ProjectCard key={project.id + index} project={project} />
-            ))}
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, index) => <ProjectCard key={index} isLoading />)
+              : projects?.map((project, index) => (
+                  <ProjectCard key={project.id + index} project={project} />
+                ))}
           </div>
         </TabsContent>
         <TabsContent value="shared">

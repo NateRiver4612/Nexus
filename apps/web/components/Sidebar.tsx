@@ -16,6 +16,7 @@ import {
 import { useMe } from '@/hooks/useMe';
 import { isUser } from '@/lib/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { cn } from '@/lib/utils';
 
@@ -31,11 +32,25 @@ const nav = [
 type SidebarProps = {
   collapsed: boolean;
   onToggle: () => void;
-}
+};
+
+const SidebarUserSkeleton = ({ collapsed }: { collapsed: boolean }) => {
+  return (
+    <>
+      <Skeleton className="size-8 shrink-0 rounded-full" />
+      {!collapsed && (
+        <div className="min-w-0 flex-1 space-y-1">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+      )}
+    </>
+  );
+};
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { data: userData } = useMe();
+  const { data: userData, isLoading } = useMe();
   const user = isUser(userData) ? userData : null;
 
   return (
@@ -81,15 +96,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       <div className="border-t-border p-3">
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-          <Avatar className="size-8">
-            {user?.image && <AvatarImage src={user.image} alt={user?.name ?? 'User'} />}
-            <AvatarFallback>{(user?.name ?? 'N')[0]}</AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm">{user?.name ?? 'Jordan Tran'}</p>
-              <p className="truncate text-xs text-muted-foreground">PRO plan</p>
-            </div>
+          {isLoading ? (
+            <SidebarUserSkeleton collapsed={collapsed} />
+          ) : (
+            <>
+              <Avatar className="size-8">
+                {user?.image && <AvatarImage src={user.image} alt={user?.name ?? 'User'} />}
+                <AvatarFallback>{(user?.name ?? 'N')[0]}</AvatarFallback>
+              </Avatar>
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">{user?.name ?? user?.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">PRO plan</p>
+                </div>
+              )}
+            </>
           )}
           {!collapsed && (
             <button

@@ -148,7 +148,9 @@ export const projectResearchResponseSchema = projectResearchSchema
   .openapi('ProjectResearchResponse');
 
 /** Every completed research run for a project, oldest first (one entry per version). */
-export const projectResearchListSchema = z.array(projectResearchSchema).openapi('ProjectResearchList');
+export const projectResearchListSchema = z
+  .array(projectResearchSchema)
+  .openapi('ProjectResearchList');
 
 /** Body for starting an on-demand research run. `reason` is fed into the research brief. */
 export const startProjectResearchInputSchema = z

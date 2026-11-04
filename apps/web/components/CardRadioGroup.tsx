@@ -17,7 +17,7 @@ export type CardRadioOption = {
   isCustom?: boolean;
   icon?: LucideIcon;
   description?: string;
-}
+};
 
 type CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> = {
   /** Field name — must match a key registered in the parent FormProvider's schema */
@@ -31,7 +31,7 @@ type CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> = {
   onCreateOption?: (option: CardRadioOption) => void;
   layout?: 'row' | 'column';
   gridClassName?: string;
-}
+};
 
 /**
  * A self-contained radio-group of cards. Reads/writes its value through

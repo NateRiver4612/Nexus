@@ -68,14 +68,7 @@ function AccordionContent({
       className="overflow-hidden text-sm data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
       {...props}
     >
-      <div
-        className={cn(
-          ' pt-0 pb-2.5 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground',
-          className,
-        )}
-      >
-        {children}
-      </div>
+      <div className={cn(' pt-0 pb-2.5 [&_a]:hover:text-foreground', className)}>{children}</div>
     </AccordionPrimitive.Content>
   );
 }
