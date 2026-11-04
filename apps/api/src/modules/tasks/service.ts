@@ -214,3 +214,5 @@ function toDetailView(row: TaskDetailRow): TaskDetailType {
     project: row.project,
   };
 }
+
+export type TaskServiceType = ReturnType<typeof TaskService>;

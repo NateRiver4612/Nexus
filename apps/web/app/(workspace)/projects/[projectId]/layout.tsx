@@ -14,6 +14,7 @@ const tabs = [
   { href: 'planner', label: 'Planner' },
   { href: 'artifacts', label: 'Artifacts' },
   { href: 'knowledge', label: 'Knowledge' },
+  { href: 'assistant', label: 'Assistant' },
   { href: 'activity', label: 'Activity' },
   { href: 'settings', label: 'Settings' },
 ];

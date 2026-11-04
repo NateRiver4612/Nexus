@@ -63,3 +63,5 @@ function toView(row: MilestoneWithTasksRow): MilestoneWithTasksType {
     updatedAt: row.updatedAt.toISOString(),
   };
 }
+
+export type MilestoneServiceType = ReturnType<typeof MilestoneService>;

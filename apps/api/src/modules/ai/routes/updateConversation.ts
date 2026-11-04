@@ -1,23 +1,24 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import {
+  conversationIdParamsSchema,
   conversationSchema,
   errorResponseSchema,
-  idParamsSchema,
   updateConversationSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
-import type { ConversationType } from '@nexus/types';
-
+import { getUser } from '../../../auth-middleware';
 import { bearerSecurity } from '../../../openapi';
+import { ConversationService } from '../conversations/service';
 
 export const updateConversationRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
-    path: '/conversations/items/{id}',
+    path: '/conversations/{conversationId}',
     security: bearerSecurity,
     request: {
-      params: idParamsSchema,
+      params: conversationIdParamsSchema,
       body: {
         content: {
           'application/json': {
@@ -30,7 +31,7 @@ export const updateConversationRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: { 'application/json': { schema: conversationSchema } },
-        description: 'Conversation updated',
+        description: 'Conversation renamed',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },
@@ -42,19 +43,17 @@ export const updateConversationRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
-    const { id } = c.req.valid('param');
-    const body = c.req.valid('json');
-    return c.json(
-      {
-        id,
-        projectId: body.projectId ?? '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        userId: 'seed@nexus.local',
-        title: body.title ?? 'New conversation',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } satisfies ConversationType,
-      200,
-    );
+  handler: async (c) => {
+    const { conversationId } = c.req.valid('param');
+    const { title } = c.req.valid('json');
+    const user = getUser(c);
+
+    const conversation = await ConversationService(getDb()).rename({
+      id: conversationId,
+      userId: user.id,
+      title,
+    });
+
+    return c.json(conversation, 200);
   },
 });

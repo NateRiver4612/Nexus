@@ -102,7 +102,7 @@ export const conversationSchema = z
   .object({
     id: idSchema,
     projectId: idSchema,
-    userId: z.string().openapi({ example: 'seed@nexus.local' }),
+    userId: idSchema,
     title: z
       .string()
       .min(1)
@@ -113,33 +113,95 @@ export const conversationSchema = z
   })
   .openapi('Conversation');
 
-export const createConversationSchema = conversationSchema.pick({
-  projectId: true,
-  title: true,
+export const createConversationSchema = z.object({
+  title: z
+    .string()
+    .min(1)
+    .max(255)
+    .default('New conversation')
+    .openapi({ example: 'Scope the AI module' }),
 });
-export const updateConversationSchema = createConversationSchema.partial();
+
+/** Renaming is the only conversation update; project ownership comes from the row. */
+export const updateConversationSchema = z.object({
+  title: z.string().min(1).max(255).openapi({ example: 'Scope the AI module' }),
+});
 
 export const conversationListSchema = z.array(conversationSchema).openapi('Conversations');
+
+/** Tool trace + citations land here. Step 5 narrows this. */
+export const messageMetadataSchema = z.record(z.string(), z.unknown()).openapi('MessageMetadata');
 
 export const messageSchema = z
   .object({
     id: idSchema,
     conversationId: idSchema,
     role: z.enum(['user', 'assistant', 'system']).openapi({ example: 'user' }),
-    content: z.string().min(1).openapi({ example: 'How should we scope AI runs?' }),
+    content: z.string().openapi({ example: 'How should we scope AI runs?' }),
     sourceId: z
       .string()
       .nullable()
       .openapi({ example: 'artifact:3fa85f64-5717-4562-b3fc-2c963f66afa6' }),
-    ...timestampSchema,
+    metadata: messageMetadataSchema.nullable(),
+    createdAt: timestampSchema.createdAt,
   })
   .openapi('Message');
 
-export const createMessageSchema = messageSchema.pick({
-  conversationId: true,
-  role: true,
-  content: true,
-  sourceId: true,
+/** The client sends text only; role and conversation come from the server and the path. */
+export const createMessageSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(1)
+    .max(20_000)
+    .openapi({ example: 'How should we scope AI runs?' }),
 });
 
-export const messageListSchema = z.array(messageSchema).openapi('Messages');
+export const messagePageQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  /** `seq` of the oldest message already loaded; returns the page before it. */
+  cursor: z.coerce.number().int().positive().optional(),
+});
+
+export const messagePageSchema = z
+  .object({
+    messages: z.array(messageSchema),
+    hasMore: z.boolean(),
+    nextCursor: z.number().int().positive().nullable(),
+  })
+  .openapi('MessagePage');
+
+/**
+ * Payloads of the project-chat SSE stream (POST /conversations/{id}/messages).
+ * The protocol is locked to `text-delta | tool | sources | done | error`; `tool` and `sources`
+ * arrive in Steps 5 and 8. Shared so the API emits and the web client parses the same shapes.
+ */
+export const chatTextDeltaEventSchema = z.object({ text: z.string() });
+
+export const chatDoneEventSchema = z.object({
+  /** The saved assistant message. */
+  messageId: idSchema,
+  runId: idSchema,
+  /** Present only when this reply generated the thread's title. */
+  title: z.string().optional(),
+});
+
+export const chatErrorEventSchema = z.object({ kind: z.string(), message: z.string() });
+
+/** A source the answer drew on. Streamed in `sources` and stored in `messages.metadata.citations`. */
+export const chatCitationSchema = z.object({ sourceId: idSchema, name: z.string() });
+export const chatCitationsSchema = z.array(chatCitationSchema);
+
+export const chatToolEventSchema = z.object({
+  /** Pairs the `running` event with its `done` / `error` event. */
+  id: z.string(),
+  name: z.string(),
+  /** What the UI shows while it runs, e.g. "Searching knowledge…". */
+  label: z.string(),
+  status: z.enum(['running', 'done', 'error']),
+});
+
+/** Tool calls persisted in `messages.metadata.tools`, so history keeps the trace. */
+export const chatToolTraceSchema = z.array(chatToolEventSchema);
+
+export const chatSourcesEventSchema = z.object({ sources: chatCitationsSchema });

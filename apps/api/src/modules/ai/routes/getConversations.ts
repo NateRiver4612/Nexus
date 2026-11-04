@@ -5,8 +5,11 @@ import {
   errorResponseSchema,
   projectIdParamsSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
+import { getUser } from '../../../auth-middleware';
 import { bearerSecurity } from '../../../openapi';
+import { ConversationService } from '../conversations/service';
 
 export const getConversationsRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -31,5 +34,15 @@ export const getConversationsRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => c.json([], 200),
+  handler: async (c) => {
+    const { projectId } = c.req.valid('param');
+    const user = getUser(c);
+
+    const conversations = await ConversationService(getDb()).list({
+      projectId,
+      userId: user.id,
+    });
+
+    return c.json(conversations, 200);
+  },
 });

@@ -95,3 +95,5 @@ function toView(row: DeliverableRow): DeliverableType {
     updatedAt: row.updatedAt.toISOString(),
   };
 }
+
+export type DeliverableServiceType = ReturnType<typeof DeliverableService>;

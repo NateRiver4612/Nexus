@@ -129,3 +129,5 @@ export function ResearchService(db: Db) {
 
   return { getNew, getActive, start, list };
 }
+
+export type ResearchServiceType = ReturnType<typeof ResearchService>;

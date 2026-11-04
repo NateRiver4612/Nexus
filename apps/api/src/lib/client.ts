@@ -19,8 +19,9 @@ export function getDeepSeekClient() {
     globalForOpenAI.nexusDeepSeek = new OpenAI({
       apiKey: env.DEEPSEEK_API_KEY,
       baseURL: 'https://api.deepseek.com',
-      // BullMQ owns retries: don't let the SDK silently re-send a timed-out request,
-      // and bound each request so a hung call can't outlive the run's deadline.
+      // Default 0: queued jobs are retried by BullMQ (see queues.ts), so the SDK must not
+      // silently re-send and double up attempts. Chat retries transient open-request
+      // failures itself, via ChatInput.retries.
       maxRetries: 0,
       timeout: env.AI_RUN_TIMEOUT_MS,
     });

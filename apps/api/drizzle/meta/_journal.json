@@ -176,6 +176,13 @@
       "when": 1792671573935,
       "tag": "0024_rename_research_prompt_to_brief",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793089390845,
+      "tag": "0025_flowery_lake",
+      "breakpoints": true
     }
   ]
 }

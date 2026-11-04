@@ -1,5 +1,11 @@
 import type { z } from '@hono/zod-openapi';
+import type { Db } from '@nexus/db';
+import type { ChatCitationType, ChatStreamEvent, Usage } from '@nexus/types';
 
+/**
+ * Who is asking and where. Built by the route from the authenticated user and the conversation
+ * row, never from model output, so a tool cannot be pointed at another project or user.
+ */
 export type ToolCall = { id: string; name: string; args: unknown };
 
 export type ChatMessage =
@@ -9,7 +15,24 @@ export type ChatMessage =
 
 export type ToolDef = { name: string; description: string; parameters: z.ZodType };
 
-export type Usage = { inputTokens: number; outputTokens: number };
+export type ToolContext = { db: Db; projectId: string; userId: string };
+
+export type ToolResult = {
+  /** Text handed back to the model. Treated as data, truncated by the loop. */
+  content: string;
+  /** Sources to show the user as citations. */
+  sources?: ChatCitationType[];
+};
+
+export type Tool = {
+  name: string;
+  description: string;
+  parameters: z.ZodType;
+  /** Shown in the UI while the tool runs. */
+  label: string;
+  /** `args` have already been validated against `parameters` by the loop. */
+  run(input: { ctx: ToolContext; args: unknown }): Promise<ToolResult>;
+};
 
 export type StreamEvent =
   | { type: 'text-delta'; text: string }
@@ -17,12 +40,23 @@ export type StreamEvent =
   | { type: 'usage'; usage: Usage }
   | { type: 'finish'; reason: 'stop' | 'tool_calls' | 'length' };
 
+/**
+ * What the chat loop yields while building one turn: the public stream events the route forwards
+ * to the client, plus `usage`, which the route aggregates and persists but never streams.
+ */
+export type ChatLoopEvent = ChatStreamEvent | { type: 'usage'; usage: Usage };
+
 export type ChatInput = {
   model: string;
   messages: ChatMessage[];
   tools?: ToolDef[];
   maxTokens?: number;
   signal?: AbortSignal;
+  /**
+   * Retry budget for transient provider failures. Queued workflows leave it unset (0) so
+   * BullMQ owns their attempts/backoff; synchronous chat opts in so a 429/503 doesn't end the turn.
+   */
+  retries?: number;
 };
 
 export type AIProvider = {
@@ -67,3 +101,17 @@ export type DeepSeekChunk = {
   // not in your example, but sent on the final chunk when include_usage is on (choices is empty there)
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null;
 };
+
+/**
+ * Declares a tool with typed args. The loop validates `args` before calling `run`, so the
+ * cast on the way out is safe; it only erases the generic so tools fit in one array.
+ */
+export function defineTool<P extends z.ZodType>(tool: {
+  name: string;
+  description: string;
+  parameters: P;
+  label: string;
+  run(input: { ctx: ToolContext; args: z.infer<P> }): Promise<ToolResult>;
+}): Tool {
+  return { ...tool, run: ({ ctx, args }) => tool.run({ ctx, args: args as z.infer<P> }) };
+}

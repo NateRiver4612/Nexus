@@ -13,6 +13,8 @@
     "start": "bun --env-file=.env src/index.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:live": "LIVE_AI=1 bun test",
     "lint": "oxlint --config ../../packages/config/oxlint.json src",
     "format": "prettier --write --ignore-path ../../.prettierignore --config ../../packages/config/prettier.json .",
     "format:check": "prettier --check --ignore-path ../../.prettierignore --config ../../packages/config/prettier.json .",
