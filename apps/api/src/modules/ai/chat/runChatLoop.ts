@@ -137,6 +137,8 @@ export async function* runChatLoop({
       // UI: { type: 'tool', id, name, label, status: 'running' } → spinner by the label
       yield { type: 'tool', id: call.id, name: call.name, label, status: 'running' };
 
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       if (!validTool) {
         // Model gets this string so it can retry:
         //   'Unknown tool "foo". Available tools: searchKnowledge, getProject.'

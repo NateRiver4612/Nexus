@@ -103,7 +103,8 @@ export function mapFinish(reason: string | null): 'stop' | 'tool_calls' | 'lengt
 }
 
 /** Transient upstream failures are worth another attempt; bad requests/config are not. */
-const isRetryable = (kind: AIProviderErrorKind) => kind === 'unavailable' || kind === 'rate_limited';
+const isRetryable = (kind: AIProviderErrorKind) =>
+  kind === 'unavailable' || kind === 'rate_limited';
 
 const BASE_RETRY_DELAY_MS = 500;
 
