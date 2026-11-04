@@ -10,6 +10,7 @@ import {
   createAiSuggestion,
   createConversation,
   deleteAiSuggestion,
+  deleteConversation,
   getAiRun,
   getAiRuns,
   getAiSuggestions,
@@ -90,6 +91,15 @@ export const useUpdateConversation = (projectId: string) =>
   createMutationHook(
     ({ id, input }: { id: string; input: UpdateConversationInputType }) =>
       updateConversation(id, input),
+    (queryClient) => ({
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: conversationKeys.list(projectId) }),
+    }),
+  )();
+
+export const useDeleteConversation = (projectId: string) =>
+  createMutationHook(
+    (id: string) => deleteConversation(id),
     (queryClient) => ({
       onSuccess: () =>
         queryClient.invalidateQueries({ queryKey: conversationKeys.list(projectId) }),

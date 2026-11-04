@@ -43,7 +43,12 @@ const DeleteConfirmDialog = ({
   const canConfirm = !requiresTyping || typed === requiredText;
 
   return (
-    <AlertDialog open={open}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isDeleting) close();
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
@@ -79,6 +84,7 @@ const DeleteConfirmDialog = ({
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
+            autoFocus
             onClick={confirmDelete}
             disabled={isDeleting || !canConfirm}
             className="w-21.25 bg-destructive"

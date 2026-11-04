@@ -24,10 +24,22 @@ export function AssistantView({ projectId }: { projectId: string }) {
 
   const select = (id: string) => router.replace(`${pathname}?c=${id}`);
 
+  const handleDeleted = (id: string) => {
+    if (id !== selectedId) return;
+
+    const nextId = conversations?.find((conversation) => conversation.id !== id)?.id ?? null;
+    router.replace(nextId ? `${pathname}?c=${nextId}` : pathname);
+  };
+
   return (
     <div className="grid h-full min-h-0 grid-cols-[240px_1fr] overflow-hidden rounded-xl border border-border bg-card">
       <aside className="border-r border-border min-h-0">
-        <AIConversationList projectId={projectId} selectedId={selectedId} onSelect={select} />
+        <AIConversationList
+          projectId={projectId}
+          selectedId={selectedId}
+          onSelect={select}
+          onDeleted={handleDeleted}
+        />
       </aside>
       <section className="min-w-0 min-h-0">
         {selectedId ? (

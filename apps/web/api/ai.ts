@@ -101,6 +101,14 @@ export async function updateConversation(
   )) as ConversationType;
 }
 
+export async function deleteConversation(id: string): Promise<OkType> {
+  return (await handleResponse(
+    await apiClient.api.v1.ai.conversations[':conversationId'].$delete({
+      param: { conversationId: id },
+    }),
+  )) as OkType;
+}
+
 export async function getMessages(
   conversationId: string,
   input: MessagePageQueryType,

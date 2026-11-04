@@ -1,6 +1,6 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
-import { conversationIdParamsSchema, errorResponseSchema } from '@nexus/zod-schemas';
+import { conversationIdParamsSchema, errorResponseSchema, okSchema } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
@@ -14,7 +14,8 @@ export const deleteConversationRoute = defineOpenAPIRoute({
       params: conversationIdParamsSchema,
     },
     responses: {
-      204: {
+      200: {
+        content: { 'application/json': { schema: okSchema } },
         description: 'Conversation deleted; messages are removed by cascade',
       },
       401: {
@@ -33,6 +34,6 @@ export const deleteConversationRoute = defineOpenAPIRoute({
 
     await ConversationService(getDb()).remove({ id: conversationId, userId: user.id });
 
-    return c.body(null, 204);
+    return c.json({ ok: true }, 200);
   },
 });
