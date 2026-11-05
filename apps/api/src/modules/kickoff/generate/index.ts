@@ -10,9 +10,33 @@ export type GeneratedKickoffPlan = {
   usage?: CompletionUsage;
 };
 
+/**
+ * A stage that already succeeded on an earlier attempt of the same run. `usage` carries
+ * the token counts of those skipped calls so the run's final totals still include them.
+ */
+export type KickoffCheckpoint = {
+  milestones?: KickoffPlanType['milestones'];
+  summary?: KickoffPlanType['summary'];
+  usage?: CompletionUsage;
+};
+
 export type GenerateKickoffPlanOptions = {
   /** Reports coarse progress as the plan moves through its stages. */
   onStage?: (stage: RunStageType) => void | Promise<unknown>;
+  /** Completed stages from an earlier attempt — reused instead of regenerated. */
+  checkpoint?: KickoffCheckpoint;
+  /**
+   * Fired as soon as a stage succeeds (before the next one starts), so the caller can
+   * persist it and skip the expensive call on a BullMQ retry.
+   */
+  onMilestones?: (
+    milestones: KickoffPlanType['milestones'],
+    usage?: CompletionUsage,
+  ) => void | Promise<unknown>;
+  onSummary?: (
+    summary: KickoffPlanType['summary'],
+    usage?: CompletionUsage,
+  ) => void | Promise<unknown>;
 };
 
 /**
@@ -47,22 +71,42 @@ function withPositions(plan: KickoffPlanType): KickoffPlanType {
  *      compact rendering of the generated milestones.
  * Each stage has its own budget and corrective retry, so a failure in one no
  * longer compounds into "the whole plan came back broken".
+ *
+ * Resume: a stage present in `checkpoint` is reused instead of re-calling the model.
+ * This matters because the whole function runs inside one BullMQ job: without it, a
+ * summary failure would replay — and re-pay for — the already-successful milestones
+ * on the queue's retry. Each successful stage is handed to its callback immediately,
+ * so the caller can persist it before the next stage starts.
  */
 export async function generateKickoffPlan(
   context: KickoffContext,
-  { onStage }: GenerateKickoffPlanOptions = {},
+  { onStage, checkpoint, onMilestones, onSummary }: GenerateKickoffPlanOptions = {},
 ): Promise<GeneratedKickoffPlan> {
-  await onStage?.('drafting_milestones');
-  const milestonesResult = await generateMilestones(context);
+  let milestones = checkpoint?.milestones;
+  let usage = checkpoint?.usage;
 
-  await onStage?.('drafting_summary');
-  const summaryResult = await generateSummary(context, milestonesResult.milestones);
+  if (!milestones) {
+    await onStage?.('drafting_milestones');
+    const milestonesResult = await generateMilestones(context);
+    milestones = milestonesResult.milestones;
+    usage = mergeUsage(usage, milestonesResult.usage);
+    await onMilestones?.(milestones, milestonesResult.usage);
+  }
+
+  // A summary is only reusable alongside the milestones it was grounded on. If milestones
+  // had to be regenerated, an old summary would describe a plan that no longer exists.
+  let summary = checkpoint?.milestones ? checkpoint.summary : undefined;
+
+  if (!summary) {
+    await onStage?.('drafting_summary');
+    const summaryResult = await generateSummary(context, milestones);
+    summary = summaryResult.summary;
+    usage = mergeUsage(usage, summaryResult.usage);
+    await onSummary?.(summary, summaryResult.usage);
+  }
 
   return {
-    data: withPositions({
-      summary: summaryResult.summary,
-      milestones: milestonesResult.milestones,
-    }),
-    usage: mergeUsage(milestonesResult.usage, summaryResult.usage),
+    data: withPositions({ summary, milestones }),
+    usage,
   };
 }

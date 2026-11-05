@@ -61,6 +61,32 @@ function TaskCard(title: string, status: TaskStatus) {
 }
 ```
 
+### Comments
+
+- Explain **why**, not what. Put the comment on the line where the non-obvious
+  decision happens (e.g. the `.catch` that swallows an error), not on the helper
+  or declaration above it.
+- Keep inline comments short and plain — one idea, 1–3 lines, written the way
+  you'd explain it to a teammate.
+- Don't comment a self-describing name or restate the code. Add a comment only
+  when the reasoning, tradeoff, or consequence isn't obvious from the code.
+- Use JSDoc for exported/shared functions and types whose contract matters;
+  use `//` for local reasoning.
+
+```typescript
+// ❌ States the rule, placed away from the decision it explains.
+// Best-effort: a failed write must never turn a successful stage into a failed run.
+const checkpointStage = (...) => saveStage(...).catch(...);
+
+// ✅ Explains the consequence at the decision point.
+saveStage(...).catch((error) => {
+  // Best-effort: this stage already succeeded and cost tokens. If saving it
+  // fails, log and continue — a missing checkpoint only costs a regeneration
+  // on retry, never the whole run.
+  console.warn(...);
+});
+```
+
 ## Agent tool/script output
 
 If writing a custom script or skill whose output is read back by the agent itself (not by the app) — a dev-tooling helper, a skill's bash script — prefer [TOON] (https://toonformat.dev) format over JSON (`name[count]{fields}:` header + comma rows); ~40% fewer tokens for the same information, per the [AXI](https://axi.md) principles. `git status --short`'s terse style is the same idea in spirit. This does **not** apply to Nexus's own API responses — those stay structured JSON per the zod-schemas contract; this rule is agent-tooling only.

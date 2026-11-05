@@ -167,6 +167,11 @@ export const projectResearch = pgTable(
 
     brief: text('brief').notNull(), // the research brief sent to the provider
 
+    // The brief-builder LLM call's usage, saved so a queue retry that resumes this row
+    // doesn't lose those tokens from the run's totals.
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+
     // Both are loosely typed on purpose: a jsonb column can't enforce a shape, so validate with
     // Zod on the way in (before saving) and again on the way out (when reading).
     content: jsonb('content').$type<Record<string, unknown>>(), // structured research digest
