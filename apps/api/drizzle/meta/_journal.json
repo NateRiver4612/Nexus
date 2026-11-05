@@ -183,6 +183,13 @@
       "when": 1793089390845,
       "tag": "0025_flowery_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793845957187,
+      "tag": "0026_open_victor_mancha",
+      "breakpoints": true
     }
   ]
 }
