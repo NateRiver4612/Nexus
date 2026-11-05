@@ -77,6 +77,34 @@ async function startResearch({
   return { requestId: parsed.data.requestId };
 }
 
+/** Temporary diagnostic: reports the raw poll shape when validation fails. */
+function describePollShape({ response }: { response: unknown }): Record<string, unknown> {
+  if (response === null || response === undefined || typeof response !== 'object') {
+    return { type: typeof response };
+  }
+
+  const record = response as Record<string, unknown>;
+  const sources = record.sources;
+
+  return {
+    keys: Object.keys(record),
+    status: record.status,
+    requestId: record.request_id ?? record.requestId,
+    responseTime: record.response_time ?? record.responseTime,
+    content: typeof record.content,
+    usage: record.usage,
+    sources: Array.isArray(sources)
+      ? {
+          count: sources.length,
+          firstKeys:
+            sources[0] !== null && sources[0] !== undefined && typeof sources[0] === 'object'
+              ? Object.keys(sources[0] as Record<string, unknown>)
+              : typeof sources[0],
+        }
+      : typeof sources,
+  };
+}
+
 async function getResearch({ requestId }: { requestId: string }): Promise<ResearchPollType> {
   let response: unknown;
 
@@ -91,6 +119,11 @@ async function getResearch({ requestId }: { requestId: string }): Promise<Resear
   const parsed = researchPollResponseSchema.safeParse(response);
 
   if (!parsed.success) {
+    console.warn('[tavily] research poll shape mismatch', {
+      shape: describePollShape({ response }),
+      issues: parsed.error.issues,
+    });
+
     throw new ResearchProviderError({
       kind: 'unavailable',
       message: 'Tavily research poll returned an unexpected response shape',
@@ -124,11 +157,18 @@ async function getResearch({ requestId }: { requestId: string }): Promise<Resear
   return {
     status,
     content,
-    sources: (parsed.data.sources ?? []).map((source) => ({
-      title: source.title ?? source.url,
-      url: source.url,
-      favicon: source.favicon ?? '',
-    })),
+    sources: (parsed.data.sources ?? []).flatMap((source) => {
+      // Without a URL a source can't be rendered, so drop it rather than fail the run.
+      if (!source.url) return [];
+
+      return [
+        {
+          title: source.title ?? source.url,
+          url: source.url,
+          favicon: source.favicon ?? '',
+        },
+      ];
+    }),
     responseTime: parsed.data.response_time == null ? null : Math.round(parsed.data.response_time),
     creditsUsed: parsed.data.usage?.credits ?? null,
   };

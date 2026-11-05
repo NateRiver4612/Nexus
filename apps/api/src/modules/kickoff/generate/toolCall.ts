@@ -1,11 +1,17 @@
 import { getDeepSeekClient } from '../../../lib/client';
 import { env } from '../../../env';
+import { toAIProviderError } from '../../ai/providers/deepseek/errors';
 import z from 'zod';
 import type OpenAI from 'openai';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
 import { jsonrepair } from 'jsonrepair';
 import type { ChatMessage } from '../../ai/types';
 
+/**
+ * OpenAI's non-streaming chat params plus DeepSeek's non-standard `thinking` toggle,
+ * which isn't part of the OpenAI SDK types. The call below is cast to this so we can
+ * pass `thinking` without loosening the SDK's type checking.
+ */
 type DeepSeekChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParamsNonStreaming & {
   thinking?: {
     type: 'enabled' | 'disabled';
@@ -16,7 +22,13 @@ type DeepSeekChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParamsNonStr
 export type AttemptToolCallInput<T> = {
   messages: ChatMessage[];
   toolName: string;
+  /** Loose JSON Schema exposed to the model as the tool's parameter shape. */
   toolParamsSchema: z.ZodType;
+  /**
+   * The real validation gate applied to the model's output. May be stricter than
+   * `toolParamsSchema` (length caps, count bounds, enums) — JSON Schema only guides
+   * the model; this is what we actually trust.
+   */
   validateSchema: z.ZodType<T>;
   maxTokens: number;
   /** Overrides the default kickoff model (e.g. the cheaper research-prompt builder). */
@@ -32,6 +44,7 @@ export type AttemptToolCallFailure = {
   issues?: string[];
 };
 
+/** Discriminated on `ok`, so callers get either validated data or the retry diagnostics. */
 export type AttemptToolCallResult<T> =
   | { ok: true; data: T; finishReason?: string; usage?: CompletionUsage }
   | ({ ok: false } & AttemptToolCallFailure);
@@ -51,28 +64,41 @@ export async function attemptToolCall<T>({
 }: AttemptToolCallInput<T>): Promise<AttemptToolCallResult<T>> {
   const client = getDeepSeekClient();
 
-  const response = await client.chat.completions.create({
-    model: model ?? env.AI_KICKOFF_MODEL,
-    messages,
-    max_tokens: maxTokens,
-    thinking: { type: 'disabled' },
-    tools: [
-      {
-        type: 'function',
-        function: {
-          name: toolName,
-          description: `Submit the generated result via ${toolName}.`,
-          parameters: z.toJSONSchema(toolParamsSchema),
-        },
-      },
-    ],
-    tool_choice: { type: 'function', function: { name: toolName } }, // forces the call
-  } as DeepSeekChatCompletionParams);
+  // One forced tool call: the model must answer through `toolName`, so we never have to
+  // parse prose or guess which shape it returned. `thinking` is disabled for this cheap,
+  // deterministic generation step.
+  let response: OpenAI.Chat.ChatCompletion;
 
+  try {
+    response = await client.chat.completions.create({
+      model: model ?? env.AI_KICKOFF_MODEL,
+      messages,
+      max_tokens: maxTokens,
+      thinking: { type: 'disabled' },
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: toolName,
+            description: `Submit the generated result via ${toolName}.`,
+            parameters: z.toJSONSchema(toolParamsSchema),
+          },
+        },
+      ],
+      tool_choice: { type: 'function', function: { name: toolName } }, // forces the call
+    } as DeepSeekChatCompletionParams);
+  } catch (error) {
+    // Normalize raw OpenAI SDK failures so the research stage can classify them as transient.
+    // Without this, a brief-builder blip would bypass the whole-run retry.
+    throw toAIProviderError(error);
+  }
+
+  // A non-streaming forced call returns a single choice; treat anything else as unknown.
   const finishReason = response.choices[0]?.finish_reason ?? 'unknown';
 
   const toolCall = response.choices[0]?.message?.tool_calls?.[0];
 
+  // Missing or mismatched tool call is a hard failure — there's no prose fallback to parse.
   if (!toolCall || toolCall.type !== 'function' || toolCall.function.name !== toolName) {
     return {
       ok: false,
@@ -86,9 +112,12 @@ export async function attemptToolCall<T>({
 
   let parsedArgs;
 
+  // debug: temporary diagnostics for truncated/malformed responses.
   console.error('finish_reason:', finishReason);
   console.error('arguments length:', toolCall?.function?.arguments?.length);
 
+  // Parse directly first; fall back to `jsonrepair` for near-valid JSON (truncation,
+  // stray trailing characters) that JSON.parse rejects.
   try {
     parsedArgs = JSON.parse(toolCall.function.arguments);
   } catch {
@@ -115,6 +144,8 @@ export async function attemptToolCall<T>({
   const result = validateSchema.safeParse(parsedArgs);
 
   if (!result.success) {
+    // Zod reports absent keys as "received undefined"; those paths become the retry's
+    // missing-field list, while all issues feed the field-level correction message.
     const missingKeys = result.error.issues
       .filter((issue) => issue.message.includes('received undefined'))
       .map((issue) => issue.path.join('.'));
@@ -142,6 +173,7 @@ export type AttemptToolCallWithRetryInput<T> = {
   toolParamsSchema: z.ZodType;
   validateSchema: z.ZodType<T>;
   maxTokens: number;
+  /** Escalated budget for the single retry — truncation is the usual first-attempt failure. */
   maxTokensRetry: number;
   model?: string;
   /** Appended as an extra user message before the retry; null → retry with just a bigger budget. */
@@ -177,6 +209,8 @@ export async function attemptToolCallWithRetry<T>({
   });
   if (first.ok) return { data: first.data, usage: first.usage };
 
+  // One corrective retry: append the caller's failure-specific guidance (if any) and
+  // rerun with the escalated budget.
   const correction = buildCorrection(first);
   const retryMessages: ChatMessage[] = correction
     ? [...messages, { role: 'user', content: correction }]
@@ -193,6 +227,8 @@ export async function attemptToolCallWithRetry<T>({
 
   if (retry.ok) return { data: retry.data, usage: retry.usage };
 
+  // Hitting the token cap is the expected hard failure, so translate it into a friendly
+  // actionable message; anything else surfaces the raw retry error.
   if (retry.finishReason === 'length') {
     throw new Error(
       `AI ${label} exceeded the token limit even after a retry (${maxTokensRetry} completion tokens). ` +

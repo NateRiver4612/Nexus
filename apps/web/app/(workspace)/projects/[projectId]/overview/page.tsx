@@ -28,6 +28,7 @@ import { useGetMilestones, useUpdateMilestonesPositions } from '@/hooks/useMiles
 import { useGetProjectById } from '@/hooks/useProjects';
 import {
   useGetActiveProjectResearch,
+  useGetProjectResearch,
   useGetProjectResearchHistory,
   useStartProjectResearch,
 } from '@/hooks/useResearch';
@@ -64,6 +65,10 @@ export default function Page() {
     variables: projectId,
   });
 
+  const { data: latestResearch } = useGetProjectResearch({
+    variables: projectId,
+  });
+
   const { data: activeResearch } = useGetActiveProjectResearch({
     variables: projectId,
   });
@@ -83,6 +88,9 @@ export default function Page() {
     Boolean(activeResearchRunId) &&
     (!activeAiRun || activeAiRun.status === 'queued' || activeAiRun.status === 'processing');
 
+  // The latest attempt covers kickoff failures, which have no active run and therefore no toast.
+  const researchFailed = latestResearch?.status === 'failed';
+
   // Toast once per completed/failed run, then refresh the version list.
   useEffect(() => {
     if (!activeResearchRunId || !activeAiRun) return;
@@ -96,12 +104,14 @@ export default function Page() {
 
       queryClient.invalidateQueries({ queryKey: researchKeys.history(projectId) });
       queryClient.invalidateQueries({ queryKey: researchKeys.active(projectId) });
+      queryClient.invalidateQueries({ queryKey: researchKeys.project(projectId) });
     } else if (activeAiRun.status === 'failed') {
       handledRunRef.current = activeResearchRunId;
 
       toastError(new Error(activeAiRun.errorMessage ?? 'Research failed'));
 
       queryClient.invalidateQueries({ queryKey: researchKeys.active(projectId) });
+      queryClient.invalidateQueries({ queryKey: researchKeys.project(projectId) });
     }
   }, [activeAiRun, activeResearchRunId, projectId, queryClient]);
 
@@ -185,13 +195,19 @@ export default function Page() {
         {isGenerating && (
           <div className="flex items-center gap-2 rounded-lg border border-gray-200 p-4 text-sm text-muted-foreground">
             <LoaderCircle className="size-4 animate-spin" />
-            Researching sources…
+            {activeAiRun?.stage === 'retrying' ? 'Retrying research…' : 'Researching sources…'}
+          </div>
+        )}
+
+        {!isGenerating && researchFailed && (
+          <div className="rounded-lg border border-error/30 bg-error/5 p-4 text-sm text-error">
+            Research isn’t working right now — please try again later.
           </div>
         )}
 
         {isHistoryLoading && versions.length === 0 && !isGenerating && <ResearchSkeleton />}
 
-        {!isHistoryLoading && !isGenerating && versions.length === 0 && (
+        {!isHistoryLoading && !isGenerating && !researchFailed && versions.length === 0 && (
           <div className="rounded-lg border border-gray-200 p-4 text-sm text-muted-foreground">
             No research yet — generate sources for this project.
           </div>
