@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import { AIProviderError } from '../../deepseek/errors';
-import { ResearchProviderError, isRetryableResearchError } from '../errors';
+import { ResearchProviderError } from '../errors';
+import { isRetryableResearchError } from '../../../../research/retry';
 
 const tavily = (kind: ConstructorParameters<typeof ResearchProviderError>[0]['kind']) =>
   new ResearchProviderError({ kind, message: 'test' });

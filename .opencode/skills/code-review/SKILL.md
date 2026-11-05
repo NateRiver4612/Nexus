@@ -99,11 +99,20 @@ Review against the Nexus rules in `AGENTS.md`, `apps/api/AGENTS.md`, `apps/web/A
 
 Lead with a one-line verdict: `approve`, `approve with nits`, or `changes requested`.
 
-Then list findings grouped by severity: **Blocker** (security, data loss, broken behavior), **Should fix** (rule violations, missing validation, missing tests), **Nit** (style), **Suggestion** (modernization, simplification, senior alternative — optional). For each finding give:
+Then list findings grouped by severity: **Blocker** (security, data loss, broken behavior), **Should fix** (rule violations, missing validation, missing tests), **Nit** (style), **Suggestion** (modernization, simplification, senior alternative — optional).
 
-- `path:line`
-- what is wrong, in one or two sentences
-- the fix, only when it isn't obvious
+For each finding:
+
+- `path:line` — what is wrong, in one or two short sentences.
+- Use plain, everyday words. Write it so someone who hasn't read the file can follow; if you need a technical term, explain it in a few words.
+- Add a tiny, concrete example that makes the problem obvious — a 2–5 line snippet, a one-line scenario, or a short before/after. Illustrate the issue; don't copy the diff.
+- Give the fix only when it isn't obvious.
+
+Example format:
+
+- `src/research/stage.ts:178` — A retry can charge the user twice: the first submit may already have created a task.
+  Example: the request times out after the provider accepted it, the code retries, and now there are two paid tasks.
+  Fix: treat ambiguous submit failures as non-retryable.
 
 Be specific and cite code. Don't pad with praise or restate the diff. If a category has nothing to report, omit it.
 
