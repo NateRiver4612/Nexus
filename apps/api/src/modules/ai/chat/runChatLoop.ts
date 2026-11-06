@@ -137,38 +137,34 @@ export async function* runChatLoop({
       // UI: { type: 'tool', id, name, label, status: 'running' } → spinner by the label
       yield { type: 'tool', id: call.id, name: call.name, label, status: 'running' };
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
       if (!validTool) {
         // Model gets this string so it can retry:
         //   'Unknown tool "foo". Available tools: searchKnowledge, getProject.'
         content = `Unknown tool "${call.name}". Available tools: ${[...toolByName.keys()].join(', ')}.`;
         failed = true;
-        continue; // skip this call, let the model see the error next turn
-      }
+      } else {
+        // Validate model args against the tool schema before running it.
+        const parsed = validTool.parameters.safeParse(call.args);
 
-      // Validate model args against the tool schema before running it.
-      const parsed = validTool.parameters.safeParse(call.args);
+        if (!parsed.success) {
+          // Model gets the prettified zod error, e.g.
+          //   'Invalid arguments: query: Expected string, received number'
+          content = `Invalid arguments: ${z.prettifyError(parsed.error)}`;
+          failed = true;
+        } else {
+          const result = await runTool({ tool: validTool, ctx, args: parsed.data });
+          content = result.content;
+          failed = result.failed;
 
-      if (!parsed.success) {
-        // Model gets the prettified zod error, e.g.
-        //   'Invalid arguments: query: Expected string, received number'
-        content = `Invalid arguments: ${z.prettifyError(parsed.error)}`;
-        failed = true;
-        continue; // skip this call, let the model see the error next turn
-      }
-
-      const result = await runTool({ tool: validTool, ctx, args: parsed.data });
-      content = result.content;
-      failed = result.failed;
-
-      // Citations go to the UI, not the model:
-      //   { type: 'sources', sources: [{ sourceId, title, ... }] }
-      if (result.sources?.length) {
-        yield {
-          type: 'sources',
-          sources: result.sources,
-        };
+          // Citations go to the UI, not the model:
+          //   { type: 'sources', sources: [{ sourceId, title, ... }] }
+          if (result.sources?.length) {
+            yield {
+              type: 'sources',
+              sources: result.sources,
+            };
+          }
+        }
       }
 
       // Same event with status 'done' | 'error' → clears/replaces the spinner.

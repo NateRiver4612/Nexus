@@ -3,10 +3,7 @@ import { eq } from 'drizzle-orm';
 import { aiRunStages, type AiRunStage, type AiRunStageResult, type Db } from '@nexus/db';
 
 /** Only the kickoff stages that are worth checkpointing across a queue retry. */
-export type KickoffStageKey = Extract<
-  AiRunStage,
-  'drafting_milestones' | 'drafting_summary'
->;
+export type KickoffStageKey = Extract<AiRunStage, 'drafting_milestones' | 'drafting_summary'>;
 
 /**
  * Persistence for kickoff's per-stage results (`ai_run_stages`). Keyed by `aiRunId` + `stage`

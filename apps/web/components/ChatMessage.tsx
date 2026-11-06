@@ -5,6 +5,7 @@ import type { ChatCitationType, MessageType } from '@nexus/types';
 import { chatCitationsSchema } from '@nexus/zod-schemas';
 
 import { cn } from '@/lib/utils';
+import { ChatSources } from './ChatSources';
 
 function Markdown({ children }: { children: string }) {
   return (
@@ -81,11 +82,7 @@ export function ChatMessage({
         !content && isStreaming && <p className="text-sm text-muted-foreground">Thinking…</p>
       )}
       {content && <Markdown>{content}</Markdown>}
-      {sources && sources.length > 0 && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Sources: {sources.map((source) => source.name).join(', ')}
-        </p>
-      )}
+      {sources && <ChatSources sources={sources} />}
       {partial && <p className="mt-1 text-xs text-muted-foreground">Stopped</p>}
     </div>
   );

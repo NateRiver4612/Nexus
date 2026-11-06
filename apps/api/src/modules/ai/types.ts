@@ -66,6 +66,23 @@ export type AIProvider = {
   generateText(input: Omit<ChatInput, 'tools'>): Promise<{ text: string; usage: Usage }>;
 };
 
+export type WebSearchInput = { query: string; maxResults?: number };
+
+export type WebSearchResult = {
+  title: string;
+  url: string;
+  content: string;
+  publishedDate: string | null;
+  score: number | null;
+  favicon: string | null;
+};
+
+/** The abstract web search provider the chat tool depends on, so Tavily stays swappable. */
+export type WebSearchProvider = {
+  name: string;
+  search(input: WebSearchInput): Promise<WebSearchResult[]>;
+};
+
 type TokenLogprob = {
   token: string;
   logprob: number;
