@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import type { ChatCitationType, MessageType } from '@nexus/types';
-import { chatCitationsSchema } from '@nexus/zod-schemas';
+import { chatCitationsSchema, citationKey } from '@nexus/zod-schemas';
 
 import { cn } from '@/lib/utils';
 
@@ -83,7 +83,24 @@ export function ChatMessage({
       {content && <Markdown>{content}</Markdown>}
       {sources && sources.length > 0 && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Sources: {sources.map((source) => source.name).join(', ')}
+          Sources:{' '}
+          {sources.map((source, index) => (
+            <span key={citationKey(source)}>
+              {index > 0 && ', '}
+              {source.kind === 'web' ? (
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {source.name}
+                </a>
+              ) : (
+                source.name
+              )}
+            </span>
+          ))}
         </p>
       )}
       {partial && <p className="mt-1 text-xs text-muted-foreground">Stopped</p>}

@@ -329,7 +329,7 @@ async function poll({
 
     let result;
     try {
-      result = await provider.getResearch({ requestId });
+      result = await provider.pollResearch({ requestId });
       transientFailures = 0;
     } catch (error) {
       // Polling never re-submits, so transient errors are cheap to retry. Hopeless errors

@@ -261,7 +261,7 @@ export type ProjectResearchRunType = z.infer<typeof projectResearchRunSchema>;
 export type ResearchProviderType = {
   name: string;
   startResearch: (params: StartResearchParamsType) => Promise<StartResearchResultType>;
-  getResearch: (params: { requestId: string }) => Promise<ResearchPollType>;
+  pollResearch: (params: { requestId: string }) => Promise<ResearchPollType>;
 };
 
 type AiTaskResultEntry = z.output<typeof aiTaskDataSchema>;

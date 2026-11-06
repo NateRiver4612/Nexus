@@ -12,7 +12,7 @@ import { generateKickoffPlan, type KickoffCheckpoint } from '../kickoff/generate
 import { mergeUsage } from '../kickoff/generate/toolCall';
 import { KickoffStageRepository, type KickoffStageKey } from '../kickoff/repository';
 import { runResearch } from '../research/stage';
-import { createTavilyProvider } from './providers/tavily';
+import { tavilyProvider } from './providers/tavily';
 import { eq, sql } from 'drizzle-orm';
 import { onComplete } from '../../startWorkers';
 
@@ -83,7 +83,7 @@ const AIWorker = () => {
             buildKnowledgeContext({ db, projectId, stepData }),
             runResearch({
               db,
-              provider: createTavilyProvider(),
+              provider: tavilyProvider,
               projectId,
               runId,
               stepData,
