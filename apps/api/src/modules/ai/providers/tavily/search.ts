@@ -5,7 +5,7 @@ import type { WebSearchInput, WebSearchResult } from '../../types';
 import { getClient } from './client';
 import { ResearchProviderError, toResearchError } from './errors';
 
-const DEFAULT_MAX_RESULTS = 5;
+const DEFAULT_MAX_RESULTS = 10;
 const SEARCH_TIMEOUT_SECONDS = 15;
 
 // Tavily marks no result field as required, and the SDK's casing for the date has varied,
@@ -17,6 +17,7 @@ const rawResultSchema = z.object({
   score: z.number().nullish(),
   publishedDate: z.string().nullish(),
   published_date: z.string().nullish(),
+  favicon: z.string().nullish(),
 });
 
 const rawSearchResponseSchema = z.object({ results: z.array(rawResultSchema) });
@@ -38,6 +39,7 @@ export async function search({
       includeAnswer: false,
       includeRawContent: false,
       includeImages: false,
+      includeFavicon: true,
       // Not in the SDK's typed options yet; Tavily forwards unknown keys to the REST field.
       // Without this, `publishedDate` is never populated for `topic: 'general'`.
       include_published_date: true,
@@ -57,7 +59,8 @@ export async function search({
     });
   }
 
-  return parsed.data.results.flatMap((result) => {
+  // Tavily usually honors maxResults, but cap it here too: one call must never exceed the limit.
+  return parsed.data.results.slice(0, maxResults).flatMap((result) => {
     // A hit without a URL can't be cited, so it is useless to the chat; drop it quietly.
     if (!result.url) return [];
 
@@ -68,6 +71,7 @@ export async function search({
         content: result.content?.trim() ?? '',
         publishedDate: result.publishedDate ?? result.published_date ?? null,
         score: result.score ?? null,
+        favicon: result.favicon ?? null,
       },
     ];
   });

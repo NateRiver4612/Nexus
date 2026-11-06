@@ -36,13 +36,11 @@ function readCheckpoint(rows: AiRunStageResult[]): KickoffCheckpoint {
     // Every persisted stage's tokens were paid for, even one whose saved shape no
     // longer validates and gets regenerated — so count them all.
     usage: mergeUsage(
-      ...rows.map(
-        (row): CompletionUsage => ({
-          prompt_tokens: row.inputTokens,
-          completion_tokens: row.outputTokens,
-          total_tokens: row.inputTokens + row.outputTokens,
-        }),
-      ),
+      ...rows.map((row): CompletionUsage => ({
+        prompt_tokens: row.inputTokens,
+        completion_tokens: row.outputTokens,
+        total_tokens: row.inputTokens + row.outputTokens,
+      })),
     ),
   };
 }

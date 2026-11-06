@@ -74,6 +74,7 @@ export type WebSearchResult = {
   content: string;
   publishedDate: string | null;
   score: number | null;
+  favicon: string | null;
 };
 
 /** The abstract web search provider the chat tool depends on, so Tavily stays swappable. */

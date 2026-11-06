@@ -210,6 +210,9 @@ const webCitationSchema = z.object({
   // The URL is the only stable identity a web result has, so it is also the dedupe key.
   url: z.url(),
   name: z.string(),
+  // Display-only. Optional because citations stored before favicons existed must still parse;
+  // it stays a plain string so one malformed URL never hides the whole citation list.
+  favicon: z.string().nullish(),
 });
 
 export const chatCitationSchema = z.union([knowledgeCitationSchema, webCitationSchema]);
