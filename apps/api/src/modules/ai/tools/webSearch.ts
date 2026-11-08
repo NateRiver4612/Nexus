@@ -4,6 +4,7 @@ import { tavilyProvider } from '../providers/tavily';
 import { isRetryableTavilyError } from '../providers/tavily/errors';
 import { truncate } from '../chat/contextBuilder';
 import { defineTool, type WebSearchResult } from '../types';
+import { normalizeUrl } from './urlAllowlist';
 
 const DEFAULT_LIMIT = 5;
 // 8 results x ~500-char excerpts plus titles and URLs stays under the chat loop's 6000-char
@@ -59,7 +60,7 @@ export const webSearchTool = defineTool({
       .optional()
       .describe('Results to return (default 5).'),
   }),
-  async run({ args }) {
+  async run({ ctx, args }) {
     const results = await searchWithRetry({
       query: args.query,
       maxResults: args.maxResults ?? DEFAULT_LIMIT,
@@ -67,6 +68,12 @@ export const webSearchTool = defineTool({
 
     if (results.length === 0) {
       return { content: 'No web results were found for that query. Try different keywords.' };
+    }
+
+    // Let read_url follow up on what was just found, and nothing else the model might be told.
+    for (const result of results) {
+      const url = normalizeUrl({ url: result.url });
+      if (url) ctx.allowedUrls.add(url);
     }
 
     return {

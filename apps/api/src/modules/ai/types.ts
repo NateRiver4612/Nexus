@@ -15,7 +15,16 @@ export type ChatMessage =
 
 export type ToolDef = { name: string; description: string; parameters: z.ZodType };
 
-export type ToolContext = { db: Db; projectId: string; userId: string };
+export type ToolContext = {
+  db: Db;
+  projectId: string;
+  userId: string;
+  /**
+   * URLs `read_url` may open this turn: every URL the user wrote in the loaded history, plus
+   * every URL `web_search` returned. Mutable so tools can add to it mid-turn.
+   */
+  allowedUrls: Set<string>;
+};
 
 export type ToolResult = {
   /** Text handed back to the model. Treated as data, truncated by the loop. */
@@ -30,6 +39,11 @@ export type Tool = {
   parameters: z.ZodType;
   /** Shown in the UI while the tool runs. */
   label: string;
+  /**
+   * Higher cap for the loop's result truncation (default 6000). Tools that return long text —
+   * like `read_url` reading an article — opt into more, since the model needs the whole page.
+   */
+  maxResultChars?: number;
   /** `args` have already been validated against `parameters` by the loop. */
   run(input: { ctx: ToolContext; args: unknown }): Promise<ToolResult>;
 };
@@ -83,6 +97,19 @@ export type WebSearchProvider = {
   search(input: WebSearchInput): Promise<WebSearchResult[]>;
 };
 
+export type WebExtractInput = { urls: string[]; focus?: string };
+
+export type WebExtractResult = {
+  pages: { url: string; content: string }[];
+  failed: { url: string; reason: string }[];
+};
+
+/** The abstract page-reading provider the chat tool depends on, so Tavily stays swappable. */
+export type WebExtractProvider = {
+  name: string;
+  extract(input: WebExtractInput): Promise<WebExtractResult>;
+};
+
 type TokenLogprob = {
   token: string;
   logprob: number;
@@ -128,6 +155,7 @@ export function defineTool<P extends z.ZodType>(tool: {
   description: string;
   parameters: P;
   label: string;
+  maxResultChars?: number;
   run(input: { ctx: ToolContext; args: z.infer<P> }): Promise<ToolResult>;
 }): Tool {
   return { ...tool, run: ({ ctx, args }) => tool.run({ ctx, args: args as z.infer<P> }) };

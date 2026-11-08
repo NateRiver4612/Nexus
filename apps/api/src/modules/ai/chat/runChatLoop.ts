@@ -181,7 +181,8 @@ export async function* runChatLoop({
       //   { role: 'tool', toolCallId: 'call_1', content: '…up to 6000 chars…' }
       conversation.push({
         role: 'tool',
-        content: truncate({ text: content, max: MAX_TOOL_RESULT_CHARS }),
+        // Tools that return long text (read_url) opt into a higher cap via `maxResultChars`.
+        content: truncate({ text: content, max: validTool?.maxResultChars ?? MAX_TOOL_RESULT_CHARS }),
         toolCallId: call.id,
       });
     }

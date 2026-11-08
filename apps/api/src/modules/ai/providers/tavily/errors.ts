@@ -35,7 +35,13 @@ const SEARCH_RULES: ErrorRule[] = [
   { kind: 'unavailable', pattern: /internal server error|^5\d\d error|timed out|fetch failed/ },
 ];
 
-const RULES = { start: START_RULES, poll: POLL_RULES, search: SEARCH_RULES } as const;
+// Extract is also read-only, so it shares the search rules.
+const RULES = {
+  start: START_RULES,
+  poll: POLL_RULES,
+  search: SEARCH_RULES,
+  extract: SEARCH_RULES,
+} as const;
 
 export class ResearchProviderError extends Error {
   readonly kind: ResearchErrorKind;
@@ -58,12 +64,13 @@ export function toResearchError({
   operation,
 }: {
   error: unknown;
-  operation: 'start' | 'poll' | 'search';
+  operation: 'start' | 'poll' | 'search' | 'extract';
 }) {
   if (error instanceof ResearchProviderError) return error;
 
   const raw = error instanceof Error ? error.message : String(error);
-  const scope = operation === 'search' ? 'search' : `research ${operation}`;
+  const scope =
+    operation === 'search' || operation === 'extract' ? operation : `research ${operation}`;
   const message = `Tavily ${scope} failed: ${raw}`;
   const text = raw.toLowerCase();
 
@@ -71,7 +78,7 @@ export function toResearchError({
   if (rule) return new ResearchProviderError({ kind: rule.kind, message });
 
   // On start the task may already exist, so an unknown failure is treated as ambiguous and
-  // not retried. Poll and search never re-submit, so those are safe to retry.
+  // not retried. Poll, search and extract never re-submit, so those are safe to retry.
   const kind = operation === 'start' ? 'timeout' : 'unavailable';
   console.warn(`[tavily] unclassified ${scope} error (kind: ${kind}): ${raw}`);
   return new ResearchProviderError({ kind, message });
