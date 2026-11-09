@@ -48,7 +48,11 @@ export const searchKnowledgeTool = defineTool({
     const cited = new Map(
       chunks.map((chunk) => [
         chunk.knowledgeSourceId,
-        { sourceId: chunk.knowledgeSourceId, name: nameOf(chunk.knowledgeSourceId) },
+        {
+          kind: 'knowledge' as const,
+          sourceId: chunk.knowledgeSourceId,
+          name: nameOf(chunk.knowledgeSourceId),
+        },
       ]),
     );
 

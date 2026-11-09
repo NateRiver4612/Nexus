@@ -1,5 +1,5 @@
 import { AIProviderError } from '../ai/providers/deepseek/errors';
-import { ResearchProviderError } from '../ai/providers/tavily/errors';
+import { isRetryableTavilyError } from '../ai/providers/tavily/errors';
 
 const TRANSIENT_KINDS = new Set(['unavailable', 'rate_limited']);
 
@@ -12,5 +12,5 @@ const TRANSIENT_KINDS = new Set(['unavailable', 'rate_limited']);
  * create and bill a second research task. Poll-phase errors stay retryable.
  */
 export const isRetryableResearchError = ({ error }: { error: unknown }) =>
-  (error instanceof ResearchProviderError && TRANSIENT_KINDS.has(error.kind)) ||
+  isRetryableTavilyError({ error }) ||
   (error instanceof AIProviderError && TRANSIENT_KINDS.has(error.kind));

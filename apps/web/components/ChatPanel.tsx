@@ -111,7 +111,7 @@ export function ChatPanel({
           onKeyDown={onKeyDown}
           placeholder="Message the assistant… (Shift+Enter for a new line)"
           maxLength={20_000}
-          className="max-h-40 min-h-10 resize-none"
+          className="max-h-40 min-h-10 resize-none outline-none"
           rows={1}
         />
         {isStreaming ? (

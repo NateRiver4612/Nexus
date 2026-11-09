@@ -5,6 +5,7 @@ import type {
   UpdateAiSuggestionInputType,
   UpdateConversationInputType,
 } from '@nexus/types';
+import { citationKey } from '@nexus/zod-schemas';
 
 import {
   createAiSuggestion,
@@ -178,7 +179,8 @@ export function useSendMessage({
                   sources: [
                     ...turn.sources,
                     ...event.sources.filter(
-                      (source) => !turn.sources.some((known) => known.sourceId === source.sourceId),
+                      (source) =>
+                        !turn.sources.some((known) => citationKey(known) === citationKey(source)),
                     ),
                   ],
                 },

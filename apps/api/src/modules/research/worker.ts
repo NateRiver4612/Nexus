@@ -4,7 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import { aiRuns, getDb } from '@nexus/db';
 
 import { getRedis } from '../../redis';
-import { createTavilyProvider } from '../ai/providers/tavily';
+import { tavilyProvider } from '../ai/providers/tavily';
 import { runResearch } from './stage';
 import { ResearchRepository } from './repository';
 import { RESEARCH_QUEUE, type AIResearchJob } from './queues';
@@ -35,7 +35,7 @@ const ResearchWorker = () => {
 
       const research = await runResearch({
         db,
-        provider: createTavilyProvider(),
+        provider: tavilyProvider,
         projectId,
         runId,
         stepData,

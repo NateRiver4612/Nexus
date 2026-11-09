@@ -1,7 +1,6 @@
 import type { ResearchSourceType } from '@nexus/types';
-import { Globe } from 'lucide-react';
-import { useState } from 'react';
 
+import { SourceFavicon } from '@/components/SourceFavicon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -22,26 +21,6 @@ const getDomain = (url: string) => {
   } catch {
     return url;
   }
-};
-
-const SourceFavicon = ({ favicon }: { favicon: string }) => {
-  const [failed, setFailed] = useState(false);
-
-  if (!favicon || failed) {
-    return <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden />;
-  }
-
-  return (
-    <img
-      src={favicon}
-      alt=""
-      loading="lazy"
-      width={16}
-      height={16}
-      onError={() => setFailed(true)}
-      className="size-4 shrink-0 rounded-sm object-contain"
-    />
-  );
 };
 
 const SourceSkeletonRow = () => {
