@@ -73,3 +73,15 @@ export async function deleteKnowledgeSource(
     }),
   )) as SuccessResponse<KnowledgeSourceType>;
 }
+
+export async function deleteKnowledgeSources(
+  projectId: string,
+  sourceIds: string[],
+): Promise<SuccessResponse<KnowledgeSourceListType>> {
+  return (await handleResponse(
+    await apiClient.api.v1.knowledge[':projectId'].sources.$delete({
+      param: { projectId },
+      json: { sourceIds },
+    }),
+  )) as SuccessResponse<KnowledgeSourceListType>;
+}

@@ -78,6 +78,29 @@ export function KnowledgeService(db: Db) {
     return toSourceView(deleted);
   }
 
+  async function deleteSources(
+    projectId: string,
+    sourceIds: string[],
+  ): Promise<KnowledgeSourceType[]> {
+    const deleted = await repository.deleteSources({ projectId, sourceIds });
+
+    // Queue storage cleanup per deleted row — the DB delete already cascaded
+    // chunks, but file sources still have an object in storage to remove.
+    for (const row of deleted) {
+      if (row.storageKey) {
+        await enqueueKnowledge({
+          name: KNOWLEDGE_QUEUE_REMOVE,
+          jobId: `ingest-${row.id}-cleanup`,
+          data: {
+            storageKey: row.storageKey,
+          },
+        });
+      }
+    }
+
+    return deleted.map(toSourceView);
+  }
+
   async function getUploadUrl(
     input: CreateUploadUrlInputType,
   ): Promise<CreateUploadUrlResponseType> {
@@ -181,7 +204,7 @@ export function KnowledgeService(db: Db) {
     }
   }
 
-  return { createSources, listSources, getUploadUrl, processSource, deleteSource };
+  return { createSources, listSources, getUploadUrl, processSource, deleteSource, deleteSources };
 }
 
 export type KnowledgeServiceType = ReturnType<typeof KnowledgeService>;

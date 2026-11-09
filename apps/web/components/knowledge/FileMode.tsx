@@ -32,6 +32,7 @@ export function FileMode({
   onAddText,
   defaultFiles,
   onHandleSubmit,
+  selectable,
 }: {
   projectId: string;
   onCreate: CreateCallback;
@@ -39,6 +40,7 @@ export function FileMode({
   onAddText: () => void;
   defaultFiles?: KnowledgeSourceListType;
   onHandleSubmit?: () => void;
+  selectable?: boolean;
 }) {
   const { getValues, setValue, watch } = useFormContext<SourceFormValues>();
   const files = watch('files');
@@ -209,7 +211,7 @@ export function FileMode({
           e.target.value = '';
         }}
       />
-      <SourceList projectId={projectId} showEmptyText={false} />
+      <SourceList projectId={projectId} showEmptyText={false} selectable={selectable} />
 
       {error && <p className="flex items-center gap-1.5 text-sm text-destructive">{error}</p>}
     </div>

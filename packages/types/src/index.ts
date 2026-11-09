@@ -13,6 +13,7 @@ import {
   createConversationSchema,
   createKnowledgeItemSchema,
   createKnowledgeSourcesSchema,
+  deleteKnowledgeSourcesSchema,
   createMessageSchema,
   createNotificationSchema,
   createPlannerItemSchema,
@@ -213,6 +214,7 @@ export type UpdateKnowledgeItemInputType = z.infer<typeof updateKnowledgeItemSch
 
 export type KnowledgeSourceType = z.infer<typeof knowledgeSourceSchema>;
 export type KnowledgeSourceListType = z.infer<typeof knowledgeSourceListSchema>;
+export type DeleteKnowledgeSourcesInputType = z.infer<typeof deleteKnowledgeSourcesSchema>;
 export type CreateKnowledgeSourcesInputType = z.infer<typeof createKnowledgeSourcesSchema>;
 export type CreateKnowledgeSourceItemType = CreateKnowledgeSourcesInputType[number];
 export type CreateUploadUrlInputType = z.infer<typeof createUploadUrlSchema>;

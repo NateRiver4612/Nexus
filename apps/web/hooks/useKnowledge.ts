@@ -11,6 +11,7 @@ import {
   createKnowledgeSources,
   deleteKnowledgeItem,
   deleteKnowledgeSource,
+  deleteKnowledgeSources,
   getKnowledge,
   getKnowledgeSources,
   getKnowledgeUploadUrl,
@@ -89,6 +90,24 @@ export const useDeleteKnowledgeSource = createMutationHook(
     onSuccess(res, { projectId, sourceId }) {
       queryClient.setQueryData<KnowledgeSourceListType>(knowledgeKeys.sources(projectId), (old) =>
         old?.filter((source) => source.id !== sourceId),
+      );
+      queryClient.invalidateQueries({
+        queryKey: knowledgeKeys.sources(projectId),
+      });
+      toast.success(res.message);
+    },
+    onError: toastError,
+  }),
+);
+
+export const useDeleteKnowledgeSources = createMutationHook(
+  ({ projectId, sourceIds }: { projectId: string; sourceIds: string[] }) =>
+    deleteKnowledgeSources(projectId, sourceIds),
+  (queryClient) => ({
+    onSuccess(res, { projectId, sourceIds }) {
+      const deletedIds = new Set(sourceIds);
+      queryClient.setQueryData<KnowledgeSourceListType>(knowledgeKeys.sources(projectId), (old) =>
+        old?.filter((source) => !deletedIds.has(source.id)),
       );
       queryClient.invalidateQueries({
         queryKey: knowledgeKeys.sources(projectId),

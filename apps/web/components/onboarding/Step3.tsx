@@ -122,7 +122,7 @@ export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
   return (
     <FormProvider {...form}>
       <div className="space-y-4 text-left">
-        <UploadKnowledgeSource projectId={projectId} />
+        <UploadKnowledgeSource projectId={projectId} selectable />
         {error && <p className="flex items-center gap-1.5 text-sm text-destructive">{error}</p>}
       </div>
     </FormProvider>
