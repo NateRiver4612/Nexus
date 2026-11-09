@@ -42,6 +42,12 @@ export async function mapInputToRow(
   };
 }
 
+/**
+ * Publishes an ingestion status update to the project's Redis pub/sub channel
+ * (`knowledge:${projectId}`). Consumed by the SSE route
+ * `GET /api/v1/knowledge/:projectId/sources/events` (routes/index.ts), which forwards
+ * each message to the client as `event: source`. Called from `KnowledgeService.processSource`.
+ */
 export function publishStatus(
   projectId: string,
   sourceId: string,

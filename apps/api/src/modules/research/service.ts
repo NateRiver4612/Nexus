@@ -52,9 +52,9 @@ function buildFallbackStepData(project: typeof projects.$inferSelect): Onboardin
 export function ResearchService(db: Db) {
   const repository = ResearchRepository(db);
 
-  /** The most recent completed research for a project, or null. */
-  async function getNew(projectId: string): Promise<ProjectResearchType | null> {
-    const row = await repository.getNewByProjectId(projectId);
+  /** The most recent research attempt for a project (any status), or null. */
+  async function getLatest(projectId: string): Promise<ProjectResearchType | null> {
+    const row = await repository.getLatestByProjectId(projectId);
     return row ? toProjectResearchView(row) : null;
   }
 
@@ -127,7 +127,7 @@ export function ResearchService(db: Db) {
     return { runId: aiRun.id };
   }
 
-  return { getNew, getActive, start, list };
+  return { getLatest, getActive, start, list };
 }
 
 export type ResearchServiceType = ReturnType<typeof ResearchService>;

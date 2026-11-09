@@ -21,7 +21,7 @@ export const getProjectResearchRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: { 'application/json': { schema: projectResearchResponseSchema } },
-        description: 'Latest project research, or null when none exists',
+        description: 'Latest research attempt (any status), or null when none exists',
       },
       401: {
         content: { 'application/json': { schema: errorResponseSchema } },
@@ -37,7 +37,7 @@ export const getProjectResearchRoute = defineOpenAPIRoute({
     const { projectId } = c.req.valid('param');
 
     const db = getDb();
-    const research = await ResearchService(db).getNew(projectId);
+    const research = await ResearchService(db).getLatest(projectId);
 
     return c.json(research, 200);
   },

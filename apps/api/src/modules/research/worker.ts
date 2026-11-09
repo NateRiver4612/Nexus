@@ -93,16 +93,21 @@ const ResearchWorker = () => {
     const maxAttempts = job.opts.attempts ?? 1;
     const finalAttempt = job.attemptsMade >= maxAttempts;
 
-    if (finalAttempt) {
-      await db
-        .update(aiRuns)
-        .set({
-          status: 'failed',
-          errorMessage: String(err),
-          updatedAt: new Date(),
-        })
-        .where(eq(aiRuns.id, runId));
-    }
+    await db
+      .update(aiRuns)
+      .set(
+        finalAttempt
+          ? {
+              status: 'failed',
+              errorMessage: String(err),
+              completedAt: new Date(),
+              updatedAt: new Date(),
+            }
+          : // Provider retries are inline in runResearch; this only fires for unexpected
+            // job failures (a crash). Keep the run processing and surface the retry.
+            { stage: 'retrying', stageUpdatedAt: new Date(), updatedAt: new Date() },
+      )
+      .where(eq(aiRuns.id, runId));
   });
 
   return worker;

@@ -57,6 +57,8 @@ export const useStartProjectResearch = createMutationHook(
     onSuccess: (result, variables) => {
       queryClient.setQueryData(researchKeys.active(variables.projectId), result);
       queryClient.invalidateQueries({ queryKey: researchKeys.active(variables.projectId) });
+      // The latest attempt flips to pending, which clears the previous failure note.
+      queryClient.invalidateQueries({ queryKey: researchKeys.project(variables.projectId) });
     },
   }),
 );
