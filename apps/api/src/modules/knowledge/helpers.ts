@@ -25,7 +25,8 @@ export async function mapInputToRow(
   if (input.sourceType === 'url' || input.sourceType === 'youtube') {
     return {
       projectId,
-      name: input.sourceType === 'youtube' ? 'YouTubeURL' : 'UnknownURL',
+      name:
+        input.sourceType === 'youtube' ? `YouTubeURL (${input.url})` : `UnknownURL (${input.url})`,
       sourceType: input.sourceType,
       sourceRef: input.url,
       status: 'pending',
