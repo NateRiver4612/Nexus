@@ -1,10 +1,11 @@
 import { z } from '@hono/zod-openapi';
 
+import { normalizeUrl } from '@nexus/shared-helpers';
+
 import { tavilyProvider } from '../providers/tavily';
 import { isRetryableTavilyError } from '../providers/tavily/errors';
 import { truncate } from '../chat/contextBuilder';
 import { defineTool, type WebSearchResult } from '../types';
-import { normalizeUrl } from './urlAllowlist';
 
 const DEFAULT_LIMIT = 5;
 // 8 results x ~500-char excerpts plus titles and URLs stays under the chat loop's 6000-char

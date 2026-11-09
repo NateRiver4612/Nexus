@@ -4,7 +4,7 @@ import { errorResponseSchema, onboardingStateSchema } from '@nexus/zod-schemas';
 import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
-import { OnboardingService } from '../service';
+import { OnboardingService } from '../../onboarding/service';
 
 export const getOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({

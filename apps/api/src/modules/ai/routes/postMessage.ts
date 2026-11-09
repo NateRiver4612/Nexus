@@ -33,9 +33,10 @@ import type {
   Usage,
   ChatToolTraceType,
 } from '@nexus/types';
+import { collectUrls } from '@nexus/shared-helpers';
+
 import { generateConversationTitle } from '../chat/generateTitle';
 import { runChatLoop } from '../chat/runChatLoop';
-import { collectUrls } from '../tools/urlAllowlist';
 import { projectChatTools, webSearchEnabled } from '../tools/registry';
 
 const HISTORY_LIMIT = 20;

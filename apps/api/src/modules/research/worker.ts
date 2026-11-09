@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq';
+import { UnrecoverableError, Worker } from 'bullmq';
 import { eq, sql } from 'drizzle-orm';
 
 import { aiRuns, getDb } from '@nexus/db';
@@ -93,7 +93,7 @@ const ResearchWorker = () => {
     const runId = job.data.jobId;
 
     const maxAttempts = job.opts.attempts ?? 1;
-    const finalAttempt = job.attemptsMade >= maxAttempts;
+    const finalAttempt = job.attemptsMade >= maxAttempts || err instanceof UnrecoverableError;
 
     await db
       .update(aiRuns)

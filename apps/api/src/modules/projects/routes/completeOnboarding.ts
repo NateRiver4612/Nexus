@@ -22,7 +22,7 @@ import {
 import { requireOnboardingForProject } from '../middlewares';
 import { getUser } from '../../../auth-middleware';
 import { getOnboarding, getProject } from '../../../lib/hono-context';
-import { toProjectCategory } from '../service';
+import { toProjectCategory } from '../../../helpers';
 import { calculateProjectProgress } from '../../milestones/progress';
 
 export const completeProjectOnboardingRoute = defineOpenAPIRoute({

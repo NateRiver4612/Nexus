@@ -1,10 +1,11 @@
 import { z } from '@hono/zod-openapi';
 
+import { normalizeUrl } from '@nexus/shared-helpers';
+
 import { truncate } from '../chat/contextBuilder';
 import { tavilyProvider } from '../providers/tavily';
 import { isRetryableTavilyError } from '../providers/tavily/errors';
 import { defineTool } from '../types';
-import { normalizeUrl } from './urlAllowlist';
 
 // The loop's default cap is 6000 chars, far too small to read an article, so this tool asks for
 // more (see `maxResultChars`). The body budget leaves room for URLs, headers and failure lines.

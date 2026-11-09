@@ -1,6 +1,10 @@
+import { UnrecoverableError } from 'bullmq';
+import OpenAI from 'openai';
+
 import { presignKnowledgePutUrl } from '../../storage';
 import { generateEmbeddings } from '../../embeddings';
 import { env } from '../../env';
+import { withUnrecoverable } from '../../queue-errors';
 import { chunkText } from './chunk';
 import { extractSourceText } from './extract';
 import { extractFromYoutube } from './youtube';
@@ -119,10 +123,19 @@ export function KnowledgeService(db: Db) {
 
       const text = sanitizeExtractedText(rawText);
       const chunks = chunkText(text);
-      if (chunks.length === 0) throw new Error('no text could be extracted');
+      if (chunks.length === 0) throw new UnrecoverableError('no text could be extracted');
 
       const canEmbed = Boolean(env.OPENAI_API_KEY);
-      const vectors = canEmbed ? await generateEmbeddings(chunks) : [];
+      let vectors: number[][] = [];
+      if (canEmbed) {
+        // 400/401/403/404 (bad input, bad key, forbidden, missing model) won't improve on
+        // retry; 429/5xx/network still will.
+        vectors = await withUnrecoverable({
+          promise: generateEmbeddings(chunks),
+          isUnrecoverable: (error) =>
+            error instanceof OpenAI.APIError && [400, 401, 403, 404].includes(error.status ?? 0),
+        });
+      }
 
       const rows = chunks.map((content, index) => ({
         knowledgeSourceId: source.id,
@@ -153,13 +166,17 @@ export function KnowledgeService(db: Db) {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
 
-      if (isFinalAttempt) {
+      // Unrecoverable errors (bad URL, missing file, unavailable source, invalid embedding
+      // request, …) never succeed on retry — mark the source failed now and don't replay it.
+      const permanent = error instanceof UnrecoverableError;
+
+      if (permanent || isFinalAttempt) {
         await repository.updateSource(sourceId, { status: 'failed', errorMessage: message });
         // Emit the terminal failure (with message) so the UI can show the error.
         await publishStatus(source.projectId, sourceId, 'failed', message);
       }
 
-      // Always rethrow so BullMQ retries; only the last attempt may leave the source failed.
+      // Rethrow so BullMQ retries transient failures; permanent ones fail the job immediately.
       throw error;
     }
   }

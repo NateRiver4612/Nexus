@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { collectUrls, normalizeUrl } from '../urlAllowlist';
+import { collectUrls, normalizeUrl } from '@nexus/shared-helpers';
 
 describe('normalizeUrl', () => {
   test('lowercases the host and drops the fragment', () => {

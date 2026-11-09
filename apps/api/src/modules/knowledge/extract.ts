@@ -1,4 +1,10 @@
+import { UnrecoverableError } from 'bullmq';
+
 import { getKnowledgeObject } from '../../storage';
+import { env } from '../../env';
+import { TRANSIENT_URL_FAILURE, withUnrecoverable } from '../../queue-errors';
+import { tavilyProvider } from '../ai/providers/tavily';
+import { isRetryableTavilyError } from '../ai/providers/tavily/errors';
 import { extractFromYoutube } from './youtube';
 
 export type ExtractableSource = {
@@ -23,6 +29,7 @@ export async function extractSourceText(source: ExtractableSource): Promise<stri
       return (await extractFromYoutube(source.sourceRef)).content;
     case 'audio':
     case 'video':
+      // Audio/video extraction is coming soon — intentionally kept a plain Error until then.
       throw new Error('audio/video ingestion is deferred to a later pass');
     case 'file':
     default:
@@ -31,8 +38,22 @@ export async function extractSourceText(source: ExtractableSource): Promise<stri
 }
 
 async function extractFromFile(source: ExtractableSource): Promise<string> {
-  if (!source.storageKey) throw new Error('file source has no storageKey');
-  const { body, contentType } = await getKnowledgeObject(source.storageKey);
+  if (!source.storageKey) throw new UnrecoverableError('file source has no storageKey');
+
+  // A missing object won't appear on retry; other S3 errors (network, 5xx) are worth retrying.
+  const object = await withUnrecoverable({
+    promise: getKnowledgeObject(source.storageKey),
+    isUnrecoverable: (error) => {
+      const { name, $metadata } = error as {
+        name?: string;
+        $metadata?: { httpStatusCode?: number };
+      };
+      return name === 'NoSuchKey' || name === 'NotFound' || $metadata?.httpStatusCode === 404;
+    },
+    message: 'The uploaded file could not be found.',
+  });
+
+  const { body, contentType } = object;
   const mime = source.mimeType ?? contentType;
 
   if (mime === 'application/pdf') return extractPdf(body);
@@ -86,21 +107,45 @@ async function extractImage(buffer: Buffer): Promise<string> {
   return data.text;
 }
 
+/**
+ * Reads a web page through Tavily, so our servers never connect to a user-supplied address and
+ * JavaScript-rendered pages work. Only https links are accepted; a thrown Tavily error is not
+ * retried here — the queue owns retries for transient failures.
+ */
 async function extractFromUrl(url?: string | null): Promise<string> {
-  if (!url) throw new Error('url source has no sourceRef');
-  const response = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Nexus/1.0)' },
-    redirect: 'follow',
+  if (!url) throw new UnrecoverableError('url source has no sourceRef');
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new UnrecoverableError('Only HTTPS links are supported.');
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new UnrecoverableError('Only HTTPS links are supported.');
+  }
+
+  if (!env.TAVILY_API_KEY) {
+    throw new UnrecoverableError('Web extraction is not configured.');
+  }
+
+  // Quota / bad key / bad request can't be fixed by retrying, and each retry costs credits.
+  // unavailable / rate_limited rethrow so BullMQ retries them.
+  const { pages, failed } = await withUnrecoverable({
+    promise: tavilyProvider.extract({ urls: [url] }),
+    isUnrecoverable: (error) => !isRetryableTavilyError({ error }),
   });
-  if (!response.ok)
-    throw new Error(`failed to fetch url: ${response.status} ${response.statusText}`);
-  const html = await response.text();
 
-  const { JSDOM } = await import('jsdom');
-  const { Readability } = await import('@mozilla/readability');
+  const page = pages[0];
 
-  const dom = new JSDOM(html, { url });
-  const article = new Readability(dom.window.document).parse();
+  if (!page) {
+    const reason = failed[0]?.reason ?? 'no content was returned';
+    const message = `failed to read url: ${reason}`;
+    // Tavily already escalated basic→advanced; a per-URL miss is usually permanent, so only
+    // clearly transient reasons are worth another attempt.
+    throw TRANSIENT_URL_FAILURE.test(reason) ? new Error(message) : new UnrecoverableError(message);
+  }
 
-  return article?.textContent ?? dom.window.document.body?.textContent ?? '';
+  return page.content;
 }
