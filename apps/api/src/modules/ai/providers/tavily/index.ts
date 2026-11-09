@@ -68,8 +68,11 @@ async function startResearch({
   const parsed = startResearchResultSchema.safeParse(response);
 
   if (!parsed.success) {
+    // A response came back, so Tavily may already have created and billed a task; we just
+    // can't read its id to poll it. Retrying would create and bill a second task, so mark
+    // this as `timeout` (ambiguous) and let the run fail instead of resubmitting.
     throw new ResearchProviderError({
-      kind: 'unavailable',
+      kind: 'timeout',
       message: 'Tavily research start returned an unexpected response shape',
     });
   }

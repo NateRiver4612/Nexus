@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -115,3 +116,32 @@ export type AiRun = typeof aiRuns.$inferSelect;
 export type NewAiRun = typeof aiRuns.$inferInsert;
 export type AiTask = typeof aiTask.enumValues;
 export type AiRunStage = (typeof runStage.enumValues)[number];
+
+/**
+ * Durable checkpoints for the expensive stages of a multi-call AI workflow, keyed by
+ * run so a BullMQ retry can skip work that already succeeded instead of re-paying for it.
+ *
+ * Kept out of `ai_runs` so the run row stays the DTO (no extra column leaking through the
+ * `getAiRun` response) and out of `project_research`, which owns the research task's own
+ * resume state and user-facing record. `data` is loosely typed because jsonb can't enforce
+ * a shape — validate with Zod on the way in and again on the way out.
+ */
+export const aiRunStages = pgTable(
+  'ai_run_stages',
+  {
+    id: idColumn(),
+    aiRunId: uuid('ai_run_id')
+      .notNull()
+      .references(() => aiRuns.id, { onDelete: 'cascade' }),
+    /** The `runStage` value that produced this result, e.g. `drafting_milestones`. */
+    stage: runStage('stage').notNull(),
+    data: jsonb('data').$type<unknown>().notNull(),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('ai_run_stages_run_stage_idx').on(table.aiRunId, table.stage)],
+);
+
+export type AiRunStageResult = typeof aiRunStages.$inferSelect;
+export type NewAiRunStageResult = typeof aiRunStages.$inferInsert;

@@ -57,6 +57,8 @@ const ResearchWorker = () => {
             errorMessage: row?.errorMessage ?? 'Research failed',
             completedAt: new Date(),
             updatedAt: new Date(),
+            inputTokens: research.usage?.prompt_tokens ?? 0,
+            outputTokens: research.usage?.completion_tokens ?? 0,
           })
           .where(eq(aiRuns.id, runId));
         return research;

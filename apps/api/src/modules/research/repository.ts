@@ -60,6 +60,8 @@ export const ResearchRepository = (db: Db) => ({
     provider: string;
     model: string;
     brief: string;
+    inputTokens?: number;
+    outputTokens?: number;
   }): Promise<ProjectResearch | undefined> {
     const rows = await db
       .insert(projectResearch)

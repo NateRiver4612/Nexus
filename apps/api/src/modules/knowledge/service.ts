@@ -153,9 +153,13 @@ export function KnowledgeService(db: Db) {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
 
-      await repository.updateSource(sourceId, { status: 'failed', errorMessage: message });
-      // Emit the terminal failure (with message) so the UI can show the error.
-      await publishStatus(source.projectId, sourceId, 'failed', message);
+      if (isFinalAttempt) {
+        await repository.updateSource(sourceId, { status: 'failed', errorMessage: message });
+        // Emit the terminal failure (with message) so the UI can show the error.
+        await publishStatus(source.projectId, sourceId, 'failed', message);
+      }
+
+      // Always rethrow so BullMQ retries; only the last attempt may leave the source failed.
       throw error;
     }
   }
