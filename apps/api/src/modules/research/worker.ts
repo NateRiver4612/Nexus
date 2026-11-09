@@ -4,7 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import { aiRuns, getDb } from '@nexus/db';
 
 import { getRedis } from '../../redis';
-import { createTavilyProvider } from '../ai/providers/tavily';
+import { tavilyProvider } from '../ai/providers/tavily';
 import { runResearch } from './stage';
 import { ResearchRepository } from './repository';
 import { RESEARCH_QUEUE, type AIResearchJob } from './queues';
@@ -35,7 +35,7 @@ const ResearchWorker = () => {
 
       const research = await runResearch({
         db,
-        provider: createTavilyProvider(),
+        provider: tavilyProvider,
         projectId,
         runId,
         stepData,
@@ -57,6 +57,8 @@ const ResearchWorker = () => {
             errorMessage: row?.errorMessage ?? 'Research failed',
             completedAt: new Date(),
             updatedAt: new Date(),
+            inputTokens: research.usage?.prompt_tokens ?? 0,
+            outputTokens: research.usage?.completion_tokens ?? 0,
           })
           .where(eq(aiRuns.id, runId));
         return research;

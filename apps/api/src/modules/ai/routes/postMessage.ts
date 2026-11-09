@@ -1,6 +1,7 @@
 import { createRoute, defineOpenAPIRoute, z } from '@hono/zod-openapi';
 
 import {
+  citationKey,
   conversationIdParamsSchema,
   createMessageSchema,
   errorResponseSchema,
@@ -34,7 +35,7 @@ import type {
 } from '@nexus/types';
 import { generateConversationTitle } from '../chat/generateTitle';
 import { runChatLoop } from '../chat/runChatLoop';
-import { projectChatTools } from '../tools/registry';
+import { projectChatTools, webSearchEnabled } from '../tools/registry';
 
 const HISTORY_LIMIT = 20;
 
@@ -134,6 +135,7 @@ export const postMessageRoute = defineOpenAPIRoute({
         content: buildProjectChatSystemPrompt({
           projectCard,
           today: new Date().toISOString().slice(0, 10),
+          webSearchEnabled,
         }),
       },
       ...history.messages.flatMap((message): ChatMessage[] =>
@@ -224,7 +226,7 @@ async function streamProjectChat({
     //   text      → full reply, saved as the assistant message
     //   usage     → merged token totals for the run row
     //   toolTrace → persisted metadata: [{ name: 'searchKnowledge', status: 'done' }]
-    //   citations → deduped by sourceId: Map<sourceId, ChatCitationType>
+    //   citations → deduped by citationKey: Map<string, ChatCitationType>
     let text = '';
     let usage: Usage = {
       inputTokens: 0,
@@ -277,8 +279,8 @@ async function streamProjectChat({
               status: event.status,
             } satisfies ChatToolEventType);
           } else if (event.type === 'sources') {
-            // Dedupe by sourceId so repeated citations collapse in the saved metadata.
-            for (const source of event.sources) citations.set(source.sourceId, source);
+            // Dedupe so repeated citations collapse in the saved metadata.
+            for (const source of event.sources) citations.set(citationKey(source), source);
             await send('sources', { sources: event.sources } satisfies ChatSourcesEventType);
           }
         }

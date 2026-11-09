@@ -188,9 +188,39 @@ export const chatDoneEventSchema = z.object({
 
 export const chatErrorEventSchema = z.object({ kind: z.string(), message: z.string() });
 
-/** A source the answer drew on. Streamed in `sources` and stored in `messages.metadata.citations`. */
-export const chatCitationSchema = z.object({ sourceId: idSchema, name: z.string() });
+/**
+ * A source the answer drew on. Streamed in `sources` and stored in `messages.metadata.citations`.
+ *
+ * The original `{ sourceId, name }` shape only fit knowledge sources. Web results are not DB
+ * rows, so they have a URL instead of an id; a union keeps both validated without making
+ * either identifier nullable.
+ */
+const knowledgeCitationSchema = z
+  .object({
+    // `kind` was added after citations were already stored, so it stays optional and is
+    // normalized below; otherwise old messages would stop rendering their sources.
+    kind: z.literal('knowledge').optional(),
+    sourceId: idSchema,
+    name: z.string(),
+  })
+  .transform((citation) => ({ ...citation, kind: 'knowledge' as const }));
+
+const webCitationSchema = z.object({
+  kind: z.literal('web'),
+  // The URL is the only stable identity a web result has, so it is also the dedupe key.
+  url: z.url(),
+  name: z.string(),
+  // Display-only. Optional because citations stored before favicons existed must still parse;
+  // it stays a plain string so one malformed URL never hides the whole citation list.
+  favicon: z.string().nullish(),
+});
+
+export const chatCitationSchema = z.union([knowledgeCitationSchema, webCitationSchema]);
 export const chatCitationsSchema = z.array(chatCitationSchema);
+
+/** Stable identity for deduping citations: knowledge sources by id, web results by URL. */
+export const citationKey = (citation: z.infer<typeof chatCitationSchema>) =>
+  citation.kind === 'web' ? citation.url : citation.sourceId;
 
 export const chatToolEventSchema = z.object({
   /** Pairs the `running` event with its `done` / `error` event. */

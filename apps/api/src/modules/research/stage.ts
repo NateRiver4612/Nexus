@@ -18,9 +18,9 @@ import {
 } from '@nexus/zod-schemas';
 
 import { env } from '../../env';
-import { isRetryableResearchError } from '../ai/providers/tavily/errors';
 import { buildResearchBrief } from '../kickoff/generate/researchBrief';
 import { ResearchRepository } from './repository';
+import { isRetryableResearchError } from './retry';
 
 const POLL_INTERVAL_MS = 5_000;
 /** How long a user may wait for research before it is abandoned. */
@@ -42,7 +42,7 @@ export type ResearchResult = {
 export type ResearchOutcome = {
   /** Null when research was skipped or failed — the plan is generated without it. */
   result: ResearchResult | null;
-  /** The research-brief builder's flash usage. Undefined when a resumed row skipped the call. */
+  /** The research-brief builder's usage, carried over from the saved row when this attempt resumed one. */
   usage?: CompletionUsage;
 };
 
@@ -74,6 +74,17 @@ const retryDelayMs = ({ attempt }: { attempt: number }) =>
   RETRY_BASE_DELAY_MS * 2 ** (attempt - 1) + Math.random() * 250;
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/** Rebuilds the brief-builder usage saved on a research row, when it was recorded. */
+function usageFromRow(row: ProjectResearch): CompletionUsage | undefined {
+  if (!row.inputTokens && !row.outputTokens) return undefined;
+
+  return {
+    prompt_tokens: row.inputTokens,
+    completion_tokens: row.outputTokens,
+    total_tokens: row.inputTokens + row.outputTokens,
+  };
+}
 
 /**
  * Runs a research task: build the brief, submit it, persist the request id, poll until
@@ -135,8 +146,11 @@ export async function runResearch({
     try {
       const existing = await researchRepository.getByAiRunId(runId);
 
-      if (existing?.status === 'completed') return { result: readCompleted(existing) };
-      if (existing?.status === 'failed') return { result: null };
+      // A resumed row already paid for the brief, so reuse its usage instead of dropping it.
+      if (existing) usage = usageFromRow(existing);
+
+      if (existing?.status === 'completed') return { result: readCompleted(existing), usage };
+      if (existing?.status === 'failed') return { result: null, usage };
 
       let row = existing;
 
@@ -257,6 +271,8 @@ async function createRow({
     provider: provider.name,
     model,
     brief,
+    inputTokens: usage?.prompt_tokens ?? 0,
+    outputTokens: usage?.completion_tokens ?? 0,
   });
 
   if (!row) throw new Error('Failed to insert project_research row');
@@ -313,7 +329,7 @@ async function poll({
 
     let result;
     try {
-      result = await provider.getResearch({ requestId });
+      result = await provider.pollResearch({ requestId });
       transientFailures = 0;
     } catch (error) {
       // Polling never re-submits, so transient errors are cheap to retry. Hopeless errors
