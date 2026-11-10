@@ -26,6 +26,7 @@ type DeleteConfirmDialog = {
    * before the Delete action becomes enabled (e.g. the item's title).
    */
   requiredText?: string;
+  title?: string;
 };
 
 const DeleteConfirmDialog = ({
@@ -36,6 +37,7 @@ const DeleteConfirmDialog = ({
   error,
   content,
   requiredText,
+  title = 'Delete this item?',
 }: DeleteConfirmDialog) => {
   const [typed, setTyped] = useState('');
 
@@ -55,9 +57,9 @@ const DeleteConfirmDialog = ({
             <FontAwesomeIcon
               icon={faTriangleExclamation}
               size="lg"
-              color="#d69d22"
+              color="#d64545"
             ></FontAwesomeIcon>
-            <p>Delete this item?</p>
+            <p>{title}</p>
           </AlertDialogTitle>
           <AlertDialogDescription>{content}</AlertDialogDescription>
         </AlertDialogHeader>
