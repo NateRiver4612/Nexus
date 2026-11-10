@@ -1,10 +1,8 @@
 import { UnrecoverableError } from 'bullmq';
-import OpenAI from 'openai';
 
 import { presignKnowledgePutUrl } from '../../storage';
-import { generateEmbeddings } from '../../embeddings';
 import { env } from '../../env';
-import { withUnrecoverable } from '../../queue-errors';
+import { getOpenAIProvider } from '../ai/providers';
 import { chunkText } from './chunk';
 import { extractSourceText } from './extract';
 import { extractFromYoutube } from './youtube';
@@ -151,13 +149,8 @@ export function KnowledgeService(db: Db) {
       const canEmbed = Boolean(env.OPENAI_API_KEY);
       let vectors: number[][] = [];
       if (canEmbed) {
-        // 400/401/403/404 (bad input, bad key, forbidden, missing model) won't improve on
-        // retry; 429/5xx/network still will.
-        vectors = await withUnrecoverable({
-          promise: generateEmbeddings(chunks),
-          isUnrecoverable: (error) =>
-            error instanceof OpenAI.APIError && [400, 401, 403, 404].includes(error.status ?? 0),
-        });
+        // The provider classifies 400/401/403/404 as unrecoverable; 429/5xx/network retry.
+        vectors = await getOpenAIProvider().embed(chunks);
       }
 
       const rows = chunks.map((content, index) => ({

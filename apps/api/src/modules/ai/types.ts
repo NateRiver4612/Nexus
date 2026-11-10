@@ -80,6 +80,25 @@ export type AIProvider = {
   generateText(input: Omit<ChatInput, 'tools'>): Promise<{ text: string; usage: Usage }>;
 };
 
+export type EmbeddingProvider = {
+  name: string;
+  model: string;
+  /** Vector width; must match the pgvector column dimensions. */
+  dimensions: number;
+  embed(texts: string[]): Promise<number[][]>;
+};
+
+export type TranscriptionInput = {
+  body: Buffer;
+  name: string;
+  mimeType: string;
+};
+
+export type TranscriptionProvider = {
+  name: string;
+  transcribe(input: TranscriptionInput): Promise<string>;
+};
+
 export type WebSearchInput = { query: string; maxResults?: number };
 
 export type WebSearchResult = {

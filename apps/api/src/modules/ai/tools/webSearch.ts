@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi';
 
 import { normalizeUrl } from '@nexus/shared-helpers';
 
-import { tavilyProvider } from '../providers/tavily';
+import { getTavilyProvider } from '../providers';
 import { isRetryableTavilyError } from '../providers/tavily/errors';
 import { truncate } from '../chat/contextBuilder';
 import { defineTool, type WebSearchResult } from '../types';
@@ -17,14 +17,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function searchWithRetry({ query, maxResults }: { query: string; maxResults: number }) {
   try {
-    return await tavilyProvider.search({ query, maxResults });
+    return await getTavilyProvider().search({ query, maxResults });
   } catch (error) {
     if (!isRetryableTavilyError({ error })) throw error;
 
     // One quick retry only. The user is waiting on a synchronous turn, and a thrown error
     // already goes back to the model, which can decide to try again itself.
     await sleep(RETRY_DELAY_MS);
-    return tavilyProvider.search({ query, maxResults });
+    return getTavilyProvider().search({ query, maxResults });
   }
 }
 

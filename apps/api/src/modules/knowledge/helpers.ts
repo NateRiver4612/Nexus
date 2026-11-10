@@ -9,10 +9,11 @@ export async function mapInputToRow(
   projectId: string,
   userId: string,
 ): Promise<NewSourceRow> {
-  if (input.sourceType === 'file') {
+  // Audio uploads go through the same presigned-S3 flow as files; only extraction differs.
+  if (input.sourceType === 'file' || input.sourceType === 'audio') {
     return {
       projectId,
-      sourceType: 'file',
+      sourceType: input.sourceType,
       name: input.name,
       mimeType: input.mimeType,
       sizeBytes: input.size,

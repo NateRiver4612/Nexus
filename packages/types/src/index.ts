@@ -12,6 +12,7 @@ import {
   createAiSuggestionSchema,
   createConversationSchema,
   createKnowledgeItemSchema,
+  createKnowledgeSourceAudioSchema,
   createKnowledgeSourcesSchema,
   deleteKnowledgeSourcesSchema,
   createMessageSchema,
@@ -219,6 +220,7 @@ export type CreateKnowledgeSourcesInputType = z.infer<typeof createKnowledgeSour
 export type CreateKnowledgeSourceItemType = CreateKnowledgeSourcesInputType[number];
 export type CreateUploadUrlInputType = z.infer<typeof createUploadUrlSchema>;
 export type CreateUploadUrlResponseType = z.infer<typeof createUploadUrlResponseSchema>;
+export type CreateKnowledgeSourceAudioType = z.infer<typeof createKnowledgeSourceAudioSchema>;
 export type CreateKnowledgeSourceTextType = z.infer<typeof createKnowledgeSourceTextSchema>;
 export type CreateKnowledgeSourceYoutubeType = z.infer<typeof createKnowledgeSourceYoutubeSchema>;
 export type DeliverableKindType = z.infer<typeof deliverableKindSchema>;

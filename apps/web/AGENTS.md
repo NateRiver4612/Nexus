@@ -9,13 +9,14 @@ Next.js 15 App Router app. `@/*` aliases to `apps/web/*`.
 - `features/<domain>/` — feature components per domain (PascalCase, e.g. `features/projects/ProjectCard.tsx`, `ProjectsView.tsx`).
 - `api/<domain>.ts` — typed request wrappers: call `apiClient.api.v1.*` (hono-client RPC) and unwrap via `handleResponse` from `@/lib/client`. No `api/index.ts` barrel.
 - `hooks/` — TanStack Query hooks that call `api/` functions, grouped **one file per domain** (`useProjects.ts` holds `useGetProjects`, `useProject`, `useCreateProject`, `useUpdateProject`, `useDeleteProject`; `useAi.ts` holds all AI hooks), plus `queryKeys.ts`. No `hooks/index.ts` barrel.
-- `lib/` — `client.ts` (`hc<AppType>` + `handleResponse`), `utils.ts` (`cn`), `providers.tsx` (QueryClientProvider + `persistQueryClient`).
+- `lib/` — `client.ts` (`hc<AppType>` + `handleResponse`), `utils.ts` (shared pure helpers: `cn`, `slugify`, `isAudioFile`, …), `providers.tsx` (QueryClientProvider + `persistQueryClient`).
 
 ## Conventions
 
 - Server components by default; add `'use client'` when using hooks, state, router, or Radix-backed primitives.
 - Data fetching goes through `hooks/` (TanStack Query) → `api/` wrappers → `apiClient`.
 - **No index barrels**: import directly from the file that owns the export (`import { getProjects } from '@/api/projects'`, `import { useGetProjects } from '@/hooks/useProjects'`).
+- **Shared pure helpers live in `lib/utils.ts`.** If two components need the same logic (e.g. `isAudioFile`), extract it to `lib/utils.ts` and import via `@/lib/utils` — don't copy-paste the helper into each component.
 - **State split**: server data → TanStack Query (`hooks/` → `api/` → `apiClient`); persisted client/UI draft state → `persistQueryClient` (`@tanstack/react-query-persist-client` + `createSyncStoragePersister` in `lib/providers.tsx`), **scoped** via `dehydrateOptions.shouldDehydrateQuery` to the draft's query key so it never serializes the whole cache. Drafts are **write-only persisted queries** (read via `useQuery` with `enabled: false` / `staleTime: Infinity`; written via functional `setQueryData`), keyed under the domain keys (e.g. `onboardingKeys.draft`). Gate restored-draft consumers on `useIsRestoring()`.
 - List-query hooks/request wrappers are named `getX` / `useGetX` (e.g. `getArtifacts`, `useGetArtifacts`).
 - **Controlled fields**: prefer the shared RHF wrappers `FormInput` / `FormTextArea` (Controller-based, self-registering — no manual `{...register}` wiring; they render label/description/error and set `aria-invalid`). Raw `<input>` is only for hidden native file inputs.

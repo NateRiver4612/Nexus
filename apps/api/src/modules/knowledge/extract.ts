@@ -3,7 +3,7 @@ import { UnrecoverableError } from 'bullmq';
 import { getKnowledgeObject } from '../../storage';
 import { env } from '../../env';
 import { TRANSIENT_URL_FAILURE, withUnrecoverable } from '../../queue-errors';
-import { tavilyProvider } from '../ai/providers/tavily';
+import { getOpenAIProvider, getTavilyProvider } from '../ai/providers';
 import { isRetryableTavilyError } from '../ai/providers/tavily/errors';
 import { extractFromYoutube } from './youtube';
 
@@ -18,6 +18,22 @@ export type ExtractableSource = {
   content?: string | null;
 };
 
+/** Loads an uploaded object from storage, failing fast when it no longer exists. */
+export async function fetchStoredObject(storageKey: string) {
+  // A missing object won't appear on retry; other S3 errors (network, 5xx) are worth retrying.
+  return withUnrecoverable({
+    promise: getKnowledgeObject(storageKey),
+    isUnrecoverable: (error) => {
+      const { name, $metadata } = error as {
+        name?: string;
+        $metadata?: { httpStatusCode?: number };
+      };
+      return name === 'NoSuchKey' || name === 'NotFound' || $metadata?.httpStatusCode === 404;
+    },
+    message: 'The uploaded file could not be found.',
+  });
+}
+
 /** Extract clean text from a source, dispatching on `sourceType`. */
 export async function extractSourceText(source: ExtractableSource): Promise<string> {
   switch (source.sourceType) {
@@ -28,6 +44,7 @@ export async function extractSourceText(source: ExtractableSource): Promise<stri
     case 'youtube':
       return (await extractFromYoutube(source.sourceRef)).content;
     case 'audio':
+      return extractFromAudio(source);
     case 'video':
       // Audio/video extraction is coming soon — intentionally kept a plain Error until then.
       throw new Error('audio/video ingestion is deferred to a later pass');
@@ -40,18 +57,7 @@ export async function extractSourceText(source: ExtractableSource): Promise<stri
 async function extractFromFile(source: ExtractableSource): Promise<string> {
   if (!source.storageKey) throw new UnrecoverableError('file source has no storageKey');
 
-  // A missing object won't appear on retry; other S3 errors (network, 5xx) are worth retrying.
-  const object = await withUnrecoverable({
-    promise: getKnowledgeObject(source.storageKey),
-    isUnrecoverable: (error) => {
-      const { name, $metadata } = error as {
-        name?: string;
-        $metadata?: { httpStatusCode?: number };
-      };
-      return name === 'NoSuchKey' || name === 'NotFound' || $metadata?.httpStatusCode === 404;
-    },
-    message: 'The uploaded file could not be found.',
-  });
+  const object = await fetchStoredObject(source.storageKey);
 
   const { body, contentType } = object;
   const mime = source.mimeType ?? contentType;
@@ -80,6 +86,22 @@ async function extractPdf(buffer: Buffer): Promise<string> {
   ) => Promise<{ text: string }>;
   const data = await pdfParse(buffer);
   return data.text;
+}
+
+async function extractFromAudio(source: ExtractableSource): Promise<string> {
+  if (!source.storageKey) throw new UnrecoverableError('audio source has no storageKey');
+
+  if (!env.OPENAI_API_KEY) {
+    throw new UnrecoverableError('Audio transcription is not configured.');
+  }
+
+  const { body, contentType } = await fetchStoredObject(source.storageKey);
+
+  return getOpenAIProvider().transcribe({
+    body,
+    name: source.name,
+    mimeType: source.mimeType ?? contentType,
+  });
 }
 
 async function extractDocx(buffer: Buffer): Promise<string> {
@@ -133,7 +155,7 @@ async function extractFromUrl(url?: string | null): Promise<string> {
   // Quota / bad key / bad request can't be fixed by retrying, and each retry costs credits.
   // unavailable / rate_limited rethrow so BullMQ retries them.
   const { pages, failed } = await withUnrecoverable({
-    promise: tavilyProvider.extract({ urls: [url] }),
+    promise: getTavilyProvider().extract({ urls: [url] }),
     isUnrecoverable: (error) => !isRetryableTavilyError({ error }),
   });
 

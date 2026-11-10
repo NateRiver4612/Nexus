@@ -14,6 +14,7 @@ import {
   useCreateKnowledgeUploadUrl,
   useGetKnowledgeSources,
 } from '@/hooks/useKnowledge';
+import { isAudioFile } from '@/lib/utils';
 import { DetectedLinks } from '../DetectedLinks';
 
 type SourceStatus = 'idle' | 'submitting' | 'error';
@@ -80,7 +81,7 @@ export function AddSources({ projectId }: { projectId: string }) {
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       await createSources([
         {
-          sourceType: 'file',
+          sourceType: isAudioFile(file) ? 'audio' : 'file',
           name: file.name,
           mimeType: file.type,
           storageKey: key,
@@ -156,7 +157,7 @@ export function AddSources({ projectId }: { projectId: string }) {
           <input
             ref={fileInput}
             type="file"
-            accept="application/pdf,.docx,.xlsx,.csv,text/markdown,text/plain,image/*"
+            accept="application/pdf,.docx,.xlsx,.csv,text/markdown,text/plain,image/*,audio/*,.mp3,.m4a,.wav,.webm,.ogg,.flac"
             multiple={false}
             className="hidden"
             onChange={(e) => {
@@ -171,7 +172,7 @@ export function AddSources({ projectId }: { projectId: string }) {
           >
             <Upload className="size-6" />
             <span>Drop a file or click to browse</span>
-            <span className="text-xs">PDF, DOCX, XLSX, CSV, markdown, text, images</span>
+            <span className="text-xs">PDF, DOCX, XLSX, CSV, markdown, text, images, audio</span>
           </button>
         </TabsContent>
 

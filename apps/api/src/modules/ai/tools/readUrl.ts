@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { normalizeUrl } from '@nexus/shared-helpers';
 
 import { truncate } from '../chat/contextBuilder';
-import { tavilyProvider } from '../providers/tavily';
+import { getTavilyProvider } from '../providers';
 import { isRetryableTavilyError } from '../providers/tavily/errors';
 import { defineTool } from '../types';
 
@@ -17,13 +17,13 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function extractWithRetry({ urls, focus }: { urls: string[]; focus?: string }) {
   try {
-    return await tavilyProvider.extract({ urls, focus });
+    return await getTavilyProvider().extract({ urls, focus });
   } catch (error) {
     if (!isRetryableTavilyError({ error })) throw error;
 
     // One quick retry only: the user is waiting on a synchronous turn.
     await sleep(RETRY_DELAY_MS);
-    return tavilyProvider.extract({ urls, focus });
+    return getTavilyProvider().extract({ urls, focus });
   }
 }
 

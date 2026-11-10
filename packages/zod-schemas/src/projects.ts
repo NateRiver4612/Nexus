@@ -1,15 +1,15 @@
 import { z } from '@hono/zod-openapi';
 
 import { idSchema, partialWithoutDefaults, timestampSchema } from './common';
-import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from './constants';
+import { ACCEPTED_UPLOAD_TYPES, MAX_FILE_SIZE } from './constants';
 
 export const fileSchema = z
   .instanceof(File, { message: 'Please select a valid file.' })
   .refine((file) => file.size > 0, 'File cannot be empty.')
   .refine((file) => file.size <= MAX_FILE_SIZE, 'Max file size is 25MB.')
   .refine(
-    (file) => ACCEPTED_FILE_TYPES.includes(file.type),
-    'Unsupported file type. Try PDF, DOCX, XLSX, CSV, TXT, MD, or an image.',
+    (file) => ACCEPTED_UPLOAD_TYPES.includes(file.type),
+    'Unsupported file type. Try PDF, DOCX, XLSX, CSV, TXT, MD, an image, or an audio file.',
   )
   .openapi({
     type: 'string',
