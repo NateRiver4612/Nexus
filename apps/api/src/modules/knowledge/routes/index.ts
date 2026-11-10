@@ -7,6 +7,7 @@ import { createKnowledgeSourcesRoute } from './createKnowledgeSources';
 import { createUploadUrlRoute } from './createUploadUrl';
 import { deleteKnowledgeRoute } from './deleteKnowledge';
 import { deleteKnowledgeSourceRoute } from './deleteKnowledgeSource';
+import { deleteKnowledgeSourcesRoute } from './deleteKnowledgeSources';
 import { getKnowledgeRoute } from './getKnowledge';
 import { getKnowledgeSourcesRoute } from './getKnowledgeSources';
 import { updateKnowledgeRoute } from './updateKnowledge';
@@ -53,5 +54,6 @@ export function knowledgeRoutes() {
     { route: createKnowledgeSourcesRoute.route, handler: createKnowledgeSourcesRoute.handler },
     { route: createUploadUrlRoute.route, handler: createUploadUrlRoute.handler },
     { route: deleteKnowledgeSourceRoute.route, handler: deleteKnowledgeSourceRoute.handler },
+    { route: deleteKnowledgeSourcesRoute.route, handler: deleteKnowledgeSourcesRoute.handler },
   ] as const);
 }

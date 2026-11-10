@@ -105,6 +105,10 @@ export const deleteKnowledgeResourceSchema = z.object({
   sourceId: z.uuid(),
 });
 
+export const deleteKnowledgeSourcesSchema = z.object({
+  sourceIds: z.array(idSchema).min(1),
+});
+
 export const knowledgeItemSchema = z
   .object({
     id: idSchema,

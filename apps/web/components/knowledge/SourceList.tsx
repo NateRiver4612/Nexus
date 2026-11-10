@@ -4,7 +4,14 @@ import { useRef, useState } from 'react';
 import type { KnowledgeSourceType } from '@nexus/types';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDeleteKnowledgeSource, useGetKnowledgeSources } from '@/hooks/useKnowledge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  useDeleteKnowledgeSource,
+  useDeleteKnowledgeSources,
+  useGetKnowledgeSources,
+} from '@/hooks/useKnowledge';
 import { cn } from '@/lib/utils';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { fileIcon, formatBytes } from '../UploadKnowledgeSource';
@@ -40,11 +47,14 @@ export function SourceList({
   showEmptyText = true,
   onDelete,
   onlyView = false,
+  selectable = false,
 }: {
   projectId: string;
   showEmptyText?: boolean;
   onDelete?: () => void;
   onlyView?: boolean;
+  /** Adds row checkboxes, select-all, and bulk deletion. */
+  selectable?: boolean;
 }) {
   const { data: sources, isLoading } = useGetKnowledgeSources({ variables: projectId });
 
@@ -63,6 +73,50 @@ export function SourceList({
   const [target, setTarget] = useState<KnowledgeSourceType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const deletingRef = useRef(false);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  const { mutate: deleteKnowledgeSources, isPending: isBulkDeleting } = useDeleteKnowledgeSources({
+    onSuccess: () => {
+      setBulkOpen(false);
+      setBulkError(null);
+      setSelectedIds(new Set());
+    },
+    onError: (err) => {
+      setBulkError(err instanceof Error ? err.message : 'Could not delete sources.');
+    },
+  });
+
+  const deletableSources = (sources ?? []).filter(
+    (source) => source.status === 'ready' || source.status === 'failed',
+  );
+  const selectedSourceIds = deletableSources
+    .filter((source) => selectedIds.has(source.id))
+    .map((source) => source.id);
+  const selectedCount = selectedSourceIds.length;
+  const allSelected = deletableSources.length > 0 && selectedCount === deletableSources.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  const toggleSelection = ({ id, checked }: { id: string; checked: boolean }) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(deletableSources.map((source) => source.id)) : new Set());
+  };
+
+  const confirmBulkDelete = () => {
+    if (selectedSourceIds.length === 0) return;
+    setBulkError(null);
+    deleteKnowledgeSources({ projectId, sourceIds: selectedSourceIds });
+  };
 
   const deleteSource = (source: KnowledgeSourceType) => {
     if (deletingRef.current) return;
@@ -95,12 +149,47 @@ export function SourceList({
 
   return (
     <>
+      {selectable && (
+        <div className="mb-2 flex items-center justify-between pl-3 gap-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="select-all-sources"
+              checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+              disabled={deletableSources.length === 0 || isBulkDeleting}
+              onCheckedChange={(checked) => toggleAll(checked === true)}
+            />
+            <Label
+              htmlFor="select-all-sources"
+              className="text-sm font-normal text-muted-foreground"
+            >
+              Select all
+            </Label>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            // disabled={selectedCount === 0 || isBulkDeleting}
+            onClick={() => {
+              setBulkError(null);
+              setBulkOpen(true);
+            }}
+            className={cn('text-destructive transition duration-300', {
+              'cursor-not-allowed opacity-0': selectedCount === 0 || isBulkDeleting,
+            })}
+          >
+            <Trash2 className="size-4" />
+            Delete{selectedCount > 0 ? ` (${selectedCount})` : ''}
+          </Button>
+        </div>
+      )}
       <ul className="divide-y divide-border space-y-2">
         {sources.map((file) => {
           const isYouTube = file.sourceType === 'youtube';
           const isPending = file.status === 'pending' || file.status === 'processing';
           const isCompleted = file.status === 'ready';
           const isFailed = file.status === 'failed';
+          const isDeletable = isCompleted || isFailed;
 
           const { icon, color } = fileIcon({
             name: file.name,
@@ -120,6 +209,16 @@ export function SourceList({
               )}
             >
               <div className="flex min-w-0 items-center gap-3">
+                {selectable && (
+                  <Checkbox
+                    checked={isDeletable ? selectedIds.has(file.id) : false}
+                    disabled={!isDeletable || isBulkDeleting}
+                    onCheckedChange={(checked) =>
+                      toggleSelection({ id: file.id, checked: checked === true })
+                    }
+                    aria-label={`Select ${file.name}`}
+                  />
+                )}
                 <span className={cn(color)}>
                   <FontAwesomeIcon icon={icon} color={color} size="xl" />
                 </span>
@@ -190,6 +289,20 @@ export function SourceList({
           );
         })}
       </ul>
+
+      {selectable && (
+        <DeleteConfirmDialog
+          open={bulkOpen}
+          close={() => {
+            setBulkOpen(false);
+            setBulkError(null);
+          }}
+          confirmDelete={confirmBulkDelete}
+          error={bulkError}
+          isDeleting={isBulkDeleting}
+          content={`Remove ${selectedCount} selected ${selectedCount === 1 ? 'source' : 'sources'}? The files are deleted from storage and their processed chunks are removed. This cannot be undone.`}
+        />
+      )}
     </>
   );
 }

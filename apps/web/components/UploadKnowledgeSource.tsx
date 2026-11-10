@@ -79,7 +79,13 @@ export function fileIcon(file: { name: string; type: string }) {
   return { icon: faFile, color: 'text-gray-500' };
 }
 
-export function UploadKnowledgeSource({ projectId: projectIdProp }: { projectId?: string }) {
+export function UploadKnowledgeSource({
+  projectId: projectIdProp,
+  selectable,
+}: {
+  projectId?: string;
+  selectable?: boolean;
+}) {
   const [mode, setMode] = useState<Mode>('file');
 
   // Explicit prop wins; fall back to the route param (project page).
@@ -119,6 +125,7 @@ export function UploadKnowledgeSource({ projectId: projectIdProp }: { projectId?
           defaultFiles={files}
           onAddLink={() => setMode('link')}
           onAddText={() => setMode('text')}
+          selectable={selectable}
         />
       )}
       {mode === 'link' && (

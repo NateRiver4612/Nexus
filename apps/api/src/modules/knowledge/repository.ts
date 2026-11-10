@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import { knowledgeSourceChunks, knowledgeSources, type Db } from '@nexus/db';
 
@@ -35,6 +35,15 @@ export const KnowledgeRepository = (db: Db) => ({
         .where(and(eq(knowledgeSources.id, id), eq(knowledgeSources.projectId, projectId)))
         .returning()
     )[0];
+  },
+
+  async deleteSources({ projectId, sourceIds }: { projectId: string; sourceIds: string[] }) {
+    return db
+      .delete(knowledgeSources)
+      .where(
+        and(eq(knowledgeSources.projectId, projectId), inArray(knowledgeSources.id, sourceIds)),
+      )
+      .returning();
   },
 
   async updateSource(id: string, patch: Partial<NewSourceRow>) {
