@@ -1,3 +1,5 @@
+import { ProjectSettingsView } from '@/components/project/ProjectSettingsView';
+
 export default function Page() {
-  return <h1>settings</h1>;
+  return <ProjectSettingsView />;
 }

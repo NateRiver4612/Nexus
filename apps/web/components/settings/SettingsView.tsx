@@ -27,7 +27,6 @@ export function SettingsView() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-xl font-semibold">Settings</h1>
-
       <section className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-4 text-lg font-semibold">Profile</h2>
         {isLoading ? (
