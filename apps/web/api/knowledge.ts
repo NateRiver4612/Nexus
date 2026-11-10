@@ -3,6 +3,7 @@ import type {
   CreateKnowledgeSourcesInputType,
   CreateUploadUrlInputType,
   CreateUploadUrlResponseType,
+  KnowledgeSourceDownloadUrlType,
   KnowledgeSourceListType,
   KnowledgeSourceType,
   SuccessResponse,
@@ -61,6 +62,17 @@ export async function getKnowledgeUploadUrl(
       json: input,
     }),
   )) as CreateUploadUrlResponseType;
+}
+
+export async function getKnowledgeSourceDownloadUrl(
+  projectId: string,
+  sourceId: string,
+): Promise<KnowledgeSourceDownloadUrlType> {
+  return (await handleResponse(
+    await apiClient.api.v1.knowledge[':projectId'].sources[':sourceId']['download-url'].$get({
+      param: { projectId, sourceId },
+    }),
+  )) as KnowledgeSourceDownloadUrlType;
 }
 
 export async function deleteKnowledgeSource(

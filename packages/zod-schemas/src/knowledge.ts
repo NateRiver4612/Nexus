@@ -109,6 +109,10 @@ export const createUploadUrlResponseSchema = z.object({
   bucket: z.string(),
 });
 
+export const knowledgeSourceDownloadUrlSchema = z.object({
+  url: z.url({ error: 'Enter a valid URL' }),
+});
+
 export const deleteKnowledgeResourceSchema = z.object({
   projectId: z.uuid(),
   sourceId: z.uuid(),

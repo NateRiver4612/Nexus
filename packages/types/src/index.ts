@@ -27,6 +27,7 @@ import {
   idSchema,
   knowledgeItemListSchema,
   knowledgeItemSchema,
+  knowledgeSourceDownloadUrlSchema,
   knowledgeSourceListSchema,
   knowledgeSourceSchema,
   messagePageQuerySchema,
@@ -215,6 +216,7 @@ export type UpdateKnowledgeItemInputType = z.infer<typeof updateKnowledgeItemSch
 
 export type KnowledgeSourceType = z.infer<typeof knowledgeSourceSchema>;
 export type KnowledgeSourceListType = z.infer<typeof knowledgeSourceListSchema>;
+export type KnowledgeSourceDownloadUrlType = z.infer<typeof knowledgeSourceDownloadUrlSchema>;
 export type DeleteKnowledgeSourcesInputType = z.infer<typeof deleteKnowledgeSourcesSchema>;
 export type CreateKnowledgeSourcesInputType = z.infer<typeof createKnowledgeSourcesSchema>;
 export type CreateKnowledgeSourceItemType = CreateKnowledgeSourcesInputType[number];

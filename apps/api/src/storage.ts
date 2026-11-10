@@ -59,6 +59,18 @@ export async function presignKnowledgePutUrl(key: string, contentType: string) {
   return { url, key, bucket: s3Bucket() };
 }
 
+/** Presigned GET URL that downloads an object with its original name. */
+export async function presignKnowledgeGetUrl({ key, filename }: { key: string; filename: string }) {
+  const command = new GetObjectCommand({
+    Bucket: s3Bucket(),
+    Key: key,
+    ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, '')}"`,
+  });
+
+  const url = await getSignedUrl(getS3Client(), command, { expiresIn: 3600 });
+  return { url };
+}
+
 /** Fetch an object's bytes (used by the ingestion worker to extract text). */
 export async function getKnowledgeObject(key: string) {
   const command = new GetObjectCommand({ Bucket: s3Bucket(), Key: key });

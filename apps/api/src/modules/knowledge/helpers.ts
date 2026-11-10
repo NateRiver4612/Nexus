@@ -65,6 +65,17 @@ export function publishStatus(
   );
 }
 
+const PREVIEW_CONTENT_MAX_CHARS = 50_000;
+
+/**
+ * The list endpoint carries `content` for the preview dialog. Trim it so a large
+ * PDF/URL doesn't bloat every list response — the full text stays in the DB.
+ */
+function truncatePreviewContent(content: string | null): string | null {
+  if (!content || content.length <= PREVIEW_CONTENT_MAX_CHARS) return content;
+  return `${content.slice(0, PREVIEW_CONTENT_MAX_CHARS)}\n\n…`;
+}
+
 export function toSourceView(row: SourceRow): KnowledgeSourceType {
   return {
     id: row.id,
@@ -77,7 +88,7 @@ export function toSourceView(row: SourceRow): KnowledgeSourceType {
     storageKey: row.storageKey ?? null,
     status: row.status,
     errorMessage: row.errorMessage ?? null,
-    content: row.content ?? null,
+    content: truncatePreviewContent(row.content ?? null),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

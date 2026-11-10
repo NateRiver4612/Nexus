@@ -1,6 +1,7 @@
 import { UnrecoverableError } from 'bullmq';
 
-import { presignKnowledgePutUrl } from '../../storage';
+import { presignKnowledgeGetUrl, presignKnowledgePutUrl } from '../../storage';
+import { ensure, ensureExists, NotFoundError } from '../../errors';
 import { env } from '../../env';
 import { getOpenAIProvider } from '../ai/providers';
 import { chunkText } from './chunk';
@@ -107,6 +108,21 @@ export function KnowledgeService(db: Db) {
     return { url, key, bucket };
   }
 
+  async function getDownloadUrl({ projectId, sourceId }: { projectId: string; sourceId: string }) {
+    const source = ensureExists(
+      await repository.getSourceById(sourceId),
+      NotFoundError('Knowledge source not found.'),
+    );
+    ensure(source.projectId === projectId, NotFoundError('Knowledge source not found.'));
+
+    const storageKey = ensureExists(
+      source.storageKey,
+      NotFoundError('This source has no stored file.'),
+    );
+
+    return presignKnowledgeGetUrl({ key: storageKey, filename: source.name });
+  }
+
   /**
    * Ingests one knowledge source end-to-end: mark it `processing`, extract text by
    * source type (YouTube transcript vs. file/url/copied text), sanitize, chunk, embed
@@ -174,6 +190,9 @@ export function KnowledgeService(db: Db) {
           status: 'ready',
           errorMessage: null,
           ...(updatedName ? { name: updatedName } : {}),
+          // Persist the extracted text so the source preview can render it
+          // without reconstructing (and re-overlapping) chunks.
+          content: text,
         });
       });
 
@@ -197,7 +216,15 @@ export function KnowledgeService(db: Db) {
     }
   }
 
-  return { createSources, listSources, getUploadUrl, processSource, deleteSource, deleteSources };
+  return {
+    createSources,
+    listSources,
+    getUploadUrl,
+    getDownloadUrl,
+    processSource,
+    deleteSource,
+    deleteSources,
+  };
 }
 
 export type KnowledgeServiceType = ReturnType<typeof KnowledgeService>;

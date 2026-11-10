@@ -10,12 +10,15 @@ import { Label } from '@/components/ui/label';
 import {
   useDeleteKnowledgeSource,
   useDeleteKnowledgeSources,
+  useGetKnowledgeSourceDownloadUrl,
   useGetKnowledgeSources,
 } from '@/hooks/useKnowledge';
 import { cn } from '@/lib/utils';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { fileIcon, formatBytes } from '../UploadKnowledgeSource';
 import DeleteConfirmDialog from '../DeleteConfirmDialog';
+import { SourceActionsMenu } from './SourceActionsMenu';
+import { SourcePreviewDialog } from './SourcePreviewDialog';
 import { Info, Trash2 } from 'lucide-react';
 import { Spinner } from '../ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -71,6 +74,7 @@ export function SourceList({
   });
 
   const [target, setTarget] = useState<KnowledgeSourceType | null>(null);
+  const [preview, setPreview] = useState<KnowledgeSourceType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const deletingRef = useRef(false);
 
@@ -116,6 +120,21 @@ export function SourceList({
     if (selectedSourceIds.length === 0) return;
     setBulkError(null);
     deleteKnowledgeSources({ projectId, sourceIds: selectedSourceIds });
+  };
+
+  const { mutate: getDownloadUrl } = useGetKnowledgeSourceDownloadUrl(projectId);
+
+  const downloadSource = (source: KnowledgeSourceType) => {
+    getDownloadUrl(source.id, {
+      onSuccess: ({ url }) => {
+        // A hidden anchor keeps the current page put — the attachment header
+        // makes the browser download instead of navigating to the stored object.
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.rel = 'noopener noreferrer';
+        anchor.click();
+      },
+    });
   };
 
   const deleteSource = (source: KnowledgeSourceType) => {
@@ -190,6 +209,7 @@ export function SourceList({
           const isCompleted = file.status === 'ready';
           const isFailed = file.status === 'failed';
           const isDeletable = isCompleted || isFailed;
+          const canPreview = isCompleted && Boolean(file.content);
 
           const { icon, color } = fileIcon({
             name: file.name,
@@ -219,61 +239,68 @@ export function SourceList({
                     aria-label={`Select ${file.name}`}
                   />
                 )}
-                <span className={cn(color)}>
-                  <FontAwesomeIcon icon={icon} color={color} size="xl" />
-                </span>
-                <div className="min-w-0 text-start">
-                  <div className="flex items-center gap-1.5">
-                    <p
-                      className={cn('text-sm text-gray-900 font-semibold', {
-                        'text-destructive': isFailed,
-                      })}
-                    >
-                      {isPending ? `Processing ${file.name}` : file.name}{' '}
-                      {isFailed ? '(Failed)' : ''}
-                    </p>
-                    {isFailed && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="size-3.5 shrink-0 cursor-pointer text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          {file.errorMessage ?? 'Invalid URL. Please check the URL and try again.'}
-                        </TooltipContent>
-                      </Tooltip>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className={cn(color)}>
+                    <FontAwesomeIcon icon={icon} color={color} size="xl" />
+                  </span>
+                  <div className="min-w-0 text-start">
+                    <div className="flex items-center gap-1.5">
+                      <p
+                        className={cn('text-sm text-gray-900 font-semibold', {
+                          'text-destructive': isFailed,
+                        })}
+                      >
+                        {isPending ? `Processing ${file.name}` : file.name}{' '}
+                        {isFailed ? '(Failed)' : ''}
+                      </p>
+                      {isFailed && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="size-3.5 shrink-0 cursor-pointer text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {file.errorMessage ??
+                              'Invalid URL. Please check the URL and try again.'}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    {!isYouTube && (
+                      <p
+                        className={cn('text-xs text-muted-foreground', {
+                          'text-destructive': isFailed,
+                        })}
+                      >
+                        {formatBytes(file.size)}
+                      </p>
                     )}
                   </div>
-                  {!isYouTube && (
-                    <p
-                      className={cn('text-xs text-muted-foreground', {
-                        'text-destructive': isFailed,
-                      })}
-                    >
-                      {formatBytes(file.size)}
-                    </p>
-                  )}
                 </div>
               </div>
               <div>
-                {!onlyView &&
-                  (isCompleted || isFailed ? (
-                    <Trash2
-                      onClick={() => {
-                        if (isFailed) {
-                          // Failed sources are removed immediately — no
-                          // confirmation needed since they contribute nothing.
-                          deleteSource(file);
-                        } else {
-                          setError(null);
-                          setTarget(file);
-                        }
-                      }}
-                      strokeWidth={2}
-                      className="size-5 cursor-pointer! text-destructive"
-                    />
-                  ) : (
-                    <Spinner></Spinner>
-                  ))}
+                {isPending ? (
+                  <Spinner />
+                ) : (
+                  <SourceActionsMenu
+                    canPreview={canPreview}
+                    canDownload={Boolean(file.storageKey)}
+                    canOpenOriginal={Boolean(file.sourceRef)}
+                    canDelete={!onlyView}
+                    sourceRef={file.sourceRef ?? null}
+                    onPreview={() => setPreview(file)}
+                    onDownload={() => downloadSource(file)}
+                    onDelete={() => {
+                      if (isFailed) {
+                        // Failed sources are removed immediately — no
+                        // confirmation needed since they contribute nothing.
+                        deleteSource(file);
+                      } else {
+                        setError(null);
+                        setTarget(file);
+                      }
+                    }}
+                  />
+                )}
               </div>
 
               <DeleteConfirmDialog
@@ -289,6 +316,14 @@ export function SourceList({
           );
         })}
       </ul>
+
+      <SourcePreviewDialog
+        source={preview}
+        open={preview !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreview(null);
+        }}
+      />
 
       {selectable && (
         <DeleteConfirmDialog
