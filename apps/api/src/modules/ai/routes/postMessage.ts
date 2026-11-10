@@ -33,6 +33,8 @@ import type {
   Usage,
   ChatToolTraceType,
 } from '@nexus/types';
+import { collectUrls } from '@nexus/shared-helpers';
+
 import { generateConversationTitle } from '../chat/generateTitle';
 import { runChatLoop } from '../chat/runChatLoop';
 import { projectChatTools, webSearchEnabled } from '../tools/registry';
@@ -249,6 +251,15 @@ async function streamProjectChat({
             db,
             projectId: conversation.projectId,
             userId,
+            // Seeded with every URL the user wrote in the loaded history. Assistant text is left
+            // out on purpose: the model must not be able to authorize its own fetches.
+            allowedUrls: new Set(
+              messages.flatMap((message) =>
+                message.role === 'user' && typeof message.content === 'string'
+                  ? collectUrls({ text: message.content })
+                  : [],
+              ),
+            ),
           },
           provider,
           tools: projectChatTools,

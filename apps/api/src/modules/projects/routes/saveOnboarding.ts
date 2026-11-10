@@ -8,7 +8,7 @@ import {
 
 import { getUser } from '../../../auth-middleware';
 import { getDb } from '@nexus/db';
-import { OnboardingService } from '../service';
+import { OnboardingService } from '../../onboarding/service';
 
 export const saveOnboardingRoute = defineOpenAPIRoute({
   route: createRoute({

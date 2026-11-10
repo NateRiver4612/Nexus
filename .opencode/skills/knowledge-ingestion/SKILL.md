@@ -11,7 +11,7 @@ Knowledge source ingestion follows a NotebookLM-style pipeline. Full detail in `
 
 ## Source types
 
-`file` — PDF (`pdf-parse`), DOCX (`mammoth`), XLSX/CSV (`xlsx`/SheetJS — parse rows/sheets into structured text), images (`tesseract.js` OCR). `url` (readability + jsdom). `youtube` (`youtube-transcript` captions, audio+Whisper fallback). `copied_text` (direct store, no extraction). `audio`/`video` are reserved in the enum but deferred (ffmpeg + Whisper, later pass) — don't implement extraction for these without checking in first.
+`file` — PDF (`pdf-parse`), DOCX (`mammoth`), XLSX/CSV (`xlsx`/SheetJS — parse rows/sheets into structured text), images (`tesseract.js` OCR). `url` (Tavily extract, https only). `youtube` (`youtube-transcript` captions, audio+Whisper fallback). `copied_text` (direct store, no extraction). `audio`/`video` are reserved in the enum but deferred (ffmpeg + Whisper, later pass) — don't implement extraction for these without checking in first.
 
 ## Request shape
 

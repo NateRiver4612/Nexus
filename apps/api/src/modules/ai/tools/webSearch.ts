@@ -1,5 +1,7 @@
 import { z } from '@hono/zod-openapi';
 
+import { normalizeUrl } from '@nexus/shared-helpers';
+
 import { tavilyProvider } from '../providers/tavily';
 import { isRetryableTavilyError } from '../providers/tavily/errors';
 import { truncate } from '../chat/contextBuilder';
@@ -59,7 +61,7 @@ export const webSearchTool = defineTool({
       .optional()
       .describe('Results to return (default 5).'),
   }),
-  async run({ args }) {
+  async run({ ctx, args }) {
     const results = await searchWithRetry({
       query: args.query,
       maxResults: args.maxResults ?? DEFAULT_LIMIT,
@@ -67,6 +69,12 @@ export const webSearchTool = defineTool({
 
     if (results.length === 0) {
       return { content: 'No web results were found for that query. Try different keywords.' };
+    }
+
+    // Let read_url follow up on what was just found, and nothing else the model might be told.
+    for (const result of results) {
+      const url = normalizeUrl({ url: result.url });
+      if (url) ctx.allowedUrls.add(url);
     }
 
     return {

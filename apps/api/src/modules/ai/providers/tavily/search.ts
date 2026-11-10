@@ -8,8 +8,8 @@ import { ResearchProviderError, toResearchError } from './errors';
 const DEFAULT_MAX_RESULTS = 10;
 const SEARCH_TIMEOUT_SECONDS = 15;
 
-// Tavily marks no result field as required, and the SDK's casing for the date has varied,
-// so accept both spellings here and normalize once below.
+// The REST API returns `published_date` (per Tavily's docs), but `@tavily/core` maps it to
+// `publishedDate` before returning, so camelCase is what actually arrives. Keep both as a fallback.
 const rawResultSchema = z.object({
   title: z.string().nullish(),
   url: z.string().nullish(),
@@ -69,7 +69,7 @@ export async function search({
         title: result.title?.trim() || result.url,
         url: result.url,
         content: result.content?.trim() ?? '',
-        publishedDate: result.publishedDate ?? result.published_date ?? null,
+        publishedDate: result.publishedDate?.trim() || result.published_date?.trim() || null,
         score: result.score ?? null,
         favicon: result.favicon ?? null,
       },

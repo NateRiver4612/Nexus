@@ -1,3 +1,5 @@
+import { isYouTubeUrl } from '@nexus/shared-helpers';
+
 import type { CreateKnowledgeSourceItemType, KnowledgeSourceType } from '@nexus/types';
 import type { NewSourceRow, SourceRow } from './repository';
 import { getRedis } from '../../redis';
@@ -23,7 +25,8 @@ export async function mapInputToRow(
   if (input.sourceType === 'url' || input.sourceType === 'youtube') {
     return {
       projectId,
-      name: 'YouTubeURL',
+      name:
+        input.sourceType === 'youtube' ? `YouTubeURL (${input.url})` : `UnknownURL (${input.url})`,
       sourceType: input.sourceType,
       sourceRef: input.url,
       status: 'pending',
@@ -89,13 +92,4 @@ export function cleanTitle(title: string, url: string): string {
     return cleaned.replace(/\s*-\s*YouTube\s*$/i, '').trim();
   }
   return cleaned;
-}
-
-function isYouTubeUrl(url: string): boolean {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtu.be';
-  } catch {
-    return false;
-  }
 }

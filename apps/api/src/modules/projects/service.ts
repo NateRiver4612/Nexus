@@ -1,21 +1,12 @@
-import { projectOnboarding, projects, workspaceMembers, type Db } from '@nexus/db';
-import type {
-  CreateProjectInputType,
-  OnboardingStateType,
-  ProjectCategoryType,
-  ProjectDetailType,
-  ProjectType,
-  UpdateOnboardingInputType,
-} from '@nexus/types';
-import { projectCategoryEnum, kickoffSummarySchema } from '@nexus/zod-schemas';
-
-import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
-import { OnboardingRepository } from '../onboarding/repository';
-import { ProjectsRepository, type NewProjectRow, type ProjectDetailsRow } from './repository';
+import { projects, workspaceMembers, type Db } from '@nexus/db';
+import type { CreateProjectInputType, ProjectDetailType, ProjectType } from '@nexus/types';
+import { kickoffSummarySchema } from '@nexus/zod-schemas';
 import { eq, isNull, and } from 'drizzle-orm';
 
+import { ensureExists, NotFoundError } from '../../errors';
+import { ProjectsRepository, type NewProjectRow, type ProjectDetailsRow } from './repository';
+
 type ProjectRow = typeof projects.$inferSelect;
-type OnboardingRow = typeof projectOnboarding.$inferSelect;
 
 export function ProjectService(db: Db) {
   const projectsRepository = ProjectsRepository(db);
@@ -71,166 +62,7 @@ export function ProjectService(db: Db) {
   return { create, get, list, update, remove };
 }
 
-export const OnboardingService = (db: Db) => {
-  const onboardingRepository = OnboardingRepository(db);
-
-  async function getOnboarding(userId: string): Promise<OnboardingStateType | null> {
-    const row = await onboardingRepository.getByUserId(userId);
-    return row ? toOnboardingView(row) : null;
-  }
-
-  async function saveOnboarding({
-    userId,
-    input,
-  }: {
-    userId: string;
-    input: UpdateOnboardingInputType;
-  }): Promise<OnboardingStateType> {
-    const step = input.step;
-
-    const key = `step${step}`;
-
-    const step1Data = input.data as {
-      name: string;
-      description?: string | null | undefined;
-      category: string;
-    };
-
-    const createdOnboarding = await db.transaction(async (tx) => {
-      const txProjectService = ProjectService(tx);
-      const txOnboardingRepository = OnboardingRepository(tx);
-
-      const workspace = await ensureWorkspace(tx, userId);
-
-      const existing = await onboardingRepository.getByUserId(userId);
-
-      if (existing) {
-        assertOnboardingOrder(existing, input.step);
-
-        let projectId = existing.projectId;
-
-        if (step === 1) {
-          await txProjectService.update(projectId, {
-            name: step1Data.name,
-            slug: slugify(step1Data.name),
-            description: step1Data.description ?? null,
-            category: toProjectCategory(step1Data.category),
-          });
-        }
-
-        const prev = (existing.stepData ?? {}) as Record<string, unknown>;
-
-        const updatedOnboarding = await txOnboardingRepository.update(existing.id, {
-          step: input.step,
-          projectId,
-          status: 'in_progress',
-          stepData: { ...prev, [key]: input.data },
-        });
-
-        return updatedOnboarding!;
-      }
-
-      const project = await txProjectService.create(userId, {
-        name: step1Data.name,
-        slug: slugify(step1Data.name),
-        description: step1Data.description ?? null,
-        category: toProjectCategory(step1Data.category),
-        status: 'draft',
-      });
-
-      const createdOnboarding = await txOnboardingRepository.create({
-        userId,
-        workspaceId: workspace.id,
-        projectId: project.id,
-        step: input.step,
-        status: 'in_progress',
-        stepData: { [key]: input.data },
-      });
-
-      return createdOnboarding;
-    });
-
-    return toOnboardingView(createdOnboarding!);
-  }
-
-  return {
-    getOnboarding,
-    saveOnboarding,
-  };
-};
-
-function toOnboardingView(row: OnboardingRow): OnboardingStateType {
-  return {
-    id: row.id,
-    status: row.status,
-    step: row.step,
-    projectId: row.projectId,
-    aiRunId: row.aiRun,
-    stepData: (row.stepData ?? {}) as OnboardingStateType['stepData'],
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
-
-function slugify(input: string) {
-  return (
-    input
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'project'
-  );
-}
-
-/** Resolve a step-1 category to the strict projects.category enum. "Other"/custom
- * values aren't supported yet (AI category support comes later) — reject them. */
-export function toProjectCategory(value: string): ProjectCategoryType {
-  const parsed = projectCategoryEnum.safeParse(value);
-  ensure(
-    parsed.success,
-    ValidationError(
-      `Category "${value}" is not supported yet. Pick one of: ${projectCategoryEnum.options.join(', ')}.`,
-    ),
-  );
-  return parsed.data;
-}
-
-/** A step may only be saved once every earlier step's data exists in stepData. */
-const stepPrerequisites: Record<number, number[]> = {
-  2: [1],
-  3: [1, 2],
-  4: [1, 2, 3],
-};
-
-function assertOnboardingOrder(existing: OnboardingRow, step: number) {
-  const stepData = (existing.stepData ?? {}) as Record<string, unknown>;
-
-  for (const required of stepPrerequisites[step] ?? []) {
-    ensure(
-      stepData[`step${required}`] != null,
-      ValidationError(`Complete step ${required} before continuing.`),
-    );
-  }
-}
-
-export async function assertProjectAccess(db: Db, userId: string, projectId: string) {
-  const rows = await db
-    .select({ id: projects.id, workspaceId: projects.workspaceId })
-    .from(projects)
-    .innerJoin(
-      workspaceMembers,
-      and(
-        eq(workspaceMembers.workspaceId, projects.workspaceId),
-        eq(workspaceMembers.userId, userId),
-      ),
-    )
-    .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
-    .limit(1);
-
-  return ensureExists(rows[0], NotFoundError('Project not found'));
-}
-
-async function ensureWorkspace(db: Db, userId: string) {
+export async function ensureWorkspace(db: Db, userId: string) {
   const projectsRepository = ProjectsRepository(db);
 
   const existing = await projectsRepository.findWorkspaceForUser(userId);
@@ -249,6 +81,23 @@ async function ensureWorkspace(db: Db, userId: string) {
     role: 'owner',
   });
   return { id: workspace.id };
+}
+
+export async function assertProjectAccess(db: Db, userId: string, projectId: string) {
+  const rows = await db
+    .select({ id: projects.id, workspaceId: projects.workspaceId })
+    .from(projects)
+    .innerJoin(
+      workspaceMembers,
+      and(
+        eq(workspaceMembers.workspaceId, projects.workspaceId),
+        eq(workspaceMembers.userId, userId),
+      ),
+    )
+    .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+    .limit(1);
+
+  return ensureExists(rows[0], NotFoundError('Project not found'));
 }
 
 function toProjectView(row: ProjectRow): ProjectType {
@@ -291,4 +140,3 @@ function toProjectDetailView(row: ProjectDetailsRow): ProjectDetailType {
 }
 
 export type ProjectServiceType = ReturnType<typeof ProjectService>;
-export type OnboardingServiceType = ReturnType<typeof OnboardingService>;

@@ -3,17 +3,44 @@
 import { useRef, useState } from 'react';
 import { Link2, Type, Upload } from 'lucide-react';
 
+import { collectUrls, isYouTubeUrl, normalizeUrl } from '@nexus/shared-helpers';
+import type { CreateKnowledgeSourcesInputType } from '@nexus/types';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCreateKnowledgeSources, useCreateKnowledgeUploadUrl } from '@/hooks/useKnowledge';
-import { isYouTubeUrl } from '@/lib/youtube';
+import {
+  useCreateKnowledgeSources,
+  useCreateKnowledgeUploadUrl,
+  useGetKnowledgeSources,
+} from '@/hooks/useKnowledge';
+import { DetectedLinks } from '../DetectedLinks';
 
 type SourceStatus = 'idle' | 'submitting' | 'error';
+
+const MAX_LINKS_PER_ADD = 10;
+const MAX_DETECTED_LINKS = 8;
+
+const toLinkEntry = (url: string): CreateKnowledgeSourcesInputType[number] =>
+  isYouTubeUrl(url) ? { sourceType: 'youtube', url } : { sourceType: 'url', url };
 
 export function AddSources({ projectId }: { projectId: string }) {
   const { mutateAsync: createSources } = useCreateKnowledgeSources(projectId);
   const { mutateAsync: getUploadUrl } = useCreateKnowledgeUploadUrl(projectId);
+  const { data: knowledgeSources } = useGetKnowledgeSources({ variables: projectId });
+
+  // Normalized so a link pasted again still counts as added: a #fragment and trailing
+  // punctuation are stripped, e.g. 'https://example.com/page#x' and 'https://example.com/page.'
+  // both collapse to 'https://example.com/page'.
+  const existingUrls = new Set(
+    (knowledgeSources ?? []).flatMap((source) => {
+      if ((source.sourceType !== 'url' && source.sourceType !== 'youtube') || !source.sourceRef) {
+        return [];
+      }
+      const url = normalizeUrl({ url: source.sourceRef });
+      return url ? [url] : [];
+    }),
+  );
 
   const fileInput = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<SourceStatus>('idle');
@@ -22,6 +49,8 @@ export function AddSources({ projectId }: { projectId: string }) {
   const [link, setLink] = useState('');
   const [textTitle, setTextTitle] = useState('');
   const [textContent, setTextContent] = useState('');
+  // Links found in the text that was just saved, waiting for the person's choice.
+  const [detected, setDetected] = useState<string[] | null>(null);
 
   async function start(work: () => Promise<void>) {
     setStatus('submitting');
@@ -62,11 +91,30 @@ export function AddSources({ projectId }: { projectId: string }) {
   }
 
   async function handleLink() {
-    if (!link) return;
+    // Several links can be pasted at once, separated by spaces or new lines.
+    const urls = collectUrls({ text: link });
+    if (urls.length === 0) {
+      setStatus('error');
+      setMessage('URL should start with http:// or https://');
+      return;
+    }
+
+    const fresh = urls.filter((url) => !existingUrls.has(url)).slice(0, MAX_LINKS_PER_ADD);
+    if (fresh.length === 0) {
+      setStatus('error');
+      setMessage('These links are already added.');
+      return;
+    }
+
     await start(async () => {
-      await createSources([{ sourceType: isYouTubeUrl(link) ? 'youtube' : 'url', url: link }]);
+      await createSources(fresh.map(toLinkEntry));
       setLink('');
     });
+  }
+
+  async function handleAddDetected(urls: string[]) {
+    if (urls.length > 0) await createSources(urls.map(toLinkEntry));
+    setDetected(null);
   }
 
   async function handleText() {
@@ -77,8 +125,13 @@ export function AddSources({ projectId }: { projectId: string }) {
     }
     await start(async () => {
       await createSources([{ sourceType: 'copied_text', textTitle, textContent }]);
+
+      // The text is saved. Offer its links, so the person decides what gets imported.
+      const found = collectUrls({ text: textContent }).filter((url) => !existingUrls.has(url));
+
       setTextTitle('');
       setTextContent('');
+      if (found.length > 0) setDetected(found);
     });
   }
 
@@ -125,7 +178,7 @@ export function AddSources({ projectId }: { projectId: string }) {
         <TabsContent value="link" className="space-y-2">
           <div className="flex gap-2">
             <Input
-              placeholder="https://example.com or a YouTube link"
+              placeholder="https://example.com or a YouTube link (separate several with spaces)"
               value={link}
               onChange={(e) => setLink(e.target.value)}
               disabled={submitting}
@@ -137,23 +190,34 @@ export function AddSources({ projectId }: { projectId: string }) {
         </TabsContent>
 
         <TabsContent value="text" className="space-y-2">
-          <Input
-            placeholder="Title"
-            value={textTitle}
-            onChange={(e) => setTextTitle(e.target.value)}
-            disabled={submitting}
-          />
-          <textarea
-            placeholder="Paste the text you want to add as knowledge…"
-            value={textContent}
-            onChange={(e) => setTextContent(e.target.value)}
-            disabled={submitting}
-            rows={5}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-          />
-          <Button onClick={handleText} disabled={submitting || !textTitle}>
-            Add text
-          </Button>
+          {detected ? (
+            <DetectedLinks
+              urls={detected.slice(0, MAX_DETECTED_LINKS)}
+              hiddenCount={Math.max(0, detected.length - MAX_DETECTED_LINKS)}
+              onAdd={handleAddDetected}
+              onSkip={() => setDetected(null)}
+            />
+          ) : (
+            <>
+              <Input
+                placeholder="Title"
+                value={textTitle}
+                onChange={(e) => setTextTitle(e.target.value)}
+                disabled={submitting}
+              />
+              <textarea
+                placeholder="Paste the text you want to add as knowledge…"
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+                disabled={submitting}
+                rows={5}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              />
+              <Button onClick={handleText} disabled={submitting || !textTitle}>
+                Add text
+              </Button>
+            </>
+          )}
         </TabsContent>
       </Tabs>
 

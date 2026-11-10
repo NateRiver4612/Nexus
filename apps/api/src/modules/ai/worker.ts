@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq';
+import { UnrecoverableError, Worker } from 'bullmq';
 
 import { getRedis } from '../../redis';
 import { env } from '../../env';
@@ -188,7 +188,7 @@ const AIWorker = () => {
     // attempt has `attemptsMade === attempts` (the old `+ 1` overshot and left the
     // run stuck on `retrying` after the last failure).
     const maxAttempts = job.opts.attempts ?? 1;
-    const finalAttempt = job.attemptsMade >= maxAttempts;
+    const finalAttempt = job.attemptsMade >= maxAttempts || err instanceof UnrecoverableError;
 
     // `startedAt` is set on the run's first attempt (coalesce), so this is a
     // wall-clock ceiling across all retries, independent of attempt count.

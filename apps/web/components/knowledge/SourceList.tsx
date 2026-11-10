@@ -9,8 +9,9 @@ import { cn } from '@/lib/utils';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { fileIcon, formatBytes } from '../UploadKnowledgeSource';
 import DeleteConfirmDialog from '../DeleteConfirmDialog';
-import { Trash2 } from 'lucide-react';
+import { Info, Trash2 } from 'lucide-react';
 import { Spinner } from '../ui/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const SourceListSkeleton = () => {
   return (
@@ -110,7 +111,6 @@ export function SourceList({
             <li
               key={`${file.id}`}
               aria-disabled={isPending || isFailed}
-              title={isFailed ? (file.errorMessage ?? 'Processing failed') : undefined}
               className={cn(
                 'flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2',
                 {
@@ -124,13 +124,26 @@ export function SourceList({
                   <FontAwesomeIcon icon={icon} color={color} size="xl" />
                 </span>
                 <div className="min-w-0 text-start">
-                  <p
-                    className={cn('text-sm text-gray-900 font-semibold', {
-                      'text-destructive': isFailed,
-                    })}
-                  >
-                    {isPending ? `Processing ${file.name}` : file.name} {isFailed ? '(Failed)' : ''}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p
+                      className={cn('text-sm text-gray-900 font-semibold', {
+                        'text-destructive': isFailed,
+                      })}
+                    >
+                      {isPending ? `Processing ${file.name}` : file.name}{' '}
+                      {isFailed ? '(Failed)' : ''}
+                    </p>
+                    {isFailed && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="size-3.5 shrink-0 cursor-pointer text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          {file.errorMessage ?? 'Invalid URL. Please check the URL and try again.'}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   {!isYouTube && (
                     <p
                       className={cn('text-xs text-muted-foreground', {

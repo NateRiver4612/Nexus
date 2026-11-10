@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 import { getUser } from '../../auth-middleware';
 import { getDb } from '@nexus/db';
-import { OnboardingService } from './service';
+import { OnboardingService } from '../onboarding/service';
 import { OnboardingRepository } from '../onboarding/repository';
 import { ProjectsRepository } from './repository';
 import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';

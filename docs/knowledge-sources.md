@@ -20,17 +20,17 @@ table; its chunks live in `knowledge_source_chunks`.
 
 # 2. Source types
 
-| Source type | What's needed                                    | Library / service                                                    |
-| ----------- | ------------------------------------------------ | -------------------------------------------------------------------- |
-| PDF         | Text extraction                                  | `pdf-parse` (server) / `pdfjs-dist`                                  |
-| DOCX        | Text extraction                                  | `mammoth`                                                            |
-| XLSX/CSV    | Parse rows/sheets into structured text           | `xlsx` (SheetJS) — already in the stack                              |
-| Images      | OCR or vision-model description                  | `tesseract.js` (OCR, free/local); vision model later                 |
-| Web link    | Fetch + strip boilerplate to clean readable text | `@mozilla/readability` + `jsdom` (self-hosted); Jina Reader optional |
-| YouTube     | Transcript, not the video                        | `youtube-transcript` (captions) > audio+Whisper fallback             |
-| Audio file  | Speech-to-text                                   | OpenAI Whisper API / `whisper.cpp` — **deferred**                    |
-| Video file  | Extract audio track, then transcribe             | `ffmpeg` → Whisper — **deferred**                                    |
-| Copied text | None — direct store                              | —                                                                    |
+| Source type | What's needed                              | Library / service                                        |
+| ----------- | ------------------------------------------ | -------------------------------------------------------- |
+| PDF         | Text extraction                            | `pdf-parse` (server) / `pdfjs-dist`                      |
+| DOCX        | Text extraction                            | `mammoth`                                                |
+| XLSX/CSV    | Parse rows/sheets into structured text     | `xlsx` (SheetJS) — already in the stack                  |
+| Images      | OCR or vision-model description            | `tesseract.js` (OCR, free/local); vision model later     |
+| Web link    | Fetch + extract readable text (https only) | Tavily extract API (vendor-fetched)                      |
+| YouTube     | Transcript, not the video                  | `youtube-transcript` (captions) > audio+Whisper fallback |
+| Audio file  | Speech-to-text                             | OpenAI Whisper API / `whisper.cpp` — **deferred**        |
+| Video file  | Extract audio track, then transcribe       | `ffmpeg` → Whisper — **deferred**                        |
+| Copied text | None — direct store                        | —                                                        |
 
 > **Sequencing:** Ship **files + links + YouTube + copied text** first. Audio/video
 > transcription (ffmpeg + Whisper) is the most expensive and infra-heavy piece and
