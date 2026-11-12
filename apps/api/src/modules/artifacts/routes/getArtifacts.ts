@@ -1,9 +1,10 @@
 import { createRoute, defineOpenAPIRoute } from '@hono/zod-openapi';
 
 import { artifactListSchema, errorResponseSchema, projectIdParamsSchema } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
 import { bearerSecurity } from '../../../openapi';
-import type { ArtifactListType } from '@nexus/types';
+import { ArtifactService } from '../service';
 
 export const getArtifactsRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -15,9 +16,7 @@ export const getArtifactsRoute = defineOpenAPIRoute({
     },
     responses: {
       200: {
-        content: {
-          'application/json': { schema: artifactListSchema },
-        },
+        content: { 'application/json': { schema: artifactListSchema } },
         description: 'List artifacts for a project',
       },
       401: {
@@ -30,22 +29,9 @@ export const getArtifactsRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
-    const artifaces: ArtifactListType = [
-      {
-        id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        projectId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        kind: 'note',
-        title: 'asdasdasd',
-        content: 'asdasdasd',
-        metadata: {
-          asdad: 'asdasd',
-        },
-        createdAt: '2026-08-12T00:00:00.000Z',
-        updatedAt: '2026-08-12T00:00:00.000Z',
-      },
-    ];
-
-    return c.json(artifaces, 200);
+  handler: async (c) => {
+    const { projectId } = c.req.valid('param');
+    const artifacts = await ArtifactService(getDb()).list(projectId);
+    return c.json(artifacts, 200);
   },
 });

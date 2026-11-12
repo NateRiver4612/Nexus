@@ -2,6 +2,7 @@ import { z } from '@hono/zod-openapi';
 
 import { idSchema, timestampSchema } from './common';
 import { kickoffPlanSchema } from './planner';
+import { chatArtifactTypeSchema } from './artifacts';
 
 export const aiTaskEnum = z.enum([
   'rewrite',
@@ -235,3 +236,21 @@ export const chatToolEventSchema = z.object({
 export const chatToolTraceSchema = z.array(chatToolEventSchema);
 
 export const chatSourcesEventSchema = z.object({ sources: chatCitationsSchema });
+
+/**
+ * An artifact the assistant saved this turn. Streamed in `artifact` and stored in
+ * `messages.metadata.artifacts`. Only the plain-text kinds (`chatArtifactTypeSchema`) can
+ * appear here — generated file formats (presentation, spreadsheet, pdf) have no chat tool.
+ */
+export const chatArtifactSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1).max(255),
+    type: chatArtifactTypeSchema,
+    version: z.number().int().positive(),
+  })
+  .openapi('ChatArtifact');
+
+export const chatArtifactsSchema = z.array(chatArtifactSchema);
+
+export const chatArtifactEventSchema = z.object({ artifact: chatArtifactSchema });

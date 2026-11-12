@@ -22,8 +22,11 @@ export function getS3Client() {
   // Reuse a single client across hot-reloading dev servers.
   if (!globalForStorage.nexusS3) {
     // Static credentials are optional — when S3_ACCESS_KEY / S3_SECRET_KEY
-    // aren't set (e.g. the instance has an IAM role / FullAccess policy) the
-    // AWS SDK falls back to its default credential provider chain (role creds).
+    // aren't set (e.g. on EC2 with an instance role), the SDK falls back to its
+    // default credential chain (env → SSO → shared profile → process → web
+    // identity → EC2/ECS role). Locally `[default]` resolves via `login_session`
+    // (an `aws login` console session, not SSO); either session type expires
+    // (up to 12h), then re-run `aws login`.
     const hasCredentials = Boolean(env.S3_ACCESS_KEY && env.S3_SECRET_KEY);
 
     globalForStorage.nexusS3 = new S3Client({
@@ -97,7 +100,7 @@ export async function putKnowledgeObject(
   await getS3Client().send(command);
 }
 
-/** Delete an object (used by the source-removal worker). */
+/** Delete an S3 object (used by the source-removal worker). */
 export async function deleteKnowledgeObject(key: string) {
   const command = new DeleteObjectCommand({ Bucket: s3Bucket(), Key: key });
   await getS3Client().send(command);
