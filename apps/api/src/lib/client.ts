@@ -33,7 +33,7 @@ const MODELS: Record<AITaskType, string> = {
   rewrite: 'deepseek-v4-flash',
   summarize: 'deepseek-v4-flash',
   classify: 'deepseek-v4-flash',
-  'project-chat': 'deepseek-v4-flash',
+  'project-chat': 'deepseek-v4-pro',
   kickoff: 'deepseek-v4-pro',
   research: 'deepseek-v4-pro',
   'artifact-generation': 'deepseek-v4-pro',

@@ -3,8 +3,9 @@
 import { Plus } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
-import type { ConversationType } from '@nexus/types';
+import type { ConversationType, MessageType } from '@nexus/types';
 
+import { getMessages } from '@/api/ai';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -13,10 +14,29 @@ import {
   useGetConversations,
   useUpdateConversation,
 } from '@/hooks/useAi';
-import { cn } from '@/lib/utils';
+import { cn, downloadTextFile, slugify } from '@/lib/utils';
 
 import { AIConversationActionsMenu } from './AIConversationActionsMenu';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+
+/** Pages through the whole transcript; the API returns it newest-page first. */
+async function getAllMessages(conversationId: string): Promise<MessageType[]> {
+  const all: MessageType[] = [];
+  let cursor: number | undefined;
+
+  for (;;) {
+    const page = await getMessages(conversationId, {
+      limit: 100,
+      ...(cursor !== undefined ? { cursor } : {}),
+    });
+    all.push(...page.messages);
+
+    if (!page.hasMore || page.nextCursor === null || page.nextCursor === cursor) break;
+    cursor = page.nextCursor;
+  }
+
+  return all.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
 
 export function AIConversationList({
   projectId,
@@ -78,6 +98,23 @@ export function AIConversationList({
     if (event.key === 'Escape') {
       event.preventDefault();
       cancelRename();
+    }
+  };
+
+  const downloadConversation = async (conversation: ConversationType) => {
+    try {
+      const messages = await getAllMessages(conversation.id);
+      const body = messages
+        .filter((message) => message.role !== 'system')
+        .map((message) => `${message.role === 'user' ? 'User' : 'Assistant'}: ${message.content}`)
+        .join('\n\n');
+
+      downloadTextFile({
+        filename: `${slugify(conversation.title) || 'conversation'}.txt`,
+        content: `${conversation.title}\n\n${body}\n`,
+      });
+    } catch (err) {
+      console.error('[conversation] download failed', err);
     }
   };
 
@@ -149,6 +186,7 @@ export function AIConversationList({
                       {conversation.title}
                     </button>
                     <AIConversationActionsMenu
+                      onDownload={() => downloadConversation(conversation)}
                       onRename={() => startRename(conversation)}
                       onDelete={() => {
                         setError(null);

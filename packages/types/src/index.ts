@@ -6,8 +6,10 @@ import {
   aiTaskDataSchema,
   aiSuggestionListSchema,
   aiSuggestionSchema,
+  artifactContentSchema,
   artifactListSchema,
   artifactSchema,
+  artifactVersionSchema,
   createArtifactSchema,
   createAiSuggestionSchema,
   createConversationSchema,
@@ -117,6 +119,8 @@ import {
   chatTextDeltaEventSchema,
   chatErrorEventSchema,
   chatCitationSchema,
+  chatArtifactSchema,
+  chatArtifactEventSchema,
   chatToolEventSchema,
   chatToolTraceSchema,
   chatSourcesEventSchema,
@@ -164,10 +168,13 @@ export type ChatToolEventType = z.infer<typeof chatToolEventSchema>;
 export type ChatToolTraceType = z.infer<typeof chatToolTraceSchema>;
 export type ChatSourcesEventType = z.infer<typeof chatSourcesEventSchema>;
 export type ChatCitationType = z.infer<typeof chatCitationSchema>;
+export type ChatArtifactType = z.infer<typeof chatArtifactSchema>;
+export type ChatArtifactEventType = z.infer<typeof chatArtifactEventSchema>;
 export type ChatStreamEvent =
   | ({ type: 'text-delta' } & ChatTextDeltaEventType)
   | ({ type: 'tool' } & ChatToolEventType)
   | ({ type: 'sources' } & ChatSourcesEventType)
+  | ({ type: 'artifact' } & ChatArtifactEventType)
   | ({ type: 'done' } & ChatDoneEventType)
   | ({ type: 'error' } & ChatErrorEventType);
 
@@ -206,6 +213,8 @@ export type UpdatePlannerItemInputType = z.infer<typeof updatePlannerItemSchema>
 
 export type ArtifactType = z.infer<typeof artifactSchema>;
 export type ArtifactListType = z.infer<typeof artifactListSchema>;
+export type ArtifactVersionType = z.infer<typeof artifactVersionSchema>;
+export type ArtifactContentType = z.infer<typeof artifactContentSchema>;
 export type CreateArtifactInputType = z.infer<typeof createArtifactSchema>;
 export type UpdateArtifactInputType = z.infer<typeof updateArtifactSchema>;
 

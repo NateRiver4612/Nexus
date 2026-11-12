@@ -24,6 +24,7 @@ import {
   chatErrorEventSchema,
   chatToolEventSchema,
   chatSourcesEventSchema,
+  chatArtifactEventSchema,
 } from '@nexus/zod-schemas';
 import { parseSSE } from '@/lib/Sse';
 
@@ -155,6 +156,8 @@ export async function* streamMessage({
       yield { type: 'tool', ...chatToolEventSchema.parse(payload) };
     } else if (event === 'sources') {
       yield { type: 'sources', ...chatSourcesEventSchema.parse(payload) };
+    } else if (event === 'artifact') {
+      yield { type: 'artifact', ...chatArtifactEventSchema.parse(payload) };
     } else if (event === 'done') {
       yield { type: 'done', ...chatDoneEventSchema.parse(payload) };
     } else if (event === 'error') {

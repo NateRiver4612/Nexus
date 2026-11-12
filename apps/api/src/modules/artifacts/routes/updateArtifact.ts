@@ -6,14 +6,19 @@ import {
   idParamsSchema,
   updateArtifactSchema,
 } from '@nexus/zod-schemas';
+import { getDb } from '@nexus/db';
 
+import { getArtifact } from '../../../lib/hono-context';
 import { bearerSecurity } from '../../../openapi';
+import { requireArtifactAccess } from '../middlewares';
+import { ArtifactService } from '../service';
 
 export const updateArtifactRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
     path: '/items/{id}',
     security: bearerSecurity,
+    middleware: [requireArtifactAccess],
     request: {
       params: idParamsSchema,
       body: {
@@ -38,22 +43,12 @@ export const updateArtifactRoute = defineOpenAPIRoute({
       },
     },
   }),
-  handler: (c) => {
-    const { id } = c.req.valid('param');
+  handler: async (c) => {
+    const artifact = getArtifact(c);
     const body = c.req.valid('json');
 
-    return c.json(
-      {
-        id,
-        projectId: body.projectId ?? '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        kind: body.kind ?? 'note',
-        title: body.title ?? 'Placeholder',
-        content: 'content' in body ? (body.content ?? null) : null,
-        metadata: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      200,
-    );
+    const updated = await ArtifactService(getDb()).update(artifact.id, body);
+
+    return c.json(updated, 200);
   },
 });

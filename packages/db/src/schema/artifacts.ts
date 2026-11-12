@@ -23,6 +23,7 @@ export const artifactType = pgEnum('artifact_type', [
   'document',
   'diagram',
   'study_guide',
+  'code',
 ]);
 
 export const artifactStatus = pgEnum('artifact_status', [

@@ -12,8 +12,10 @@ import { z } from '@hono/zod-openapi';
 import { truncate } from './contextBuilder';
 
 /** Model calls per turn. The last one runs without tools so the turn always ends in an answer. */
-export const MAX_ITERATIONS = 5;
+export const MAX_ITERATIONS = 8;
 const MAX_TOOL_RESULT_CHARS = 6000;
+// TEMP: keep each tool stage on screen long enough to read (demo pacing). Remove when done.
+const MIN_STAGE_MS = 2000;
 /** 2 retries = 3 attempts. Chat runs synchronously, so no queue retries it for us. */
 const CHAT_MAX_RETRIES = 2;
 
@@ -33,10 +35,17 @@ async function runTool({
     return { ...result, failed: false };
   } catch (error) {
     // The model gets a generic message; the real error stays in our logs.
-    //   content = 'The tool failed. Try again or answer without it.'
+    // so that during retry, we don't yield failed tool result to the UI
+    // therefore the model can retry without the user seeing a failed tool result.
     console.error(`[project-chat] tool ${tool.name} failed`, error);
     return { content: 'The tool failed. Try again or answer without it.', failed: true };
   }
+}
+
+/** Holds a tool's "running" stage until it has been visible for at least `MIN_STAGE_MS`. */
+async function holdStage(startedAt: number) {
+  const remaining = MIN_STAGE_MS - (Date.now() - startedAt);
+  if (remaining > 0) await new Promise<void>((resolve) => setTimeout(resolve, remaining));
 }
 
 /**
@@ -81,6 +90,7 @@ export async function* runChatLoop({
     const isLast = iteration === MAX_ITERATIONS - 1;
     let text = ''; // assistant text for this iteration
     const calls: ToolCall[] = []; // complete tool calls the model requested
+    let cutOff = false; // the model hit its token limit before it finished
 
     // Raw provider events here:
     //   { type: 'text-delta', text } | { type: 'tool-call', call } | { type: 'usage', usage }
@@ -109,6 +119,8 @@ export async function* runChatLoop({
       } else if (event.type === 'usage') {
         // Route totals this and persists it; it is never streamed to the client.
         yield event;
+      } else if (event.type === 'finish') {
+        cutOff = event.reason === 'length';
       }
     }
 
@@ -134,14 +146,25 @@ export async function* runChatLoop({
       let content: string; // what the model sees as this tool's result
       let failed = false;
 
+      const stageStartedAt = Date.now();
       // UI: { type: 'tool', id, name, label, status: 'running' } → spinner by the label
       yield { type: 'tool', id: call.id, name: call.name, label, status: 'running' };
 
-      if (!validTool) {
+      if (cutOff) {
+        // The provider repairs cut-off JSON into something that parses, so without this check
+        // a half-written artifact would be saved as if it were complete.
+        content =
+          'Your reply was cut off before this call finished, so it was not run. Try again with shorter content.';
+        failed = true;
+        console.warn(
+          `[project-chat] ${call.name} skipped: reply was cut off (finish_reason length)`,
+        );
+      } else if (!validTool) {
         // Model gets this string so it can retry:
         //   'Unknown tool "foo". Available tools: searchKnowledge, getProject.'
         content = `Unknown tool "${call.name}". Available tools: ${[...toolByName.keys()].join(', ')}.`;
         failed = true;
+        console.warn(`[project-chat] model called unknown tool "${call.name}"`);
       } else {
         // Validate model args against the tool schema before running it.
         const parsed = validTool.parameters.safeParse(call.args);
@@ -149,9 +172,13 @@ export async function* runChatLoop({
         if (!parsed.success) {
           // Model gets the prettified zod error, e.g.
           //   'Invalid arguments: query: Expected string, received number'
-          content = `Invalid arguments: ${z.prettifyError(parsed.error)}`;
+          const issues = z.prettifyError(parsed.error);
+          content = `Invalid arguments: ${issues}`;
           failed = true;
-        } else {
+          console.warn(`[project-chat] invalid arguments for ${call.name}: ${issues}`);
+        }
+        // Best effort case
+        else {
           const result = await runTool({ tool: validTool, ctx, args: parsed.data });
           content = result.content;
           failed = result.failed;
@@ -164,8 +191,16 @@ export async function* runChatLoop({
               sources: result.sources,
             };
           }
+
+          // Same idea for artifacts: the UI shows a card, the model only sees `content`.
+          if (result.artifact) {
+            yield { type: 'artifact', artifact: result.artifact };
+          }
         }
       }
+
+      // Hold the stage so a fast tool doesn't flash by (TEMP demo pacing).
+      await holdStage(stageStartedAt);
 
       // Same event with status 'done' | 'error' → clears/replaces the spinner.
       yield {

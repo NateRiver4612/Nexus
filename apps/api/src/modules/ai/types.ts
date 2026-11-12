@@ -1,6 +1,6 @@
 import type { z } from '@hono/zod-openapi';
 import type { Db } from '@nexus/db';
-import type { ChatCitationType, ChatStreamEvent, Usage } from '@nexus/types';
+import type { ChatArtifactType, ChatCitationType, ChatStreamEvent, Usage } from '@nexus/types';
 
 /**
  * Who is asking and where. Built by the route from the authenticated user and the conversation
@@ -31,6 +31,8 @@ export type ToolResult = {
   content: string;
   /** Sources to show the user as citations. */
   sources?: ChatCitationType[];
+  /** An artifact the tool saved; the loop streams it as an `artifact` event, the model never sees it. */
+  artifact?: ChatArtifactType;
 };
 
 export type Tool = {

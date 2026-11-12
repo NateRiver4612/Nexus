@@ -3,6 +3,7 @@ import z from 'zod';
 import { jsonrepair } from 'jsonrepair';
 
 import { AIProviderError, toAIProviderError, type AIProviderErrorKind } from './errors';
+import { DsmlSieve, dsmlCallId, type DsmlToolCall } from './dsml';
 import type {
   AIProvider,
   ChatInput,
@@ -96,6 +97,16 @@ export function parseArgs(raw: string): unknown {
   }
 }
 
+/**
+ * Normalises DeepSeek's `finish_reason` into the loop's three outcomes:
+ *   - `tool_calls` — the model asked for tools; the loop runs them and calls the model again.
+ *   - `length` — the reply hit the token limit mid-call, so the loop drops the half-written
+ *     call instead of running it.
+ *   - `stop` — the turn is over and the text is the answer, also the fallback for anything
+ *     unrecognised (`content_filter`, `null`, unknown values), which must not throw.
+ *
+ * @example mapFinish('content_filter') → 'stop'
+ */
 export function mapFinish(reason: string | null): 'stop' | 'tool_calls' | 'length' {
   if (reason === 'tool_calls') return 'tool_calls';
   if (reason === 'length') return 'length';
@@ -189,6 +200,11 @@ export class DeepSeekProvider implements AIProvider {
     //   { index: 0, id: 'call_1', function: { name: 'searchKnowledge', arguments: '{"qu' } }
     //   { index: 0, function: { arguments: 'ery":"auth"}' } }
     const pending = new Map<number, { id: string; name: string; args: string }>();
+    // Occasionally a DeepSeek V4 stream leaks a tool call as DSML markup in `content` instead of
+    // `delta.tool_calls` — a provider-side parser/routing defect (mostly Pro + large arguments),
+    // not an alternate wire format. The sieve keeps it out of the text and recovers what it can.
+    const sieve = new DsmlSieve();
+    const dsmlCalls: DsmlToolCall[] = [];
     // finish_reason / usage only appear on the last chunks, so capture them in the loop.
     let finishReason: string | null = null;
     let usage: Usage | undefined;
@@ -218,8 +234,10 @@ export class DeepSeekProvider implements AIProvider {
         if (!choice) continue;
 
         if (choice.delta.content) {
-          // Chat text arrives incrementally → one `text-delta` per chunk.
-          yield { type: 'text-delta', text: choice.delta.content };
+          // Prose streams immediately; DSML tool-call markup is buffered instead of leaked.
+          const out = sieve.push(choice.delta.content);
+          if (out.text) yield { type: 'text-delta', text: out.text };
+          dsmlCalls.push(...out.calls);
         }
 
         // Same call can span many chunks; keyed by index. Only `arguments` is cumulative.
@@ -235,13 +253,19 @@ export class DeepSeekProvider implements AIProvider {
         if (choice.finish_reason) finishReason = choice.finish_reason;
       }
     } catch (err) {
+      console.error('[project-chat] streamChat failed', err);
       if (input.signal?.aborted) return; // aborted by the caller: end quietly
       throw toAIProviderError(err);
     }
 
-    // Stream is over, so every call is complete and its JSON parseable. Flush them sorted by index
-    // to match the model's request order.
-    const calls: ToolCall[] = [...pending.entries()]
+    // Release any text the sieve held back (a trailing `<` that never became a tag) and any calls
+    // in a block that was cut off before its close tag.
+    const tail = sieve.flush();
+    if (tail.text) yield { type: 'text-delta', text: tail.text };
+    dsmlCalls.push(...tail.calls);
+
+    // Structured `tool_calls` win when the API sends them; otherwise use the DSML we parsed.
+    const structuredCalls: ToolCall[] = [...pending.entries()]
       .sort(([a], [b]) => a - b)
       .map(([, slot]) => {
         // A truncated stream can leave a call without id/name — treat it as a provider error.
@@ -251,13 +275,29 @@ export class DeepSeekProvider implements AIProvider {
         // `slot.args` is a JSON string (possibly malformed); parseArgs repairs or throws.
         return { id: slot.id, name: slot.name, args: parseArgs(slot.args) };
       });
+    if (!structuredCalls.length && dsmlCalls.length) {
+      // Provider defect, not our happy path: surface it so a rise in leaks is visible.
+      console.warn(
+        `[deepseek] ${input.model}: recovered ${dsmlCalls.length} tool call(s) from DSML content ` +
+          '(expected delta.tool_calls)',
+      );
+    }
+
+    const calls: ToolCall[] = structuredCalls.length
+      ? structuredCalls
+      : dsmlCalls.map((call) => ({ id: dsmlCallId(), name: call.name, args: call.args }));
 
     // Emit in a fixed order so callers can rely on it:
-    //   { type: 'tool-call', call }* → { type: 'usage' }? → { type: 'finish', reason }
+    //   { type: 'text-delta' }* → { type: 'tool-call', call }* → { type: 'usage' }? → { type: 'finish', reason }
     for (const call of calls) yield { type: 'tool-call', call };
 
     if (usage) yield { type: 'usage', usage };
 
-    yield { type: 'finish', reason: mapFinish(finishReason) };
+    // A cut-off stream keeps 'length' so the loop refuses to run a half-written call.
+    const mapped = mapFinish(finishReason);
+    yield {
+      type: 'finish',
+      reason: mapped === 'length' ? 'length' : calls.length ? 'tool_calls' : mapped,
+    };
   }
 }
