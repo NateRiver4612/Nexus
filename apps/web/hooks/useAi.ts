@@ -1,4 +1,5 @@
 import type {
+  ChatArtifactType,
   ChatCitationType,
   CreateAiSuggestionInputType,
   CreateConversationInputType,
@@ -22,7 +23,7 @@ import {
   updateConversation,
 } from '@/api/ai';
 
-import { aiRunKeys, aiSuggestionKeys, conversationKeys, messageKeys } from './queryKeys';
+import { aiRunKeys, aiSuggestionKeys, artifactKeys, conversationKeys, messageKeys } from './queryKeys';
 import { createDetailQueryHook, createQueryHook } from './createQuery';
 import { createMutationHook } from './createMutation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -125,6 +126,10 @@ export type PendingTurn = {
   content: string;
   text: string;
   sources: ChatCitationType[];
+  /** Artifacts the assistant saved this turn, shown as cards under the reply. */
+  artifacts: ChatArtifactType[];
+  /** `create_artifact` is running — show a skeleton card until the real one arrives. */
+  creatingArtifact: boolean;
   /** Label of the tool that is running right now, e.g. "Searching knowledge…". */
   activity: string | null;
 };
@@ -137,9 +142,12 @@ export type PendingTurn = {
 export function useSendMessage({
   projectId,
   conversationId,
+  onArtifactCreated,
 }: {
   projectId: string;
   conversationId: string;
+  /** Fired the moment the assistant saves an artifact, so the panel can auto-open. */
+  onArtifactCreated?: (artifact: ChatArtifactType) => void;
 }) {
   const queryClient = useQueryClient();
   const controllerRef = useRef<AbortController | null>(null);
@@ -156,7 +164,14 @@ export function useSendMessage({
       const controller = new AbortController();
       controllerRef.current = controller;
       setError(null);
-      setPending({ content, text: '', sources: [], activity: null });
+      setPending({
+        content,
+        text: '',
+        sources: [],
+        artifacts: [],
+        creatingArtifact: false,
+        activity: null,
+      });
 
       try {
         for await (const event of streamMessage({
@@ -169,7 +184,11 @@ export function useSendMessage({
           } else if (event.type === 'tool') {
             setPending(
               (turn) =>
-                turn && { ...turn, activity: event.status === 'running' ? event.label : null },
+                turn && {
+                  ...turn,
+                  activity: event.status === 'running' ? event.label : null,
+                  creatingArtifact: event.name === 'create_artifact' && event.status === 'running',
+                },
             );
           } else if (event.type === 'sources') {
             setPending(
@@ -185,6 +204,17 @@ export function useSendMessage({
                   ],
                 },
             );
+          } else if (event.type === 'artifact') {
+            setPending((turn) =>
+              turn
+                ? {
+                    ...turn,
+                    artifacts: [...turn.artifacts, event.artifact],
+                    creatingArtifact: false,
+                  }
+                : turn,
+            );
+            onArtifactCreated?.(event.artifact);
           } else if (event.type === 'error') {
             setError(event.message);
           }
@@ -203,11 +233,14 @@ export function useSendMessage({
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: messageKeys.list(conversationId) }),
           queryClient.invalidateQueries({ queryKey: conversationKeys.list(projectId) }),
+          // Artifacts belong to the project, so a save must refresh any open panel's content
+          // (e.g. a new version) and the project's artifact list.
+          queryClient.invalidateQueries({ queryKey: artifactKeys.all }),
         ]);
         setPending(null);
       }
     },
-    [conversationId, projectId, queryClient],
+    [conversationId, projectId, queryClient, onArtifactCreated],
   );
 
   const stop = useCallback(() => controllerRef.current?.abort(), []);

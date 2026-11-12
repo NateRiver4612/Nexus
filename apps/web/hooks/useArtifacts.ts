@@ -2,8 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { CreateArtifactInputType, UpdateArtifactInputType } from '@nexus/types';
 
-import { createArtifact, deleteArtifact, getArtifacts, updateArtifact } from '@/api/artifacts';
+import {
+  createArtifact,
+  deleteArtifact,
+  getArtifactContent,
+  getArtifacts,
+  updateArtifact,
+} from '@/api/artifacts';
 
+import { createQueryHook } from './createQuery';
 import { artifactKeys } from './queryKeys';
 
 export function useGetArtifacts(projectId: string) {
@@ -13,6 +20,13 @@ export function useGetArtifacts(projectId: string) {
     enabled: Boolean(projectId),
   });
 }
+
+/** One artifact's content (a specific version, or the newest when `version` is omitted). */
+export const useGetArtifactContent = createQueryHook(
+  ({ id, version }: { id: string; version?: number }) => getArtifactContent({ id, version }),
+  ({ id, version }) => artifactKeys.content(id, version),
+  { getEnabled: ({ id }) => Boolean(id) },
+);
 
 export function useCreateArtifact(projectId: string) {
   const queryClient = useQueryClient();

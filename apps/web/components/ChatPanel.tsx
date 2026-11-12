@@ -1,21 +1,25 @@
 'use client';
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import type { ChatArtifactType } from '@nexus/types';
 import { SendHorizontal, Square } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useGetMessages, useSendMessage } from '@/hooks/useAi';
-import { ChatMessage, citationsOf } from './ChatMessage';
+import { ChatMessage, artifactsOf, citationsOf } from './ChatMessage';
 
 /** Mount with `key={conversationId}` so streaming state never leaks between threads. */
 export function ChatPanel({
   projectId,
   conversationId,
+  onOpenArtifact,
 }: {
   projectId: string;
   conversationId: string;
+  /** Opens the artifact panel (both on card click and when the assistant saves one). */
+  onOpenArtifact?: (artifact: ChatArtifactType) => void;
 }) {
   const { data, isLoading } = useGetMessages({
     variables: { conversationId },
@@ -23,10 +27,9 @@ export function ChatPanel({
   const { send, stop, pending, error, isStreaming } = useSendMessage({
     projectId,
     conversationId,
+    onArtifactCreated: onOpenArtifact,
   });
   const [draft, setDraft] = useState('');
-
-  console.log('Pending', pending);
 
   // Follow the stream, but only while the user is already at the bottom.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,7 +64,7 @@ export function ChatPanel({
           const el = event.currentTarget;
           stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}
-        className="min-h-0 flex-1 h-[50%] space-y-4 overflow-y-auto px-4 py-4"
+        className="min-h-0 flex-1 h-[50%] space-y-8 overflow-y-auto px-4 py-4"
       >
         {isLoading ? (
           <>
@@ -80,6 +83,8 @@ export function ChatPanel({
               content={message.content}
               partial={message.metadata?.partial === true}
               sources={citationsOf(message.metadata)}
+              artifacts={artifactsOf(message.metadata)}
+              onOpenArtifact={onOpenArtifact}
             />
           ))
         )}
@@ -91,8 +96,11 @@ export function ChatPanel({
               role="assistant"
               content={pending.text}
               sources={pending.sources}
+              artifacts={pending.artifacts}
+              creatingArtifact={pending.creatingArtifact}
               activity={pending.activity}
               isStreaming
+              onOpenArtifact={onOpenArtifact}
             />
           </>
         )}

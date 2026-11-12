@@ -31,6 +31,37 @@ export function formatTimeMinutes(minutes?: number | null): string | null {
   return `${hours}h ${remaining}m`;
 }
 
+/** Triggers a browser download for a text file. Client-only. */
+export function downloadTextFile({
+  filename,
+  content,
+  mimeType = 'text/plain',
+}: {
+  filename: string;
+  content: string;
+  mimeType?: string;
+}) {
+  const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+const ARTIFACT_EXTENSION: Record<string, string> = {
+  'text/markdown': '.md',
+  'text/vnd.mermaid': '.mmd',
+};
+
+/** Keep the artifact's own name when it already has an extension; otherwise add one by mime type. */
+export function artifactFilename(name: string, mimeType: string): string {
+  if (/\.[a-z]{2,5}$/i.test(name)) return name;
+  return `${name}${ARTIFACT_EXTENSION[mimeType] ?? '.txt'}`;
+}
+
 const AUDIO_EXTENSIONS = ['mp3', 'm4a', 'wav', 'webm', 'ogg', 'flac', 'mp4'];
 
 /** Audio uploads use the same presigned PUT flow but a different `sourceType`. */

@@ -1,6 +1,6 @@
 'use client';
 
-import { EllipsisVertical, Pencil, Trash2 } from 'lucide-react';
+import { Download, EllipsisVertical, Pencil, Trash2 } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
 import {
@@ -13,15 +13,22 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 type AIConversationActionsMenuProps = {
+  onDownload: () => void;
   onRename: () => void;
   onDelete: () => void;
 };
 
 export const AIConversationActionsMenu = ({
+  onDownload,
   onRename,
   onDelete,
 }: AIConversationActionsMenuProps) => {
   const [open, setOpen] = useState(false);
+
+  const selectDownload = () => {
+    setOpen(false);
+    onDownload();
+  };
 
   const selectRename = () => {
     setOpen(false);
@@ -64,6 +71,14 @@ export const AIConversationActionsMenu = ({
         onCloseAutoFocus={(event) => event.preventDefault()}
         className="w-56 rounded-lg bg-white border border-border/80 p-1.5 shadow-xl"
       >
+        <DropdownMenuItem
+          onSelect={selectDownload}
+          className="flex cursor-pointer items-center gap-3 px-2.5 py-1 text-sm"
+        >
+          <Download className="size-4" strokeWidth={1.6} />
+          Download
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={selectRename}
           className="flex cursor-pointer items-center gap-3 px-2.5 py-1 text-sm"
