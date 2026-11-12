@@ -101,4 +101,41 @@ live('DeepSeek live wire compatibility', () => {
       reason: 'stop',
     });
   }, 60_000);
+
+  // Regression guard for the Pro leak: a large tool payload is where the provider is most likely
+  // to emit DSML in `content` instead of `delta.tool_calls`. If the sieve breaks, this fails with
+  // markup in the text; when the fallback fires, `streamChat` logs the recovery warning.
+  test('recovers a large tool call without leaking DSML (pro)', async () => {
+    const { provider, model } = await getLiveProvider();
+    const saveDocument: ToolDef = {
+      name: 'save_document',
+      description: 'Save a markdown document. Call with the full content.',
+      parameters: z.object({ name: z.string(), content: z.string() }),
+    };
+    const messages: ChatMessage[] = [
+      {
+        role: 'user',
+        content:
+          'Call save_document with name "brief.md" and content set to a markdown document ' +
+          'containing 40 short bullet points about distributed systems. Include all 40 bullets.',
+      },
+    ];
+
+    const events = await collect(
+      provider.streamChat({ model, messages, tools: [saveDocument], maxTokens: 4000 }),
+    );
+
+    const text = events.reduce(
+      (acc, event) => (event.type === 'text-delta' ? acc + event.text : acc),
+      '',
+    );
+    expect(text).not.toMatch(/14731|DSML/);
+
+    const callEvent = events.find((event) => event.type === 'tool-call');
+    expect(callEvent?.type).toBe('tool-call');
+    if (callEvent?.type !== 'tool-call') throw new Error('expected a tool call');
+    expect(callEvent.call.name).toBe('save_document');
+    expect(saveDocument.parameters.safeParse(callEvent.call.args).success).toBe(true);
+    expect(events.at(-1)).toEqual({ type: 'finish', reason: 'tool_calls' });
+  }, 120_000);
 });

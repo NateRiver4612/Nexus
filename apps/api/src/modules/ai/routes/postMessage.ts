@@ -24,6 +24,8 @@ import { buildProjectChatSystemPrompt } from '../prompts/projectChat';
 import { streamSSE } from 'hono/streaming';
 import type { Context } from 'hono';
 import type {
+  ChatArtifactEventType,
+  ChatArtifactType,
   ChatCitationType,
   ChatTextDeltaEventType,
   ChatDoneEventType,
@@ -58,6 +60,12 @@ const userFacingError = (kind: AIProviderErrorKind) => {
   }
 };
 
+// Correctly tells OpenAPI that the raw wire format is text chunks
+// No False Promises to Client Generators
+// Flexibility for Mixed Events
+const RawFormatTextChunkDescription =
+  'SSE stream. Events: `text-delta` {text}, `tool` {id, name, label, status}, `sources` {sources}, `artifact` {artifact}, `done` {messageId, runId, title?}, `error` {kind, message}.';
+
 export const postMessageRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'post',
@@ -74,13 +82,9 @@ export const postMessageRoute = defineOpenAPIRoute({
     responses: {
       200: {
         content: {
-          // Correctly tells OpenAPI that the raw wire format is text chunks
-          // No False Promises to Client Generators
-          // Flexibility for Mixed Events
           'text/event-stream': {
             schema: z.string().openapi({
-              description:
-                'SSE stream. Events: `text-delta` {text}, `tool` {id, name, label, status}, `sources` {sources}, `done` {messageId, runId, title?}, `error` {kind, message}.',
+              description: RawFormatTextChunkDescription,
             }),
           },
         },
@@ -204,14 +208,21 @@ async function streamProjectChat({
 
     // The HTTP connection closed → stop the upstream stream instead of wasting tokens.
     stream.onAbort(() => {
+      console.warn('[project-chat] stream aborted (client disconnected or idle timeout)');
       controller.abort();
     });
+
+    // A large tool call (e.g. an artifact) is buffered by the DSML sieve without emitting text, so
+    // the stream can be silent for a long time. SSE comments keep the connection from idling out.
+    const keepAlive = setInterval(() => {
+      if (!stream.aborted) void stream.write(': keep-alive\n\n').catch(() => undefined);
+    }, 15_000);
 
     // Single write path; skips writes after abort. Wire format:
     //   event: text-delta
     //   data: {"text":"…"}
     const send = async (
-      event: 'text-delta' | 'tool' | 'sources' | 'done' | 'error',
+      event: 'text-delta' | 'tool' | 'sources' | 'artifact' | 'done' | 'error',
       data: object,
     ): Promise<void> => {
       if (stream.aborted) {
@@ -236,6 +247,7 @@ async function streamProjectChat({
     };
     const toolTrace: ChatToolTraceType = [];
     const citations = new Map<string, ChatCitationType>();
+    const artifacts: ChatArtifactType[] = [];
 
     try {
       // Two levels on purpose: an error from the provider/loop is a normal failure we report
@@ -293,11 +305,19 @@ async function streamProjectChat({
             // Dedupe so repeated citations collapse in the saved metadata.
             for (const source of event.sources) citations.set(citationKey(source), source);
             await send('sources', { sources: event.sources } satisfies ChatSourcesEventType);
+          } else if (event.type === 'artifact') {
+            artifacts.push(event.artifact);
+            // Wire shape: { artifact: { id, name, type, version } }
+            await send('artifact', { artifact: event.artifact } satisfies ChatArtifactEventType);
           }
         }
       } catch (err) {
-        console.error(err);
-        if (!controller.signal.aborted) {
+        const aborted = controller.signal.aborted;
+        console.error(
+          `[project-chat] model/tool loop failed (run ${run.id}, aborted: ${aborted})`,
+          err,
+        );
+        if (!aborted) {
           failure = toAIProviderError(err);
         }
       }
@@ -308,7 +328,11 @@ async function streamProjectChat({
 
       // Keep whatever the user already saw, flagged `partial`, so a reload matches the screen.
       // Nothing is saved if no text arrived. metadata shape:
-      //   { runId, partial?: true, tools?: [{ id, name, label, status }], citations?: [...] }
+      //   {
+      //    runId, partial?: true, tools?: [{ id, name, label, status }],
+      //    citations?: [...],
+      //    artifacts?: [{ id, name, type, version }]
+      //   }
       let messageId: string | undefined;
       if (text.trim()) {
         const saved = await conversations.appendAssistantMessage({
@@ -320,6 +344,7 @@ async function streamProjectChat({
             ...(partial ? { partial: true } : {}),
             ...(toolTrace.length ? { tools: toolTrace } : {}),
             ...(citations.size ? { citations: [...citations.values()] } : {}),
+            ...(artifacts.length ? { artifacts } : {}),
           },
         });
 
@@ -387,7 +412,7 @@ async function streamProjectChat({
     } catch (err) {
       // Last-resort catch (e.g. save/rename threw): mark the run failed and tell the client.
       // Secondary failures are swallowed so the SSE response can still finish.
-      console.error('[project-chat] unexpected failure', err);
+      console.error(`[project-chat] unexpected failure (run ${run.id})`, err);
 
       await aiService
         .failRun({
@@ -401,6 +426,8 @@ async function streamProjectChat({
         kind: 'unknown',
         message: userFacingError('unknown'),
       }).catch(() => undefined);
+    } finally {
+      clearInterval(keepAlive);
     }
   });
 }
