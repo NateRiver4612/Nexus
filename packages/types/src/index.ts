@@ -12,6 +12,7 @@ import {
   createAiSuggestionSchema,
   createConversationSchema,
   createKnowledgeItemSchema,
+  createKnowledgeSourceAudioSchema,
   createKnowledgeSourcesSchema,
   deleteKnowledgeSourcesSchema,
   createMessageSchema,
@@ -26,6 +27,7 @@ import {
   idSchema,
   knowledgeItemListSchema,
   knowledgeItemSchema,
+  knowledgeSourceDownloadUrlSchema,
   knowledgeSourceListSchema,
   knowledgeSourceSchema,
   messagePageQuerySchema,
@@ -214,11 +216,13 @@ export type UpdateKnowledgeItemInputType = z.infer<typeof updateKnowledgeItemSch
 
 export type KnowledgeSourceType = z.infer<typeof knowledgeSourceSchema>;
 export type KnowledgeSourceListType = z.infer<typeof knowledgeSourceListSchema>;
+export type KnowledgeSourceDownloadUrlType = z.infer<typeof knowledgeSourceDownloadUrlSchema>;
 export type DeleteKnowledgeSourcesInputType = z.infer<typeof deleteKnowledgeSourcesSchema>;
 export type CreateKnowledgeSourcesInputType = z.infer<typeof createKnowledgeSourcesSchema>;
 export type CreateKnowledgeSourceItemType = CreateKnowledgeSourcesInputType[number];
 export type CreateUploadUrlInputType = z.infer<typeof createUploadUrlSchema>;
 export type CreateUploadUrlResponseType = z.infer<typeof createUploadUrlResponseSchema>;
+export type CreateKnowledgeSourceAudioType = z.infer<typeof createKnowledgeSourceAudioSchema>;
 export type CreateKnowledgeSourceTextType = z.infer<typeof createKnowledgeSourceTextSchema>;
 export type CreateKnowledgeSourceYoutubeType = z.infer<typeof createKnowledgeSourceYoutubeSchema>;
 export type DeliverableKindType = z.infer<typeof deliverableKindSchema>;

@@ -18,6 +18,20 @@ import {
 } from 'lucide-react';
 
 export const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — bigger than your avatar upload limit, docs are larger
+
+export const ACCEPTED_AUDIO_TYPES = [
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/m4a',
+  'audio/x-m4a',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/webm',
+  'audio/ogg',
+  'audio/flac',
+];
+
 export const ACCEPTED_FILE_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
@@ -29,6 +43,9 @@ export const ACCEPTED_FILE_TYPES = [
   'image/png',
   'image/webp',
 ];
+
+/** Everything a knowledge source may upload: documents/images plus audio. */
+export const ACCEPTED_UPLOAD_TYPES = [...ACCEPTED_FILE_TYPES, ...ACCEPTED_AUDIO_TYPES];
 
 export const DEFAULT_ONBOARDING_CATEGORIES = [
   {

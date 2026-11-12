@@ -17,7 +17,7 @@ import {
 import { toAIProviderError, type AIProviderErrorKind } from '../providers/deepseek/errors';
 import type { AIProvider, ChatMessage } from '../types';
 import { AIService, type AIServiceType } from '../service';
-import { getAIProvider } from '../providers';
+import { getDeepSeekProvider } from '../providers';
 import { modelForTask } from '../../../lib/client';
 import { buildProjectGeneralContext } from '../chat/contextBuilder';
 import { buildProjectChatSystemPrompt } from '../prompts/projectChat';
@@ -108,7 +108,7 @@ export const postMessageRoute = defineOpenAPIRoute({
     const aiService = AIService(db);
 
     // Provider + model are chosen server-side per task; callers can't override them.
-    const provider = getAIProvider();
+    const provider = getDeepSeekProvider();
     const model = modelForTask('project-chat');
 
     // Everything that can fail with a normal HTTP error (404 on a missing or foreign

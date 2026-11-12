@@ -1,3 +1,4 @@
+import { ACCEPTED_AUDIO_TYPES } from '@nexus/zod-schemas/constants';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -28,4 +29,14 @@ export function formatTimeMinutes(minutes?: number | null): string | null {
   if (hours === 0) return `${remaining}m`;
   if (remaining === 0) return `${hours}h`;
   return `${hours}h ${remaining}m`;
+}
+
+const AUDIO_EXTENSIONS = ['mp3', 'm4a', 'wav', 'webm', 'ogg', 'flac', 'mp4'];
+
+/** Audio uploads use the same presigned PUT flow but a different `sourceType`. */
+export function isAudioFile(file: File) {
+  if (ACCEPTED_AUDIO_TYPES.includes(file.type)) return true;
+  // Some browsers report an empty type for .m4a/.flac; fall back to the extension.
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return AUDIO_EXTENSIONS.includes(ext) && !file.type.startsWith('video/');
 }

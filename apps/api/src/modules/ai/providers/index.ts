@@ -1,14 +1,22 @@
-import { getDeepSeekClient } from '../../../lib/client';
-import type { AIProvider } from '../types';
+import { getDeepSeekClient, getOpenAI } from '../../../lib/client';
 import { DeepSeekProvider } from './deepseek';
+import { OpenAIProvider } from './openai';
+import { TavilyProvider } from './tavily';
 
-let provider: AIProvider | undefined;
+// One shared instance per vendor. Each is stateless — the SDK clients are created lazily
+// per call — so domain code asks for the vendor provider and never touches an SDK client.
+const deepseekProvider = new DeepSeekProvider(getDeepSeekClient);
+const openaiProvider = new OpenAIProvider(getOpenAI);
+const tavilyProvider = new TavilyProvider();
 
-/**
- * The one place a concrete provider is chosen. Domain code asks for `getAIProvider()` and
- * never touches an SDK client, so swapping providers later is a change to this file only.
- */
-export function getAIProvider(): AIProvider {
-  provider ??= new DeepSeekProvider(getDeepSeekClient);
-  return provider;
+export function getDeepSeekProvider(): DeepSeekProvider {
+  return deepseekProvider;
+}
+
+export function getOpenAIProvider(): OpenAIProvider {
+  return openaiProvider;
+}
+
+export function getTavilyProvider(): TavilyProvider {
+  return tavilyProvider;
 }

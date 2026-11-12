@@ -9,10 +9,11 @@ export async function mapInputToRow(
   projectId: string,
   userId: string,
 ): Promise<NewSourceRow> {
-  if (input.sourceType === 'file') {
+  // Audio uploads go through the same presigned-S3 flow as files; only extraction differs.
+  if (input.sourceType === 'file' || input.sourceType === 'audio') {
     return {
       projectId,
-      sourceType: 'file',
+      sourceType: input.sourceType,
       name: input.name,
       mimeType: input.mimeType,
       sizeBytes: input.size,
@@ -64,6 +65,17 @@ export function publishStatus(
   );
 }
 
+const PREVIEW_CONTENT_MAX_CHARS = 50_000;
+
+/**
+ * The list endpoint carries `content` for the preview dialog. Trim it so a large
+ * PDF/URL doesn't bloat every list response — the full text stays in the DB.
+ */
+function truncatePreviewContent(content: string | null): string | null {
+  if (!content || content.length <= PREVIEW_CONTENT_MAX_CHARS) return content;
+  return `${content.slice(0, PREVIEW_CONTENT_MAX_CHARS)}\n\n…`;
+}
+
 export function toSourceView(row: SourceRow): KnowledgeSourceType {
   return {
     id: row.id,
@@ -76,7 +88,7 @@ export function toSourceView(row: SourceRow): KnowledgeSourceType {
     storageKey: row.storageKey ?? null,
     status: row.status,
     errorMessage: row.errorMessage ?? null,
-    content: row.content ?? null,
+    content: truncatePreviewContent(row.content ?? null),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

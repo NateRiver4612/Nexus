@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   faFile,
+  faFileAudio,
   faFileCsv,
   faFileExcel,
   faFileImage,
@@ -70,6 +71,8 @@ export function fileIcon(file: { name: string; type: string }) {
   if (type.includes('spreadsheetml') || ext === 'xlsx')
     return { icon: faFileExcel, color: 'text-emerald-600' };
   if (type.startsWith('image/')) return { icon: faFileImage, color: 'text-violet-600' };
+  if (type.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'webm', 'ogg', 'flac'].includes(ext ?? ''))
+    return { icon: faFileAudio, color: 'text-amber-600' };
   if (type.startsWith('youtube'))
     return {
       icon: faYoutube,
@@ -114,7 +117,9 @@ export function UploadKnowledgeSource({
     }),
   );
 
-  const files = knowledgeSources?.filter((k) => k.sourceType === 'file');
+  const files = knowledgeSources?.filter(
+    (k) => k.sourceType === 'file' || k.sourceType === 'audio',
+  );
 
   return (
     <div>

@@ -4,14 +4,15 @@ import { useCallback, useRef, useState, type DragEvent } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { ClipboardType, Link2, Play, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, isAudioFile } from '@/lib/utils';
 import { createKnowledgeSourcesSchema, fileSchema } from '@nexus/zod-schemas';
 import type { CreateKnowledgeSourcesInputType, KnowledgeSourceListType } from '@nexus/types';
 import { useCreateKnowledgeUploadUrl } from '@/hooks/useKnowledge';
 import type { CreateCallback, SourceFileMeta, SourceFormValues } from '../UploadKnowledgeSource';
 import { SourceList } from './SourceList';
 
-const ACCEPTED_EXTENSIONS = '.pdf,.docx,.xlsx,.csv,.txt,.md,.jpg,.jpeg,.png,.webp';
+const ACCEPTED_EXTENSIONS =
+  '.pdf,.docx,.xlsx,.csv,.txt,.md,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.wav,.webm,.ogg,.flac';
 
 /**
  * Normalizes either a real `File`, a form `SourceFileMeta`, or a server source
@@ -137,6 +138,17 @@ export function FileMode({
         headers: { 'Content-Type': file.type },
       });
       if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+
+      if (isAudioFile(file)) {
+        return {
+          sourceType: 'audio',
+          name: file.name,
+          mimeType: file.type,
+          storageKey: key,
+          size: file.size,
+        };
+      }
+
       return {
         sourceType: 'file',
         name: file.name,
@@ -166,7 +178,7 @@ export function FileMode({
           Drag and drop files here, or choose a source below
         </p>
         <p className="mt-1 text-sm font-semibold text-muted-foreground">
-          PDF, DOCX, XLSX, CSV, TXT, MD, or an image
+          PDF, DOCX, XLSX, CSV, TXT, MD, an image, or an audio file
         </p>
         <div className="flex justify-center flex-wrap gap-2 pt-6">
           <Button

@@ -50,7 +50,7 @@ export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
   const activeSources = (sources ?? []).filter((row) => row.status !== 'failed');
 
   const serverFiles: SourceFileMeta[] = activeSources
-    .filter((row) => row.sourceType === 'file')
+    .filter((row) => row.sourceType === 'file' || row.sourceType === 'audio')
     .map((row) => ({ name: row.name, size: row.size, mimeType: row.mimeType ?? null }));
 
   const form = useForm<SourceFormValues>({
@@ -63,7 +63,7 @@ export function Step3({ ref, projectId, defaults, onSave }: Step3Props) {
       const rows = activeSources;
 
       const files = rows
-        .filter((row) => row.sourceType === 'file')
+        .filter((row) => row.sourceType === 'file' || row.sourceType === 'audio')
         .map((row) => ({ name: row.name, size: row.size, mimeType: row.mimeType ?? null }));
       const urlRow = rows.find(
         (row) => (row.sourceType === 'url' || row.sourceType === 'youtube') && row.sourceRef,

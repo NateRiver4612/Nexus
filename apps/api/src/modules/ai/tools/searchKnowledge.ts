@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-import { embedText } from '../../../embeddings';
+import { getOpenAIProvider } from '../providers';
 import { KnowledgeService } from '../../knowledge/service';
 import { KnowledgeChunkService } from '../../knowledgeChunk/service';
 import { defineTool } from '../types';
@@ -22,12 +22,12 @@ export const searchKnowledgeTool = defineTool({
     limit: z.number().int().min(1).max(8).optional().describe('Excerpts to return (default 5).'),
   }),
   async run({ ctx, args }) {
-    const queryEmbedding = await embedText(args.query);
+    const [queryEmbedding] = await getOpenAIProvider().embed([args.query]);
 
     const [chunks, sources] = await Promise.all([
       KnowledgeChunkService(ctx.db).searchChunksByEmbedding({
         projectId: ctx.projectId,
-        queryEmbedding,
+        queryEmbedding: queryEmbedding ?? [],
         limit: args.limit ?? DEFAULT_LIMIT,
       }),
       KnowledgeService(ctx.db).listSources(ctx.projectId),

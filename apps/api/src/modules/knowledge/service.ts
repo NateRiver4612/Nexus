@@ -1,10 +1,9 @@
 import { UnrecoverableError } from 'bullmq';
-import OpenAI from 'openai';
 
-import { presignKnowledgePutUrl } from '../../storage';
-import { generateEmbeddings } from '../../embeddings';
+import { presignKnowledgeGetUrl, presignKnowledgePutUrl } from '../../storage';
+import { ensure, ensureExists, NotFoundError } from '../../errors';
 import { env } from '../../env';
-import { withUnrecoverable } from '../../queue-errors';
+import { getOpenAIProvider } from '../ai/providers';
 import { chunkText } from './chunk';
 import { extractSourceText } from './extract';
 import { extractFromYoutube } from './youtube';
@@ -109,6 +108,21 @@ export function KnowledgeService(db: Db) {
     return { url, key, bucket };
   }
 
+  async function getDownloadUrl({ projectId, sourceId }: { projectId: string; sourceId: string }) {
+    const source = ensureExists(
+      await repository.getSourceById(sourceId),
+      NotFoundError('Knowledge source not found.'),
+    );
+    ensure(source.projectId === projectId, NotFoundError('Knowledge source not found.'));
+
+    const storageKey = ensureExists(
+      source.storageKey,
+      NotFoundError('This source has no stored file.'),
+    );
+
+    return presignKnowledgeGetUrl({ key: storageKey, filename: source.name });
+  }
+
   /**
    * Ingests one knowledge source end-to-end: mark it `processing`, extract text by
    * source type (YouTube transcript vs. file/url/copied text), sanitize, chunk, embed
@@ -151,13 +165,8 @@ export function KnowledgeService(db: Db) {
       const canEmbed = Boolean(env.OPENAI_API_KEY);
       let vectors: number[][] = [];
       if (canEmbed) {
-        // 400/401/403/404 (bad input, bad key, forbidden, missing model) won't improve on
-        // retry; 429/5xx/network still will.
-        vectors = await withUnrecoverable({
-          promise: generateEmbeddings(chunks),
-          isUnrecoverable: (error) =>
-            error instanceof OpenAI.APIError && [400, 401, 403, 404].includes(error.status ?? 0),
-        });
+        // The provider classifies 400/401/403/404 as unrecoverable; 429/5xx/network retry.
+        vectors = await getOpenAIProvider().embed(chunks);
       }
 
       const rows = chunks.map((content, index) => ({
@@ -181,6 +190,9 @@ export function KnowledgeService(db: Db) {
           status: 'ready',
           errorMessage: null,
           ...(updatedName ? { name: updatedName } : {}),
+          // Persist the extracted text so the source preview can render it
+          // without reconstructing (and re-overlapping) chunks.
+          content: text,
         });
       });
 
@@ -204,7 +216,15 @@ export function KnowledgeService(db: Db) {
     }
   }
 
-  return { createSources, listSources, getUploadUrl, processSource, deleteSource, deleteSources };
+  return {
+    createSources,
+    listSources,
+    getUploadUrl,
+    getDownloadUrl,
+    processSource,
+    deleteSource,
+    deleteSources,
+  };
 }
 
 export type KnowledgeServiceType = ReturnType<typeof KnowledgeService>;

@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi';
 
 import { idSchema, timestampSchema } from './common';
-import { ACCEPTED_FILE_TYPES } from './constants';
+import { ACCEPTED_AUDIO_TYPES, ACCEPTED_FILE_TYPES, ACCEPTED_UPLOAD_TYPES } from './constants';
 
 export const knowledgeSourceType = z.enum([
   'file',
@@ -20,7 +20,7 @@ export const knowledgeSourceSchema = z
     projectId: idSchema,
     sourceType: knowledgeSourceType,
     name: z.string().min(1).max(255).openapi({ example: 'research.pdf' }),
-    mimeType: z.enum(ACCEPTED_FILE_TYPES).nullish(),
+    mimeType: z.enum(ACCEPTED_UPLOAD_TYPES).nullish(),
     size: z.number().int().nonnegative(),
     sourceRef: z.string().nullish(),
     storageKey: z.string().nullish(),
@@ -38,6 +38,14 @@ export const createKnowledgeSourceFileSchema = z.object({
   sourceType: z.literal('file'),
   name: z.string().min(1).max(255),
   mimeType: z.enum(ACCEPTED_FILE_TYPES),
+  storageKey: z.string().min(1),
+  size: z.number().int().nonnegative().default(0),
+});
+
+export const createKnowledgeSourceAudioSchema = z.object({
+  sourceType: z.literal('audio'),
+  name: z.string().min(1).max(255),
+  mimeType: z.enum(ACCEPTED_AUDIO_TYPES),
   storageKey: z.string().min(1),
   size: z.number().int().nonnegative().default(0),
 });
@@ -74,6 +82,7 @@ export const createKnowledgeSourcesSchema = z
   .array(
     z.discriminatedUnion('sourceType', [
       createKnowledgeSourceFileSchema,
+      createKnowledgeSourceAudioSchema,
       createKnowledgeSourceUrlSchema,
       createKnowledgeSourceYoutubeSchema,
       createKnowledgeSourceTextSchema,
@@ -83,7 +92,7 @@ export const createKnowledgeSourcesSchema = z
 
 export const createUploadUrlSchema = z.object({
   name: z.string().min(1).max(255),
-  mimeType: z.enum(ACCEPTED_FILE_TYPES),
+  mimeType: z.enum(ACCEPTED_UPLOAD_TYPES),
   size: z
     .number()
     .int()
@@ -98,6 +107,10 @@ export const createUploadUrlResponseSchema = z.object({
   }),
   key: z.string(),
   bucket: z.string(),
+});
+
+export const knowledgeSourceDownloadUrlSchema = z.object({
+  url: z.url({ error: 'Enter a valid URL' }),
 });
 
 export const deleteKnowledgeResourceSchema = z.object({

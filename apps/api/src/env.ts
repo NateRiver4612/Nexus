@@ -36,6 +36,14 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(3 * 60 * 1000),
+  AI_TRANSCRIPTION_MODEL: z.string().default('gpt-4o-mini-transcribe'),
+  // Separate from AI_RUN_TIMEOUT_MS: a 25 MB recording can legitimately take several minutes
+  // to transcribe, which the 3-minute run ceiling would cut off.
+  AI_TRANSCRIPTION_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10 * 60 * 1000),
   BETTER_AUTH_SECRET: z.string().default('dev-only-secret-change-me'),
   BETTER_AUTH_URL: z.url().default('http://localhost:3001/api/auth'),
   GOOGLE_CLIENT_ID: z.string().default(''),

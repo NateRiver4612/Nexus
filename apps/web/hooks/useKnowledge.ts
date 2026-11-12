@@ -13,6 +13,7 @@ import {
   deleteKnowledgeSource,
   deleteKnowledgeSources,
   getKnowledge,
+  getKnowledgeSourceDownloadUrl,
   getKnowledgeSources,
   getKnowledgeUploadUrl,
   updateKnowledgeItem,
@@ -81,6 +82,12 @@ export const useCreateKnowledgeSources = (projectId: string) =>
 export const useCreateKnowledgeUploadUrl = (projectId: string) =>
   createMutationHook((input: CreateUploadUrlInputType) =>
     getKnowledgeUploadUrl(projectId, input),
+  )();
+
+export const useGetKnowledgeSourceDownloadUrl = (projectId: string) =>
+  createMutationHook(
+    (sourceId: string) => getKnowledgeSourceDownloadUrl(projectId, sourceId),
+    () => ({ onError: toastError }),
   )();
 
 export const useDeleteKnowledgeSource = createMutationHook(

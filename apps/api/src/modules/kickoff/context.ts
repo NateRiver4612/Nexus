@@ -1,7 +1,7 @@
 import type { Db } from '@nexus/db';
 import type { OnboardingDataType } from '@nexus/types';
-import { generateEmbeddings } from '../../embeddings';
 import { env } from '../../env';
+import { getOpenAIProvider } from '../ai/providers';
 import { KnowledgeRepository } from '../knowledge/repository';
 import { KnowledgeChunkService, type KnowledgeChunkServiceType } from '../knowledgeChunk/service';
 
@@ -92,7 +92,7 @@ async function searchWithFloorAndFill(
   const pseudoQuery = buildPseudoQuery(stepData);
   if (!pseudoQuery) return [];
 
-  const [queryEmbedding] = await generateEmbeddings([pseudoQuery]);
+  const [queryEmbedding] = await getOpenAIProvider().embed([pseudoQuery]);
 
   if (!queryEmbedding) return [];
 
