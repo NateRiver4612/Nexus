@@ -34,9 +34,164 @@
   }
 }
 
+/* Shared syntax-highlighted code block (artifact viewer + markdown fences).
+   Kept outside Tailwind layers so it wins over the markdown wrapper's `[&_pre]` utilities. */
+.syntax-block {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: #2e2b29;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  font-family: 'JetBrainsMono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+.syntax-block code {
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0;
+}
+
+.syntax-block .hljs-comment,
+.syntax-block .hljs-quote {
+  color: #616161;
+}
+
+.syntax-block .hljs-variable,
+.syntax-block .hljs-template-variable,
+.syntax-block .hljs-attribute,
+.syntax-block .hljs-tag,
+.syntax-block .hljs-name,
+.syntax-block .hljs-regexp,
+.syntax-block .hljs-link,
+.syntax-block .hljs-selector-id,
+.syntax-block .hljs-selector-class,
+.syntax-block .hljs-selector-attr,
+.syntax-block .hljs-selector-pseudo {
+  color: #f98181;
+}
+
+.syntax-block .hljs-number,
+.syntax-block .hljs-meta,
+.syntax-block .hljs-built_in,
+.syntax-block .hljs-builtin-name,
+.syntax-block .hljs-literal,
+.syntax-block .hljs-type,
+.syntax-block .hljs-params {
+  color: #fbbc88;
+}
+
+.syntax-block .hljs-string,
+.syntax-block .hljs-symbol,
+.syntax-block .hljs-bullet,
+.syntax-block .hljs-formula,
+.syntax-block .hljs-addition {
+  color: #b9f18d;
+}
+
+.syntax-block .hljs-title,
+.syntax-block .hljs-section {
+  color: #faf594;
+}
+
+.syntax-block .hljs-keyword,
+.syntax-block .hljs-selector-tag,
+.syntax-block .hljs-doctag {
+  color: #70cff8;
+}
+
+.syntax-block .hljs-deletion {
+  color: #f98181;
+}
+
+.syntax-block .hljs-emphasis {
+  font-style: italic;
+}
+
+.syntax-block .hljs-strong {
+  font-weight: 700;
+}
+
+/* Each Markdown block fades in as it mounts, so streaming replies reveal block by block. */
+.markdown-fade-in > * {
+  animation: var(--animate-fade-in);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown-fade-in > * {
+    animation: none;
+  }
+}
+
+/* GFM task lists: drop the bullet and lay the checkbox out beside its text. */
+.markdown-body .contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+.markdown-body .task-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.markdown-body .task-list-item input {
+  margin-top: 0.4rem;
+  accent-color: var(--color-primary);
+}
+
+/* Long block math should scroll instead of overflowing the chat/panel column. */
+.markdown-body .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Markdown tables: accent-tinted header, zebra rows, subtle hover, rounded scroll container. */
+.markdown-table {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+}
+.markdown-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.markdown-table thead th {
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-card));
+  color: var(--color-foreground);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.markdown-table tbody td {
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  border-top: 1px solid var(--color-border);
+}
+.markdown-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-muted) 45%, transparent);
+}
+.markdown-table tbody tr:hover {
+  background: var(--color-muted);
+}
+.markdown-table th[align='center'],
+.markdown-table td[align='center'] {
+  text-align: center;
+}
+.markdown-table th[align='right'],
+.markdown-table td[align='right'] {
+  text-align: right;
+}
+
 @theme {
-  --animate-accordion-down: accordion-down 0.3s ease-out;
-  --animate-accordion-up: accordion-up 0.3s ease-out;
+  --animate-accordion-down: accordion-down 0.5s ease-out;
+  --animate-accordion-up: accordion-up 0.5s ease-out;
+  --animate-fade-in: fadeIn 500ms ease-out both;
 
   --color-background: #f7f7f8;
   --color-foreground: #323c46;
