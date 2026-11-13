@@ -78,7 +78,7 @@ export function ChatMessage({
       ) : (
         !content && isStreaming && <p className="text-sm text-muted-foreground">Thinking…</p>
       )}
-      {content && <Markdown>{content}</Markdown>}
+      {content && <Markdown fadeIn>{content}</Markdown>}
       {sources && <ChatSources sources={sources} />}
       {creatingArtifact && (
         <div className="mt-2">
