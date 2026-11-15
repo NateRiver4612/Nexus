@@ -23,7 +23,13 @@ import {
   updateConversation,
 } from '@/api/ai';
 
-import { aiRunKeys, aiSuggestionKeys, artifactKeys, conversationKeys, messageKeys } from './queryKeys';
+import {
+  aiRunKeys,
+  aiSuggestionKeys,
+  artifactKeys,
+  conversationKeys,
+  messageKeys,
+} from './queryKeys';
 import { createDetailQueryHook, createQueryHook } from './createQuery';
 import { createMutationHook } from './createMutation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -103,8 +109,13 @@ export const useDeleteConversation = (projectId: string) =>
   createMutationHook(
     (id: string) => deleteConversation(id),
     (queryClient) => ({
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: conversationKeys.list(projectId) }),
+      onSuccess: async () => {
+        // Deleting a conversation also deletes the artifacts that belong to it.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: conversationKeys.list(projectId) }),
+          queryClient.invalidateQueries({ queryKey: artifactKeys.all }),
+        ]);
+      },
     }),
   )();
 

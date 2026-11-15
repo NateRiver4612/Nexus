@@ -9,7 +9,10 @@ import {
 import { getDb } from '@nexus/db';
 
 import { getUser } from '../../../auth-middleware';
+import { ensure, NotFoundError } from '../../../errors';
 import { bearerSecurity } from '../../../openapi';
+import { ConversationService } from '../../ai/conversations/service';
+import { requireProjectAccess } from '../../projects/middlewares';
 import { ArtifactService } from '../service';
 
 export const createArtifactRoute = defineOpenAPIRoute({
@@ -17,6 +20,7 @@ export const createArtifactRoute = defineOpenAPIRoute({
     method: 'post',
     path: '/{projectId}',
     security: bearerSecurity,
+    middleware: [requireProjectAccess],
     request: {
       params: projectIdParamsSchema,
       body: {
@@ -45,11 +49,15 @@ export const createArtifactRoute = defineOpenAPIRoute({
     const { projectId } = c.req.valid('param');
     const body = c.req.valid('json');
     const user = getUser(c);
+    const db = getDb();
 
-    const artifact = await ArtifactService(getDb()).create(
-      { projectId, name: body.name, type: body.type },
-      user.id,
-    );
+    const conversation = await ConversationService(db).get({
+      id: body.conversationId,
+      userId: user.id,
+    });
+    ensure(conversation.projectId === projectId, NotFoundError('Conversation not found.'));
+
+    const artifact = await ArtifactService(db).create({ projectId, ...body }, user.id);
 
     return c.json(artifact, 201);
   },

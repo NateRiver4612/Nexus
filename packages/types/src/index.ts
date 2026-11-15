@@ -7,8 +7,10 @@ import {
   aiSuggestionListSchema,
   aiSuggestionSchema,
   artifactContentSchema,
+  artifactListItemSchema,
   artifactListSchema,
   artifactSchema,
+  artifactSourceSchema,
   artifactVersionSchema,
   createArtifactSchema,
   createAiSuggestionSchema,
@@ -212,6 +214,8 @@ export type CreatePlannerItemInputType = z.infer<typeof createPlannerItemSchema>
 export type UpdatePlannerItemInputType = z.infer<typeof updatePlannerItemSchema>;
 
 export type ArtifactType = z.infer<typeof artifactSchema>;
+export type ArtifactSourceType = z.infer<typeof artifactSourceSchema>;
+export type ArtifactListItemType = z.infer<typeof artifactListItemSchema>;
 export type ArtifactListType = z.infer<typeof artifactListSchema>;
 export type ArtifactVersionType = z.infer<typeof artifactVersionSchema>;
 export type ArtifactContentType = z.infer<typeof artifactContentSchema>;

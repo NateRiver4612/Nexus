@@ -1,15 +1,22 @@
 import type {
   ArtifactContentType,
+  ArtifactListType,
   CreateArtifactInputType,
   UpdateArtifactInputType,
 } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
-export async function getArtifacts(projectId: string) {
-  return handleResponse(
-    await apiClient.api.v1.artifacts[':projectId'].$get({ param: { projectId } }),
-  );
+export async function getArtifacts(
+  projectId: string,
+  conversationId?: string,
+): Promise<ArtifactListType> {
+  return (await handleResponse(
+    await apiClient.api.v1.artifacts[':projectId'].$get({
+      param: { projectId },
+      query: conversationId ? { conversationId } : {},
+    }),
+  )) as ArtifactListType;
 }
 
 /** One version's text plus the full version list; omitting `version` reads the newest. */

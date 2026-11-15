@@ -18,12 +18,21 @@ export type ToolDef = { name: string; description: string; parameters: z.ZodType
 export type ToolContext = {
   db: Db;
   projectId: string;
+  conversationId: string;
   userId: string;
   /**
    * URLs `read_url` may open this turn: every URL the user wrote in the loaded history, plus
    * every URL `web_search` returned. Mutable so tools can add to it mid-turn.
    */
   allowedUrls: Set<string>;
+  /**
+   * Artifacts already written in this reply, keyed by normalized filename. A repeated
+   * `create_artifact` call rewrites that reply's version instead of adding another one.
+   */
+  artifactWrites: Map<
+    string,
+    { artifactId: string; version: number; type: ChatArtifactType['type'] }
+  >;
 };
 
 export type ToolResult = {

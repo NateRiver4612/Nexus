@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_versions" ADD COLUMN "sources" jsonb DEFAULT '[]'::jsonb NOT NULL;

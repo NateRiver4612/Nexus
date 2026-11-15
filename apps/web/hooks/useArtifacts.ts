@@ -13,11 +13,19 @@ import {
 import { createQueryHook } from './createQuery';
 import { artifactKeys } from './queryKeys';
 
-export function useGetArtifacts(projectId: string) {
+export function useGetArtifacts({
+  projectId,
+  conversationId,
+  enabled = true,
+}: {
+  projectId: string;
+  conversationId?: string;
+  enabled?: boolean;
+}) {
   return useQuery({
-    queryKey: artifactKeys.list(projectId),
-    queryFn: () => getArtifacts(projectId),
-    enabled: Boolean(projectId),
+    queryKey: artifactKeys.list(projectId, conversationId),
+    queryFn: () => getArtifacts(projectId, conversationId),
+    enabled: enabled && Boolean(projectId),
   });
 }
 
@@ -33,25 +41,25 @@ export function useCreateArtifact(projectId: string) {
 
   return useMutation({
     mutationFn: (input: CreateArtifactInputType) => createArtifact(projectId, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: artifactKeys.list(projectId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: artifactKeys.all }),
   });
 }
 
-export function useUpdateArtifact(projectId: string) {
+export function useUpdateArtifact() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateArtifactInputType }) =>
       updateArtifact(id, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: artifactKeys.list(projectId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: artifactKeys.all }),
   });
 }
 
-export function useDeleteArtifact(projectId: string) {
+export function useDeleteArtifact() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) => deleteArtifact(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: artifactKeys.list(projectId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: artifactKeys.all }),
   });
 }

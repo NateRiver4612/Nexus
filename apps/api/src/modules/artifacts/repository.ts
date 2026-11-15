@@ -1,4 +1,4 @@
-import { and, desc, eq, max } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, max, sql } from 'drizzle-orm';
 
 import {
   artifacts,
@@ -9,16 +9,56 @@ import {
 } from '@nexus/db';
 
 export const ArtifactRepository = (db: Db) => ({
-  listByProject(projectId: string) {
+  listByProject({ projectId, conversationId }: { projectId: string; conversationId?: string }) {
+    const latestVersions = db
+      .select({
+        artifactId: artifactVersions.artifactId,
+        latestVersion: max(artifactVersions.version).as('latest_version'),
+      })
+      .from(artifactVersions)
+      .groupBy(artifactVersions.artifactId)
+      .as('latest_versions');
+
     return db
-      .select()
+      .select({
+        ...getTableColumns(artifacts),
+        latestVersion: latestVersions.latestVersion,
+      })
       .from(artifacts)
-      .where(eq(artifacts.projectId, projectId))
-      .orderBy(desc(artifacts.createdAt));
+      .leftJoin(latestVersions, eq(latestVersions.artifactId, artifacts.id))
+      .where(
+        and(
+          eq(artifacts.projectId, projectId),
+          conversationId ? eq(artifacts.conversationId, conversationId) : undefined,
+        ),
+      )
+      .orderBy(desc(artifacts.updatedAt));
   },
 
   async getById(id: string) {
     const rows = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1);
+    return rows[0];
+  },
+
+  /** Newest match; older duplicates within a conversation can exist until cleaned up. */
+  async findByConversationAndName({
+    conversationId,
+    name,
+  }: {
+    conversationId: string;
+    name: string;
+  }) {
+    const rows = await db
+      .select()
+      .from(artifacts)
+      .where(
+        and(
+          eq(artifacts.conversationId, conversationId),
+          sql`lower(${artifacts.name}) = lower(${name})`,
+        ),
+      )
+      .orderBy(desc(artifacts.createdAt))
+      .limit(1);
     return rows[0];
   },
 
@@ -61,6 +101,12 @@ export const ArtifactRepository = (db: Db) => ({
     return db.insert(artifactVersions).values(values).returning();
   },
 
+  async updateVersion(id: string, patch: Partial<NewArtifactVersion>) {
+    return (
+      await db.update(artifactVersions).set(patch).where(eq(artifactVersions.id, id)).returning()
+    )[0];
+  },
+
   /** A specific version, or the newest one when `version` is omitted. */
   async getVersion({ artifactId, version }: { artifactId: string; version?: number }) {
     const rows = await db
@@ -89,6 +135,15 @@ export const ArtifactRepository = (db: Db) => ({
       .select({ storageKey: artifactVersions.storageKey })
       .from(artifactVersions)
       .where(eq(artifactVersions.artifactId, artifactId));
+    return rows.map((row) => row.storageKey);
+  },
+
+  async listVersionStorageKeysByConversation(conversationId: string) {
+    const rows = await db
+      .select({ storageKey: artifactVersions.storageKey })
+      .from(artifactVersions)
+      .innerJoin(artifacts, eq(artifactVersions.artifactId, artifacts.id))
+      .where(eq(artifacts.conversationId, conversationId));
     return rows.map((row) => row.storageKey);
   },
 });
