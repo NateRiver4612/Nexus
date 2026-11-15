@@ -9,7 +9,7 @@ Two audiences, two folders:
 - `notes/` — human-facing explainers like this one and `troubleshooting.md`.
 
 Scope: **implemented code only**. Scaffolded-but-unwired areas (cross-module search, notifications
-logic, Redis caching/rate limiting, the pgvector *query* path) are deliberately left out.
+logic, Redis caching/rate limiting, the pgvector _query_ path) are deliberately left out.
 
 Related docs: [`docs/system-design.md`](../docs/system-design.md),
 [`docs/backend-architecture.md`](../docs/backend-architecture.md),
@@ -19,36 +19,20 @@ Related docs: [`docs/system-design.md`](../docs/system-design.md),
 ## Contents
 
 **Architecture & contracts**
+
 1. [Modular monolith with layered modules](#1-modular-monolith-with-layered-modules)
 2. [Schema-first API contract + typed end-to-end RPC](#2-schema-first-api-contract--typed-end-to-end-rpc)
 3. [Relational integrity and a normalized data model](#3-relational-integrity-and-a-normalized-data-model)
 
-**Data & consistency**
-4. [ACID transactions](#4-acid-transactions)
-5. [Pessimistic locking (`SELECT … FOR UPDATE`)](#5-pessimistic-locking-select--for-update)
-6. [Append-only versioning with immutable blob keys](#6-append-only-versioning-with-immutable-blob-keys)
-7. [Idempotency and job deduplication](#7-idempotency-and-job-deduplication)
+**Data & consistency** 4. [ACID transactions](#4-acid-transactions) 5. [Pessimistic locking (`SELECT … FOR UPDATE`)](#5-pessimistic-locking-select--for-update) 6. [Append-only versioning with immutable blob keys](#6-append-only-versioning-with-immutable-blob-keys) 7. [Idempotency and job deduplication](#7-idempotency-and-job-deduplication)
 
-**Asynchronous processing**
-8. [Queue-based asynchronous processing](#8-queue-based-asynchronous-processing)
-9. [Worker concurrency and distributed job locks](#9-worker-concurrency-and-distributed-job-locks)
-10. [Retry with backoff, jitter, and failure classification](#10-retry-with-backoff-jitter-and-failure-classification)
-11. [Checkpointing and resumability](#11-checkpointing-and-resumability)
-12. [Timeouts, deadlines, and cancellation](#12-timeouts-deadlines-and-cancellation)
+**Asynchronous processing** 8. [Queue-based asynchronous processing](#8-queue-based-asynchronous-processing) 9. [Worker concurrency and distributed job locks](#9-worker-concurrency-and-distributed-job-locks) 10. [Retry with backoff, jitter, and failure classification](#10-retry-with-backoff-jitter-and-failure-classification) 11. [Checkpointing and resumability](#11-checkpointing-and-resumability) 12. [Timeouts, deadlines, and cancellation](#12-timeouts-deadlines-and-cancellation)
 
-**Storage, retrieval & AI context**
-13. [Object storage offload with presigned URLs](#13-object-storage-offload-with-presigned-urls)
-14. [Ingestion pipeline: chunking with overlap and embeddings](#14-ingestion-pipeline-chunking-with-overlap-and-embeddings)
-15. [RAG context assembly with budgets](#15-rag-context-assembly-with-budgets)
+**Storage, retrieval & AI context** 13. [Object storage offload with presigned URLs](#13-object-storage-offload-with-presigned-urls) 14. [Ingestion pipeline: chunking with overlap and embeddings](#14-ingestion-pipeline-chunking-with-overlap-and-embeddings) 15. [RAG context assembly with budgets](#15-rag-context-assembly-with-budgets)
 
-**Realtime & resilience**
-16. [Realtime updates: pub/sub, SSE, and polling fallback](#16-realtime-updates-pubsub-sse-and-polling-fallback)
-17. [Resilience: graceful degradation, compensation, and error taxonomy](#17-resilience-graceful-degradation-compensation-and-error-taxonomy)
+**Realtime & resilience** 16. [Realtime updates: pub/sub, SSE, and polling fallback](#16-realtime-updates-pubsub-sse-and-polling-fallback) 17. [Resilience: graceful degradation, compensation, and error taxonomy](#17-resilience-graceful-degradation-compensation-and-error-taxonomy)
 
-**Security, AI & frontend**
-18. [Security and access control](#18-security-and-access-control)
-19. [AI orchestration](#19-ai-orchestration)
-20. [Frontend data layer](#20-frontend-data-layer)
+**Security, AI & frontend** 18. [Security and access control](#18-security-and-access-control) 19. [AI orchestration](#19-ai-orchestration) 20. [Frontend data layer](#20-frontend-data-layer)
 
 ---
 
@@ -78,7 +62,7 @@ const v1 = new OpenAPIHono()
   .route('/artifacts', artifactRoutes());
 ```
 
-*`apps/api/src/app.ts:55-59`*
+_`apps/api/src/app.ts:55-59`_
 
 ```ts
 // apps/api/src/modules/artifacts/repository.ts
@@ -89,8 +73,8 @@ export const ArtifactRepository = (db: Db) => ({
 });
 ```
 
-*`apps/api/src/modules/artifacts/repository.ts:11,39-41` — the service then does
-`ArtifactRepository(tx)` inside a transaction (`service.ts:78-79`).*
+_`apps/api/src/modules/artifacts/repository.ts:11,39-41` — the service then does
+`ArtifactRepository(tx)` inside a transaction (`service.ts:78-79`)._
 
 **Why it matters** — Domain boundaries stay enforceable without network calls or distributed
 transactions. The transaction-aware factory is what makes multi-write operations composable (see #4).
@@ -124,7 +108,7 @@ export const apiClient = hc<AppType>(baseUrl, {
 });
 ```
 
-*`apps/web/lib/client.ts:4-12`; `AppType` is defined in `apps/api/src/client.ts:1-3`.*
+_`apps/web/lib/client.ts:4-12`; `AppType` is defined in `apps/api/src/client.ts:1-3`._
 
 ```ts
 // apps/api/src/validation.ts
@@ -135,7 +119,7 @@ export async function parseBody<T>(body: unknown, schema: z.ZodSchema<T>) {
 }
 ```
 
-*`apps/api/src/validation.ts:5-11`*
+_`apps/api/src/validation.ts:5-11`_
 
 **Why it matters** — A single source of truth for I/O removes hand-written client types and makes the
 type system the first line of defense at every boundary.
@@ -164,7 +148,7 @@ projectId: uuid('project_id')
 // artifacts.id is a uuid PK; artifact_versions.artifact_id cascades the same way
 ```
 
-*`packages/db/src/schema/artifacts.ts:44-46,68-70`*
+_`packages/db/src/schema/artifacts.ts:44-46,68-70`_
 
 **Why it matters** — Invariants that the database can enforce are cheaper and safer than repeated
 application checks, especially across async workers.
@@ -196,8 +180,8 @@ await db.transaction(async (tx) => {
 });
 ```
 
-*`apps/api/src/modules/tasks/service.ts:38-85`; other examples: `artifacts/service.ts:78-99`,
-`milestones/service.ts:30-40`, `ai/worker.ts:135-149`.*
+_`apps/api/src/modules/tasks/service.ts:38-85`; other examples: `artifacts/service.ts:78-99`,
+`milestones/service.ts:30-40`, `ai/worker.ts:135-149`._
 
 **Why it matters** — The transaction boundary is where "one logical operation" becomes real. It is also
 what lets the code use a single repository layer everywhere (#1).
@@ -237,8 +221,8 @@ const next = (await txRepository.latestVersionNumber(artifactId)) + 1;
 await txRepository.insertVersion({ id: versionId, artifactId, version: next, ... });
 ```
 
-*`apps/api/src/modules/artifacts/service.ts:136-151`; the lock itself is
-`SELECT … FOR UPDATE` in `repository.ts:25-37`.*
+_`apps/api/src/modules/artifacts/service.ts:136-151`; the lock itself is
+`SELECT … FOR UPDATE` in `repository.ts:25-37`._
 
 **Why it matters** — Concurrent edits need not be simultaneous to the millisecond: double-clicks, two
 tabs, retries, and AI writes easily overlap. The lock makes the invariant "version numbers are unique and
@@ -267,7 +251,7 @@ function buildStorageKey({ projectId, artifactId, versionId }) {
 }
 ```
 
-*`apps/api/src/modules/artifacts/service.ts:219-230`; version insert at `:143-151`.*
+_`apps/api/src/modules/artifacts/service.ts:219-230`; version insert at `:143-151`._
 
 **Why it matters** — Immutable keys remove the need for overwrite semantics or copy-on-write logic, and
 make cleanup a straightforward "delete every version key" operation.
@@ -299,8 +283,8 @@ await queue.add(name, data, {
 });
 ```
 
-*`apps/api/src/modules/knowledge/queues.ts:27-38`; same pattern in `ai/queues.ts:34-59` and
-`research/queues.ts:34-61`.*
+_`apps/api/src/modules/knowledge/queues.ts:27-38`; same pattern in `ai/queues.ts:34-59` and
+`research/queues.ts:34-61`._
 
 **Why it matters** — Retries and user impatience are both normal. A deterministic `jobId` turns "maybe
 duplicate" into "at most one live job per resource".
@@ -330,8 +314,8 @@ const aiWorker = AIWorker();
 const researchWorker = ResearchWorker();
 ```
 
-*`apps/api/src/startWorkers.ts:40-42`; the workers are collected in `globalForWorkers.nexusWorkers`
-at `:47-52`. The singleton guard at `:21-29` avoids duplicate workers during dev hot reload.*
+_`apps/api/src/startWorkers.ts:40-42`; the workers are collected in `globalForWorkers.nexusWorkers`
+at `:47-52`. The singleton guard at `:21-29` avoids duplicate workers during dev hot reload._
 
 **Why it matters** — Decoupling request latency from work duration is the core reason the system stays
 responsive while doing AI-scale processing.
@@ -359,8 +343,8 @@ new Worker(KNOWLEDGE_QUEUE, handler, {
 });
 ```
 
-*`apps/api/src/modules/knowledge/worker.ts:42`; `lockDuration` for long AI jobs:
-`research/worker.ts:83` and `ai/worker.ts:159` (5 minutes).*
+_`apps/api/src/modules/knowledge/worker.ts:42`; `lockDuration` for long AI jobs:
+`research/worker.ts:83` and `ai/worker.ts:159` (5 minutes)._
 
 **Why it matters** — Concurrency is a throughput knob, while the lock is a correctness guarantee. Tuning
 one without the other either starves the queue or duplicates work.
@@ -388,7 +372,7 @@ times.
 await sleep(BASE_RETRY_DELAY_MS * 2 ** attempt + Math.random() * 100, signal);
 ```
 
-*`apps/api/src/modules/ai/providers/deepseek/index.ts:156-157`.*
+_`apps/api/src/modules/ai/providers/deepseek/index.ts:156-157`._
 
 ```ts
 // apps/api/src/queue-errors.ts
@@ -396,7 +380,7 @@ if (isUnrecoverable(error)) throw new UnrecoverableError(text);
 throw error; // BullMQ retries the original error
 ```
 
-*`apps/api/src/queue-errors.ts:18-38`; retryable-only predicate in `research/retry.ts:6-16`.*
+_`apps/api/src/queue-errors.ts:18-38`; retryable-only predicate in `research/retry.ts:6-16`._
 
 **Why it matters** — Retrying a permanent error wastes budget and delays the user-visible failure; not
 retrying a transient error makes the system look flaky. The explicit predicate is the contract.
@@ -430,8 +414,8 @@ let summary = checkpoint?.milestones ? checkpoint.summary : undefined;
 if (!summary) summary = (await generateSummary(context, milestones)).summary;
 ```
 
-*`apps/api/src/modules/kickoff/generate/index.ts:85-106`; resume logic for research:
-`research/stage.ts:147-189`.*
+_`apps/api/src/modules/kickoff/generate/index.ts:85-106`; resume logic for research:
+`research/stage.ts:147-189`._
 
 **Why it matters** — A failure late in a multi-call workflow should cost one call, not the whole run.
 Checkpointing turns "retry" into "continue".
@@ -457,11 +441,13 @@ the pending backoff sleep, so the system stops generating (and billing) immediat
 // apps/api/src/modules/research/stage.ts
 const RESEARCH_TIMEOUT_MS = 4 * 60 * 1000;
 const deadline = startedAt.getTime() + RESEARCH_TIMEOUT_MS;
-while (Date.now() < deadline) { /* poll */ }
+while (Date.now() < deadline) {
+  /* poll */
+}
 ```
 
-*`apps/api/src/modules/research/stage.ts:25-33,324-327`. Abort-aware provider retry:
-`deepseek/index.ts:112-130,246`; SSE idle timeout: `apps/api/src/index.ts:9-11`.*
+_`apps/api/src/modules/research/stage.ts:25-33,324-327`. Abort-aware provider retry:
+`deepseek/index.ts:112-130,246`; SSE idle timeout: `apps/api/src/index.ts:9-11`._
 
 **Why it matters** — Without deadlines, one stuck dependency can pin a worker forever. Cancellation also
 stops work the user no longer wants.
@@ -493,7 +479,7 @@ export async function presignKnowledgePutUrl(key: string, contentType: string) {
 }
 ```
 
-*`apps/api/src/storage.ts:53-63`; download variant with a sanitized filename at `:65-75`.*
+_`apps/api/src/storage.ts:53-63`; download variant with a sanitized filename at `:65-75`._
 
 **Why it matters** — Keeping bytes out of the API process avoids memory pressure and lets storage scale
 independently. Presigned URLs keep credentials server-side.
@@ -526,8 +512,8 @@ if (current.length + sentence.length > targetChars && current.length > 0) {
 current += sentence + '\n';
 ```
 
-*`apps/api/src/modules/knowledge/chunk.ts:33-43`; the atomic replace + status flip:
-`knowledge/service.ts:181-197`.*
+_`apps/api/src/modules/knowledge/chunk.ts:33-43`; the atomic replace + status flip:
+`knowledge/service.ts:181-197`._
 
 **Why it matters** — Chunking quality directly bounds retrieval quality. Overlap and atomic replacement
 prevent "lost context" and "mixed old/new chunks" failure modes.
@@ -558,8 +544,8 @@ lines.push(`Progress: ${project.progressPercentage}% (...)`);
 // milestones.slice(0, MAX_MILESTONES) ...
 ```
 
-*`apps/api/src/modules/ai/chat/contextBuilder.ts:6-11,22-62`; tool results capped at 6000 chars in
-`runChatLoop.ts:16,217-220`.*
+_`apps/api/src/modules/ai/chat/contextBuilder.ts:6-11,22-62`; tool results capped at 6000 chars in
+`runChatLoop.ts:16,217-220`._
 
 **Why it matters** — Context is a finite budget. Bounded assembly keeps prompts predictable in cost and
 leaves room for the actual question.
@@ -595,8 +581,8 @@ return streamSSE(c, async (stream) => {
 });
 ```
 
-*`apps/api/src/modules/knowledge/routes/index.ts:23-47`; publisher in `knowledge/helpers.ts:49-66`;
-client parser in `apps/web/lib/Sse.ts:52-124`; polling fallback in `useKnowledge.ts:32-43`.*
+_`apps/api/src/modules/knowledge/routes/index.ts:23-47`; publisher in `knowledge/helpers.ts:49-66`;
+client parser in `apps/web/lib/Sse.ts:52-124`; polling fallback in `useKnowledge.ts:32-43`._
 
 **Why it matters** — Push gives low latency; polling gives a simple, resilient baseline. Having both
 means a dropped connection degrades UX instead of breaking it.
@@ -624,7 +610,9 @@ run continues, because the next retry can regenerate it.
 await putKnowledgeObject(storageKey, body, mimeType);
 
 try {
-  const artifact = await db.transaction(async (tx) => { /* insert artifact + version */ });
+  const artifact = await db.transaction(async (tx) => {
+    /* insert artifact + version */
+  });
   return { artifact: toView(artifact), version: 1 };
 } catch (error) {
   await discardObject(storageKey);
@@ -632,8 +620,8 @@ try {
 }
 ```
 
-*`apps/api/src/modules/artifacts/service.ts:75-105`; best-effort cleanup at `:232-239`; degrading
-research at `research/stage.ts:113-114`; error taxonomy in `apps/api/src/errors.ts:4-79`.*
+_`apps/api/src/modules/artifacts/service.ts:75-105`; best-effort cleanup at `:232-239`; degrading
+research at `research/stage.ts:113-114`; error taxonomy in `apps/api/src/errors.ts:4-79`._
 
 **Why it matters** — Distributed steps can't be atomic. Deciding explicitly what is optional, what must
 be compensated, and what is best-effort is what keeps partial failures from becoming corruption.
@@ -658,12 +646,14 @@ response as a genuinely missing artifact.
 
 ```ts
 // apps/api/src/modules/artifacts/middlewares.ts
-ensure(await ProjectsRepository(db).isWorkspaceMember(user.id, project.workspaceId),
-  NotFoundError('Artifact not found.'));
+ensure(
+  await ProjectsRepository(db).isWorkspaceMember(user.id, project.workspaceId),
+  NotFoundError('Artifact not found.'),
+);
 ```
 
-*`apps/api/src/modules/artifacts/middlewares.ts:31-34`; auth middleware `auth-middleware.ts:13-29`;
-CORS with credentials `app.ts:25-31`.*
+_`apps/api/src/modules/artifacts/middlewares.ts:31-34`; auth middleware `auth-middleware.ts:13-29`;
+CORS with credentials `app.ts:25-31`._
 
 **Why it matters** — Distinguishing "forbidden" from "not found" tells an attacker a resource exists.
 Treating them the same closes that information leak while keeping the same UX.
@@ -698,8 +688,8 @@ if (!parsed.success) {
 }
 ```
 
-*`apps/api/src/modules/ai/chat/runChatLoop.ts:167-197`; iteration bound at `:14-15,87-89`; provider
-instances in `ai/providers/index.ts:6-21`.*
+_`apps/api/src/modules/ai/chat/runChatLoop.ts:167-197`; iteration bound at `:14-15,87-89`; provider
+instances in `ai/providers/index.ts:6-21`._
 
 **Why it matters** — Models are unreliable in specific, recoverable ways. Validating at the tool boundary
 and returning errors as data keeps a bad call from crashing the turn, while the iteration cap bounds cost.
@@ -729,15 +719,15 @@ key is dehydrated; project/artifact lists are not written to storage.
 onSuccess: composeCallbacks(defaults.onSuccess, props?.onSuccess),
 ```
 
-*`apps/web/hooks/createMutation.ts:43-61` (default invalidation + caller callback both run).*
+_`apps/web/hooks/createMutation.ts:43-61` (default invalidation + caller callback both run)._
 
 ```ts
 // apps/web/lib/providers.tsx
 dehydrateOptions: { shouldDehydrateQuery }, // only onboardingKeys.draft
 ```
 
-*`apps/web/lib/providers.tsx:9-13,48-55`; key hierarchy in `hooks/queryKeys.ts`; optimistic list filter in
-`hooks/useKnowledge.ts:93-108`.*
+_`apps/web/lib/providers.tsx:9-13,48-55`; key hierarchy in `hooks/queryKeys.ts`; optimistic list filter in
+`hooks/useKnowledge.ts:93-108`._
 
 **Why it matters** — A clear cache-key hierarchy makes invalidation precise and cheap. Persisting only
 what must survive a reload avoids stale server data in localStorage.

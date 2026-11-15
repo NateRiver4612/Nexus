@@ -42,6 +42,11 @@ export type ToolResult = {
   sources?: ChatCitationType[];
   /** An artifact the tool saved; the loop streams it as an `artifact` event, the model never sees it. */
   artifact?: ChatArtifactType;
+  /**
+   * A tool that handled its own failure (returned an explanatory message instead of throwing).
+   * The loop marks the trace as `error` so the UI doesn't show a misleading success.
+   */
+  failed?: boolean;
 };
 
 export type Tool = {

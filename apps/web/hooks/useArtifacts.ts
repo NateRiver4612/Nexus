@@ -1,14 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { CreateArtifactInputType, UpdateArtifactInputType } from '@nexus/types';
+import type { UpdateArtifactInputType } from '@nexus/types';
 
-import {
-  createArtifact,
-  deleteArtifact,
-  getArtifactContent,
-  getArtifacts,
-  updateArtifact,
-} from '@/api/artifacts';
+import { deleteArtifact, getArtifactContent, getArtifacts, updateArtifact } from '@/api/artifacts';
 
 import { createQueryHook } from './createQuery';
 import { artifactKeys } from './queryKeys';
@@ -35,15 +29,6 @@ export const useGetArtifactContent = createQueryHook(
   ({ id, version }) => artifactKeys.content(id, version),
   { getEnabled: ({ id }) => Boolean(id) },
 );
-
-export function useCreateArtifact(projectId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (input: CreateArtifactInputType) => createArtifact(projectId, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: artifactKeys.all }),
-  });
-}
 
 export function useUpdateArtifact() {
   const queryClient = useQueryClient();

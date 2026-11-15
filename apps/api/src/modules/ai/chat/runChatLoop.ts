@@ -19,6 +19,10 @@ const MIN_STAGE_MS = 2000;
 /** 2 retries = 3 attempts. Chat runs synchronously, so no queue retries it for us. */
 const CHAT_MAX_RETRIES = 2;
 
+/** A write tool that didn't run must not leave the model believing it saved something. */
+const notSavedHint = (toolName: string) =>
+  toolName === 'create_artifact' ? ' Nothing was saved; do not tell the user it was.' : '';
+
 // Runs one tool and swallows its failure so the model can recover.
 // Citations are returned (not yielded) because yielding only works in the generator.
 async function runTool({
@@ -32,13 +36,16 @@ async function runTool({
 }): Promise<ToolResult & { failed: boolean }> {
   try {
     const result = await tool.run({ ctx, args });
-    return { ...result, failed: false };
+    return { ...result, failed: result.failed ?? false };
   } catch (error) {
     // The model gets a generic message; the real error stays in our logs.
     // so that during retry, we don't yield failed tool result to the UI
     // therefore the model can retry without the user seeing a failed tool result.
     console.error(`[project-chat] tool ${tool.name} failed`, error);
-    return { content: 'The tool failed. Try again or answer without it.', failed: true };
+    return {
+      content: `The tool failed. Try again or answer without it.${notSavedHint(tool.name)}`,
+      failed: true,
+    };
   }
 }
 
@@ -153,8 +160,7 @@ export async function* runChatLoop({
       if (cutOff) {
         // The provider repairs cut-off JSON into something that parses, so without this check
         // a half-written artifact would be saved as if it were complete.
-        content =
-          'Your reply was cut off before this call finished, so it was not run. Try again with shorter content.';
+        content = `Your reply was cut off before this call finished, so it was not run. Try again with shorter content.${notSavedHint(call.name)}`;
         failed = true;
         console.warn(
           `[project-chat] ${call.name} skipped: reply was cut off (finish_reason length)`,
@@ -173,7 +179,7 @@ export async function* runChatLoop({
           // Model gets the prettified zod error, e.g.
           //   'Invalid arguments: query: Expected string, received number'
           const issues = z.prettifyError(parsed.error);
-          content = `Invalid arguments: ${issues}`;
+          content = `Invalid arguments: ${issues}${notSavedHint(call.name)}`;
           failed = true;
           console.warn(`[project-chat] invalid arguments for ${call.name}: ${issues}`);
         }
