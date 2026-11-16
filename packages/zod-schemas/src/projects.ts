@@ -9,7 +9,7 @@ export const fileSchema = z
   .refine((file) => file.size <= MAX_FILE_SIZE, 'Max file size is 25MB.')
   .refine(
     (file) => ACCEPTED_UPLOAD_TYPES.includes(file.type),
-    'Unsupported file type. Try PDF, DOCX, XLSX, CSV, TXT, MD, an image, or an audio file.',
+    'Unsupported file type. Try PDF, DOCX, XLSX, CSV, JSON, TXT, MD, an image, or an audio file.',
   )
   .openapi({
     type: 'string',

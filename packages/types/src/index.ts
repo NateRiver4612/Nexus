@@ -126,6 +126,13 @@ import {
   chatToolEventSchema,
   chatToolTraceSchema,
   chatSourcesEventSchema,
+  chatAttachmentSchema,
+  chatAttachmentsSchema,
+  attachmentStatusSchema,
+  attachmentSchema,
+  attachmentDownloadUrlSchema,
+  createAttachmentUploadUrlSchema,
+  attachmentUploadUrlResponseSchema,
 } from '@nexus/zod-schemas';
 
 export type Usage = { inputTokens: number; outputTokens: number };
@@ -172,6 +179,13 @@ export type ChatSourcesEventType = z.infer<typeof chatSourcesEventSchema>;
 export type ChatCitationType = z.infer<typeof chatCitationSchema>;
 export type ChatArtifactType = z.infer<typeof chatArtifactSchema>;
 export type ChatArtifactEventType = z.infer<typeof chatArtifactEventSchema>;
+export type ChatAttachmentType = z.infer<typeof chatAttachmentSchema>;
+export type ChatAttachmentsType = z.infer<typeof chatAttachmentsSchema>;
+export type AttachmentStatusType = z.infer<typeof attachmentStatusSchema>;
+export type AttachmentType = z.infer<typeof attachmentSchema>;
+export type AttachmentDownloadUrlType = z.infer<typeof attachmentDownloadUrlSchema>;
+export type CreateAttachmentUploadUrlInputType = z.infer<typeof createAttachmentUploadUrlSchema>;
+export type AttachmentUploadUrlResponseType = z.infer<typeof attachmentUploadUrlResponseSchema>;
 export type ChatStreamEvent =
   | ({ type: 'text-delta' } & ChatTextDeltaEventType)
   | ({ type: 'tool' } & ChatToolEventType)

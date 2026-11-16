@@ -37,6 +37,7 @@ export const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
   'text/csv',
+  'application/json',
   'text/markdown',
   'text/plain',
   'image/jpeg',
