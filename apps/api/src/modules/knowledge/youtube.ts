@@ -5,6 +5,9 @@ import { withUnrecoverable } from '../../queue-errors';
 
 export type ExtractResult = { title: string; content: string };
 
+/** Only English transcripts are accepted for now; other languages fail rather than fall back. */
+const TRANSCRIPT_LANG = 'en';
+
 /** Extract a stable video id from common YouTube URL shapes. */
 export function youtubeVideoId(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -31,14 +34,24 @@ export async function extractFromYoutube(url?: string | null): Promise<ExtractRe
   const videoId = youtubeVideoId(url);
   if (!videoId) throw new UnrecoverableError('unable to parse a YouTube video id from the url');
 
-  const { YoutubeTranscript, YoutubeTranscriptError, YoutubeTranscriptTooManyRequestError } =
-    await import('youtube-transcript');
+  const {
+    YoutubeTranscript,
+    YoutubeTranscriptError,
+    YoutubeTranscriptNotAvailableLanguageError,
+    YoutubeTranscriptTooManyRequestError,
+  } = await import('youtube-transcript');
   // A disabled/missing/private transcript won't change on retry; rate limits will.
   const transcriptPromise = withUnrecoverable({
-    promise: YoutubeTranscript.fetchTranscript(videoId),
+    promise: YoutubeTranscript.fetchTranscript(videoId, { lang: TRANSCRIPT_LANG }),
     isUnrecoverable: (error) =>
       error instanceof YoutubeTranscriptError &&
       !(error instanceof YoutubeTranscriptTooManyRequestError),
+    message: (error) =>
+      error instanceof YoutubeTranscriptNotAvailableLanguageError
+        ? 'No English transcript is available for this video.'
+        : error instanceof Error
+          ? error.message
+          : String(error),
   });
   const [transcript, title] = await Promise.all([transcriptPromise, fetchYoutubeTitle(videoId)]);
 
