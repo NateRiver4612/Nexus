@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Providers } from '@/lib/providers';
 import './globals.css';
+import 'katex/dist/katex.min.css';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from 'sonner';
 

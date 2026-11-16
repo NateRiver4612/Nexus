@@ -14,6 +14,7 @@ import {
   ARTIFACT_TYPE_LABELS,
   displayArtifactType,
 } from './ArtifactCard';
+import { HighlightedCode } from './HighlightedCode';
 import { Markdown } from './Markdown';
 import { MermaidDiagram } from './MermaidDiagram';
 
@@ -154,9 +155,7 @@ export const ArtifactPanel = ({ artifact, onClose, onBack }: ArtifactPanelProps)
           ) : renderKind === 'markdown' ? (
             <Markdown>{data.content}</Markdown>
           ) : (
-            <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs">
-              {data.content}
-            </pre>
+            <HighlightedCode code={data.content} filename={artifact.name} />
           ))}
       </div>
     </div>
