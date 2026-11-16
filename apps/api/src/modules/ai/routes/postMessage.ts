@@ -43,6 +43,12 @@ import { collectUrls } from '@nexus/shared-helpers';
 import { generateConversationTitle } from '../chat/generateTitle';
 import { runChatLoop } from '../chat/runChatLoop';
 import { projectChatTools, webSearchEnabled } from '../tools/registry';
+import { AttachmentService } from '../attachments/service';
+import {
+  attachmentsOf,
+  formatAttachmentStubs,
+  formatCurrentTurnAttachments,
+} from '../chat/attachmentContext';
 
 const HISTORY_LIMIT = 20;
 
@@ -106,7 +112,7 @@ export const postMessageRoute = defineOpenAPIRoute({
   handler: async (c) => {
     // Request inputs: path id, message body, authenticated user (never model-supplied).
     const { conversationId } = c.req.valid('param');
-    const { content } = c.req.valid('json');
+    const { content, attachmentIds } = c.req.valid('json');
     const user = getUser(c);
 
     const db = getDb();
@@ -125,7 +131,25 @@ export const postMessageRoute = defineOpenAPIRoute({
       id: conversationId,
       userId: user.id,
     });
-    await conversationService.appendUserMessage({ conversationId, userId: user.id, content });
+    // Load and validate this turn's attachments before saving anything: each must be ready,
+    // belong to this conversation+user, and not already be attached to a message.
+    const attachmentRows = await AttachmentService(db).listReadyForSend({
+      conversationId,
+      userId: user.id,
+      attachmentIds,
+    });
+
+    const saved = await conversationService.appendUserMessage({
+      conversationId,
+      userId: user.id,
+      content,
+      attachments: attachmentRows.map((attachment) => ({
+        id: attachment.id,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        size: attachment.size,
+      })),
+    });
 
     // Fetch recent history and both context blocks in parallel for the system prompt.
     const [history, projectCard, artifactContext] = await Promise.all([
@@ -139,10 +163,30 @@ export const postMessageRoute = defineOpenAPIRoute({
       }),
     ]);
 
+    // Char counts for earlier-turn attachments, so their stubs can say how big the file is.
+    const earlierAttachmentIds = [
+      ...new Set(
+        history.messages
+          .filter((message) => message.id !== saved.id)
+          .flatMap((message) => attachmentsOf(message.metadata).map((a) => a.id)),
+      ),
+    ];
+    const charCounts = await AttachmentService(db).getCharCounts({
+      conversationId,
+      userId: user.id,
+      ids: earlierAttachmentIds,
+    });
+
+    const currentTurnText = new Map(
+      attachmentRows.map((attachment) => [attachment.id, attachment.extractedText ?? '']),
+    );
+
     // Prompt shape:
     //   [{ role: 'system', content: '<project card + instructions>' },
     //    { role: 'user', content: 'Hi' }, { role: 'assistant', content: '…' }, …]
-    // Dropping `system` history rows keeps our one system prompt authoritative.
+    // Dropping `system` history rows keeps our one system prompt authoritative. Attachment text is
+    // injected as separate `system` messages (never into `messages.content`), so `allowedUrls`
+    // below still scans only what the user typed.
     const messages: ChatMessage[] = [
       {
         role: 'system',
@@ -153,9 +197,42 @@ export const postMessageRoute = defineOpenAPIRoute({
           webSearchEnabled,
         }),
       },
-      ...history.messages.flatMap((message): ChatMessage[] =>
-        message.role === 'system' ? [] : [{ role: message.role, content: message.content }],
-      ),
+      ...history.messages.flatMap((message): ChatMessage[] => {
+        if (message.role === 'system') return [];
+
+        const result: ChatMessage[] = [];
+        const attachments = attachmentsOf(message.metadata);
+
+        // "Current" = the message just sent in this run. "Earlier" = every message before it.
+        // The current message's files get their full text pasted in, so the model can answer right away.
+        // Older messages' files get a short stub instead, to keep the prompt small — the model reopens
+        // them with read_attachment when it needs them.
+        if (message.role === 'user' && attachments.length > 0) {
+          if (message.id === saved.id) {
+            // Current turn: inject the extracted text in full within the budgets.
+            const block = formatCurrentTurnAttachments(
+              attachments.map((attachment) => ({
+                name: attachment.name,
+                mimeType: attachment.mimeType,
+                text: currentTurnText.get(attachment.id) ?? '',
+              })),
+            );
+            if (block) result.push({ role: 'system', content: block });
+          } else {
+            // Earlier turn: a one-line stub; the model reopens it with read_attachment.
+            const stub = formatAttachmentStubs(
+              attachments.map((attachment) => ({
+                name: attachment.name,
+                chars: charCounts.get(attachment.id) ?? 0,
+              })),
+            );
+            if (stub) result.push({ role: 'system', content: stub });
+          }
+        }
+
+        result.push({ role: message.role, content: message.content });
+        return result;
+      }),
     ];
 
     // Open the run row first so the streamed `done`/`error` events can reference run.id.

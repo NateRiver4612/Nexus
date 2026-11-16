@@ -5,6 +5,7 @@ import { getProjectOverviewTool } from './getProjectOverview';
 import { getTaskTool } from './getTask';
 import { listTasksTool } from './listTasks';
 import { readArtifactTool } from './readArtifact';
+import { readAttachmentTool } from './readAttachment';
 import { readUrlTool } from './readUrl';
 import { searchKnowledgeTool } from './searchKnowledge';
 import { webSearchTool } from './webSearch';
@@ -19,6 +20,7 @@ export const projectChatTools: Tool[] = [
   listTasksTool,
   getTaskTool,
   readArtifactTool,
+  readAttachmentTool,
   createArtifactTool,
   // Both Tavily-backed tools are gated together: neither works without the API key.
   ...(webSearchEnabled ? [webSearchTool, readUrlTool] : []),

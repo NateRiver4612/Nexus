@@ -11,7 +11,7 @@ import type {
 } from '@nexus/types';
 
 import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
-import { deleteKnowledgeObject, getKnowledgeObject, putKnowledgeObject } from '../../storage';
+import { deleteObject, getObject, putObject } from '../../storage';
 import { ArtifactRepository } from './repository';
 
 /** Generated text is held in memory and sent to S3 in one piece, so it needs a ceiling. */
@@ -98,7 +98,7 @@ export function ArtifactService(db: Db) {
     const versionId = randomUUID();
     const storageKey = buildStorageKey({ projectId: input.projectId, artifactId, versionId });
 
-    await putKnowledgeObject(storageKey, body, mimeType);
+    await putObject(storageKey, body, mimeType);
 
     try {
       const artifact = await db.transaction(async (tx) => {
@@ -160,7 +160,7 @@ export function ArtifactService(db: Db) {
       versionId,
     });
 
-    await putKnowledgeObject(storageKey, body, mimeType);
+    await putObject(storageKey, body, mimeType);
 
     try {
       const { artifact, version } = await db.transaction(async (tx) => {
@@ -229,7 +229,7 @@ export function ArtifactService(db: Db) {
       versionId: randomUUID(),
     });
 
-    await putKnowledgeObject(storageKey, body, mimeType);
+    await putObject(storageKey, body, mimeType);
 
     try {
       const artifact = await db.transaction(async (tx) => {
@@ -264,7 +264,7 @@ export function ArtifactService(db: Db) {
       NotFoundError('Artifact version not found.'),
     );
 
-    const object = await getKnowledgeObject(row.storageKey);
+    const object = await getObject(row.storageKey);
     return {
       content: object.body.toString('utf8'),
       mimeType: row.mimeType,
@@ -342,7 +342,7 @@ function buildStorageKey({
 
 async function discardObject(key: string) {
   try {
-    await deleteKnowledgeObject(key);
+    await deleteObject(key);
   } catch (error) {
     // Best-effort: a leftover object costs storage only, and must not mask the real outcome.
     console.warn(`[artifacts] could not delete S3 object ${key}`, error);

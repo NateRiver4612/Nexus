@@ -1,6 +1,6 @@
 import { UnrecoverableError } from 'bullmq';
 
-import { presignKnowledgeGetUrl, presignKnowledgePutUrl } from '../../storage';
+import { presignGetUrl, presignPutUrl } from '../../storage';
 import { ensure, ensureExists, NotFoundError } from '../../errors';
 import { env } from '../../env';
 import { getOpenAIProvider } from '../ai/providers';
@@ -104,7 +104,7 @@ export function KnowledgeService(db: Db) {
     input: CreateUploadUrlInputType,
   ): Promise<CreateUploadUrlResponseType> {
     const key = `knowledge/${input.name}`;
-    const { url, bucket } = await presignKnowledgePutUrl(key, input.mimeType);
+    const { url, bucket } = await presignPutUrl(key, input.mimeType);
     return { url, key, bucket };
   }
 
@@ -120,7 +120,7 @@ export function KnowledgeService(db: Db) {
       NotFoundError('This source has no stored file.'),
     );
 
-    return presignKnowledgeGetUrl({ key: storageKey, filename: source.name });
+    return presignGetUrl({ key: storageKey, filename: source.name });
   }
 
   /**

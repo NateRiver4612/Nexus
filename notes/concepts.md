@@ -472,7 +472,7 @@ reverse.
 
 ```ts
 // apps/api/src/storage.ts
-export async function presignKnowledgePutUrl(key: string, contentType: string) {
+export async function presignPutUrl(key: string, contentType: string) {
   const command = new PutObjectCommand({ Bucket: s3Bucket(), Key: key, ContentType: contentType });
   const url = await getSignedUrl(getS3Client(), command, { expiresIn: 3600 });
   return { url, key, bucket: s3Bucket() };
@@ -607,7 +607,7 @@ run continues, because the next retry can regenerate it.
 
 ```ts
 // apps/api/src/modules/artifacts/service.ts
-await putKnowledgeObject(storageKey, body, mimeType);
+await putObject(storageKey, body, mimeType);
 
 try {
   const artifact = await db.transaction(async (tx) => {
