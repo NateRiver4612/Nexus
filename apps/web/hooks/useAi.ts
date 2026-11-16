@@ -1,5 +1,7 @@
 import type {
+  AttachmentType,
   ChatArtifactType,
+  ChatAttachmentType,
   ChatCitationType,
   CreateAiSuggestionInputType,
   CreateConversationInputType,
@@ -22,6 +24,7 @@ import {
   updateAiSuggestion,
   updateConversation,
 } from '@/api/ai';
+import { confirmAttachment, createAttachmentUploadUrl } from '@/api/attachments';
 
 import {
   aiRunKeys,
@@ -135,6 +138,8 @@ export const useGetMessages = createQueryHook(
 /** The turn that is still streaming: the user's text and the reply received so far. */
 export type PendingTurn = {
   content: string;
+  /** Files attached to this turn, shown as chips in the optimistic user bubble. */
+  attachments: ChatAttachmentType[];
   text: string;
   sources: ChatCitationType[];
   /** Artifacts the assistant saved this turn, shown as cards under the reply. */
@@ -169,7 +174,7 @@ export function useSendMessage({
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   const send = useCallback(
-    async (content: string) => {
+    async (content: string, attachments: ChatAttachmentType[] = []) => {
       if (controllerRef.current) return;
 
       const controller = new AbortController();
@@ -177,6 +182,7 @@ export function useSendMessage({
       setError(null);
       setPending({
         content,
+        attachments,
         text: '',
         sources: [],
         artifacts: [],
@@ -187,7 +193,7 @@ export function useSendMessage({
       try {
         for await (const event of streamMessage({
           conversationId,
-          input: { content },
+          input: { content, attachmentIds: attachments.map((attachment) => attachment.id) },
           signal: controller.signal,
         })) {
           if (event.type === 'text-delta') {
@@ -257,4 +263,37 @@ export function useSendMessage({
   const stop = useCallback(() => controllerRef.current?.abort(), []);
 
   return { send, stop, pending, error, isStreaming: pending !== null };
+}
+
+/**
+ * Uploads one file to chat: request a presigned URL, PUT the file straight to S3, then confirm so
+ * the server extracts its text. Only metadata crosses our API — the bytes never touch the API.
+ * `onCreated` fires as soon as the server row exists, so the caller can clean up even if a later
+ * step fails. Returns the confirmed attachment (status `ready`, or `failed` with a reason).
+ */
+export function useUploadAttachment(conversationId: string) {
+  return useCallback(
+    async (
+      file: File,
+      onCreated?: (attachmentId: string) => void,
+    ): Promise<AttachmentType> => {
+      const { attachmentId, url } = await createAttachmentUploadUrl(conversationId, {
+        name: file.name,
+        mimeType: file.type,
+        size: file.size,
+      });
+
+      onCreated?.(attachmentId);
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+
+      return confirmAttachment(conversationId, attachmentId);
+    },
+    [conversationId],
+  );
 }

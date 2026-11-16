@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   faFile,
   faFileAudio,
+  faFileCode,
   faFileCsv,
   faFileExcel,
   faFileImage,
@@ -70,6 +71,8 @@ export function fileIcon(file: { name: string; type: string }) {
   if (type === 'text/csv' || ext === 'csv') return { icon: faFileCsv, color: 'text-emerald-600' };
   if (type.includes('spreadsheetml') || ext === 'xlsx')
     return { icon: faFileExcel, color: 'text-emerald-600' };
+  if (type === 'application/json' || ext === 'json')
+    return { icon: faFileCode, color: 'text-amber-600' };
   if (type.startsWith('image/')) return { icon: faFileImage, color: 'text-violet-600' };
   if (type.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'webm', 'ogg', 'flac'].includes(ext ?? ''))
     return { icon: faFileAudio, color: 'text-amber-600' };
