@@ -1,9 +1,4 @@
-import type {
-  ArtifactContentType,
-  ArtifactListType,
-  CreateArtifactInputType,
-  UpdateArtifactInputType,
-} from '@nexus/types';
+import type { ArtifactContentType, ArtifactListType, UpdateArtifactInputType } from '@nexus/types';
 
 import { apiClient, handleResponse } from '@/lib/client';
 
@@ -33,12 +28,6 @@ export async function getArtifactContent({
       query: version !== undefined ? { version } : {},
     }),
   )) as ArtifactContentType;
-}
-
-export async function createArtifact(projectId: string, input: CreateArtifactInputType) {
-  return handleResponse(
-    await apiClient.api.v1.artifacts[':projectId'].$post({ param: { projectId }, json: input }),
-  );
 }
 
 export async function updateArtifact(id: string, input: UpdateArtifactInputType) {
