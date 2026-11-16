@@ -80,7 +80,10 @@ export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
         type="button"
         disabled={!onOpen}
         onClick={() => onOpen?.(artifact)}
-        className={cn('flex min-w-0 flex-1 items-center gap-3 text-left', onOpen && 'cursor-pointer')}
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-3 text-left',
+          onOpen && 'cursor-pointer',
+        )}
       >
         <ArtifactTypeIcon type={displayType} className="size-5 shrink-0 text-muted-foreground" />
         <div className="min-w-0">
@@ -98,7 +101,11 @@ export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
         aria-label="Download artifact"
         className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition hover:bg-accent disabled:opacity-50"
       >
-        {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+        {downloading ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Download className="size-4" />
+        )}
       </button>
     </div>
   );

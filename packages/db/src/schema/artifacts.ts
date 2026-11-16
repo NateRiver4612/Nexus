@@ -2,6 +2,7 @@ import {
   bigint,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -11,6 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { idColumn, timestamps } from './columns';
+import { conversations } from './conversations';
 import { projects } from './projects';
 import { users } from './users';
 
@@ -44,6 +46,9 @@ export const artifacts = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 255 }).notNull(),
     type: artifactType('type').notNull(),
     status: artifactStatus('status').notNull().default('queued'),
@@ -54,6 +59,7 @@ export const artifacts = pgTable(
   },
   (table) => [
     index('artifacts_project_idx').on(table.projectId),
+    index('artifacts_conversation_name_idx').on(table.conversationId, table.name),
     index('artifacts_type_idx').on(table.type),
   ],
 );
@@ -72,6 +78,7 @@ export const artifactVersions = pgTable(
     storageKey: text('storage_key').notNull(),
     mimeType: varchar('mime_type', { length: 128 }).notNull(),
     size: bigint('size', { mode: 'number' }).notNull().default(0),
+    sources: jsonb('sources').$type<ArtifactSource[]>().notNull().default([]),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -82,3 +89,6 @@ export const artifactVersions = pgTable(
 
 export type ArtifactVersion = typeof artifactVersions.$inferSelect;
 export type NewArtifactVersion = typeof artifactVersions.$inferInsert;
+
+/** A web source an artifact drew on: URL plus a display name (matches the chat web citation shape). */
+export type ArtifactSource = { url: string; name: string };

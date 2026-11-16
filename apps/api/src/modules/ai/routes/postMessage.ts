@@ -19,7 +19,10 @@ import type { AIProvider, ChatMessage } from '../types';
 import { AIService, type AIServiceType } from '../service';
 import { getDeepSeekProvider } from '../providers';
 import { modelForTask } from '../../../lib/client';
-import { buildProjectGeneralContext } from '../chat/contextBuilder';
+import {
+  buildConversationArtifactContext,
+  buildProjectGeneralContext,
+} from '../chat/contextBuilder';
 import { buildProjectChatSystemPrompt } from '../prompts/projectChat';
 import { streamSSE } from 'hono/streaming';
 import type { Context } from 'hono';
@@ -124,11 +127,16 @@ export const postMessageRoute = defineOpenAPIRoute({
     });
     await conversationService.appendUserMessage({ conversationId, userId: user.id, content });
 
-    // Fetch both in parallel: recent history and general project context for the system prompt.
-    const [history, projectCard] = await Promise.all([
+    // Fetch recent history and both context blocks in parallel for the system prompt.
+    const [history, projectCard, artifactContext] = await Promise.all([
       // Includes the user message we just saved, oldest first.
       conversationService.getMessages({ conversationId, userId: user.id, limit: HISTORY_LIMIT }),
       buildProjectGeneralContext({ db, projectId: conversation.projectId }),
+      buildConversationArtifactContext({
+        db,
+        projectId: conversation.projectId,
+        conversationId,
+      }),
     ]);
 
     // Prompt shape:
@@ -140,6 +148,7 @@ export const postMessageRoute = defineOpenAPIRoute({
         role: 'system',
         content: buildProjectChatSystemPrompt({
           projectCard,
+          artifactContext,
           today: new Date().toISOString().slice(0, 10),
           webSearchEnabled,
         }),
@@ -262,6 +271,7 @@ async function streamProjectChat({
           ctx: {
             db,
             projectId: conversation.projectId,
+            conversationId: conversation.id,
             userId,
             // Seeded with every URL the user wrote in the loaded history. Assistant text is left
             // out on purpose: the model must not be able to authorize its own fetches.
@@ -272,6 +282,7 @@ async function streamProjectChat({
                   : [],
               ),
             ),
+            artifactWrites: new Map(),
           },
           provider,
           tools: projectChatTools,
@@ -325,6 +336,31 @@ async function streamProjectChat({
       // aborted → client left; failure → provider/loop error. Either way the reply is partial.
       const aborted = controller.signal.aborted;
       const partial = aborted || failure !== undefined;
+
+      // The model can say "Done." even when create_artifact never ran (bad arguments, a
+      // cut-off reply, or a handled failure). Correct that deterministically so the user is
+      // never told a file was saved when it wasn't.
+      const attemptedArtifact = toolTrace.some((entry) => entry.name === 'create_artifact');
+      const savedArtifact = artifacts.length > 0;
+      // Short success-sounding replies only, so a longer explanation is never rewritten.
+      const bareSuccess =
+        text.trim().length <= 60 && /^(done|saved|created|updated)\b/i.test(text.trim());
+      const alreadyReportedFailure =
+        /(not (been )?saved|wasn'?t saved|couldn'?t save|could not save|didn'?t save|failed to save|unable to save)/i.test(
+          text,
+        );
+
+      if (
+        !aborted &&
+        !failure &&
+        !savedArtifact &&
+        (attemptedArtifact || bareSuccess) &&
+        !alreadyReportedFailure
+      ) {
+        const warning = '\n\nNo file was saved — the write did not complete. Please try again.';
+        text += warning;
+        await send('text-delta', { text: warning });
+      }
 
       // Keep whatever the user already saw, flagged `partial`, so a reload matches the screen.
       // Nothing is saved if no text arrived. metadata shape:

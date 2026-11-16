@@ -66,7 +66,7 @@ export const EditableProjectTitle = ({ projectId, name }: EditableProjectTitlePr
         onKeyDown={handleKeyDown}
         maxLength={255}
         aria-label="Project name"
-        className="min-w-0 flex-1 border-b border-border bg-transparent text-3xl font-bold outline-none"
+        className="min-w-0 flex-1 border-b border-border bg-transparent lg:text-xl 2xl:text-3xl font-bold outline-none"
       />
     );
   }
@@ -78,7 +78,7 @@ export const EditableProjectTitle = ({ projectId, name }: EditableProjectTitlePr
           type="button"
           onClick={startEditing}
           disabled={isPending}
-          className="max-w-full cursor-text truncate text-left text-3xl font-bold"
+          className="max-w-full cursor-text truncate text-left lg:text-2xl 2xl:text-3xl font-bold"
         >
           {name}
         </button>

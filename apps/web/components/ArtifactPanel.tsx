@@ -157,6 +157,28 @@ export const ArtifactPanel = ({ artifact, onClose, onBack }: ArtifactPanelProps)
           ) : (
             <HighlightedCode code={data.content} filename={artifact.name} />
           ))}
+
+        {data && data.sources.length > 0 && (
+          <div className="mt-6 border-t border-border pt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Sources
+            </p>
+            <ul className="space-y-1">
+              {data.sources.map((source) => (
+                <li key={source.url}>
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {source.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

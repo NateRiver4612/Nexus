@@ -3,17 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { ChatArtifactType } from '@nexus/types';
+import { chatArtifactTypeSchema } from '@nexus/zod-schemas';
 import { Newspaper, PanelLeft } from 'lucide-react';
 import { useGroupRef, usePanelRef, type Layout } from 'react-resizable-panels';
 
 import { Button } from '@/components/ui/button';
 import { ResizableGroup, ResizablePanel, ResizableSeparator } from '@/components/ui/resizable';
-import { useGetConversations, useGetMessages } from '@/hooks/useAi';
+import { useGetConversations } from '@/hooks/useAi';
+import { useGetArtifacts } from '@/hooks/useArtifacts';
 
 import { AIConversationList } from './AIConversationList';
 import { ArtifactListPanel, ArtifactPanel } from './ArtifactPanel';
 import { ChatPanel } from './ChatPanel';
-import { chatArtifactsOfMessages } from './ChatMessage';
 
 const LAYOUT_KEY = 'assistant-layout';
 const ARTIFACT_DEFAULT_SIZE = '30';
@@ -25,7 +26,8 @@ export function AssistantView({ projectId }: { projectId: string }) {
   const searchParams = useSearchParams();
   const { data: conversations } = useGetConversations({ variables: projectId });
 
-  // Artifacts belong to the project, so the panel stays open when the thread changes.
+  // Artifacts belong to the conversation, so the panel stays open but the selection resets
+  // when the thread changes.
   const [artifact, setArtifact] = useState<ChatArtifactType | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -115,14 +117,32 @@ export function AssistantView({ projectId }: { projectId: string }) {
     (conversation) => conversation.id === selectedId,
   )?.title;
 
-  // Shares the query cache with `ChatPanel`, so the artifact list costs no extra request.
-  const { data: messagePage } = useGetMessages({
-    variables: { conversationId: selectedId ?? '' },
+  const { data: artifacts } = useGetArtifacts({
+    projectId,
+    conversationId: selectedId ?? undefined,
+    enabled: Boolean(selectedId),
   });
-  const chatArtifacts = useMemo(
-    () => chatArtifactsOfMessages(messagePage?.messages ?? []),
-    [messagePage],
+  const chatArtifacts: ChatArtifactType[] = useMemo(
+    () =>
+      (artifacts ?? []).flatMap((artifact) => {
+        const type = chatArtifactTypeSchema.safeParse(artifact.type);
+        if (!type.success) return [];
+        return [
+          {
+            id: artifact.id,
+            name: artifact.name,
+            type: type.data,
+            version: artifact.latestVersion ?? 1,
+          },
+        ];
+      }),
+    [artifacts],
   );
+
+  // The panel is conversation-scoped, so an artifact from the previous thread must not linger.
+  useEffect(() => {
+    setArtifact(null);
+  }, [selectedId]);
 
   const select = (id: string) => router.replace(`${pathname}?c=${id}`);
 

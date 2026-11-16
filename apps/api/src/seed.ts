@@ -242,11 +242,19 @@ async function main() {
     createdBy: authorId,
   });
 
+  const conversation = (
+    await db
+      .insert(conversations)
+      .values({ projectId: project.id, userId: authorId, title: 'Kickoff' })
+      .returning()
+  )[0]!;
+
   const artifact = (
     await db
       .insert(artifacts)
       .values({
         projectId: project.id,
+        conversationId: conversation.id,
         name: 'Executive Summary',
         type: 'report',
         status: 'ready',
@@ -279,13 +287,6 @@ async function main() {
     entityType: 'project',
     entityId: project.id,
   });
-
-  const conversation = (
-    await db
-      .insert(conversations)
-      .values({ projectId: project.id, userId: authorId, title: 'Kickoff' })
-      .returning()
-  )[0]!;
 
   await db
     .insert(messages)

@@ -30,7 +30,8 @@ export const taskKeys = {
 
 export const artifactKeys = {
   all: ['artifacts'] as const,
-  list: (projectId: string) => ['artifacts', 'list', projectId] as const,
+  list: (projectId: string, conversationId?: string) =>
+    ['artifacts', 'list', projectId, conversationId ?? null] as const,
   detail: (id: string) => ['artifacts', id] as const,
   content: (id: string, version?: number) => ['artifacts', 'content', id, version] as const,
 };

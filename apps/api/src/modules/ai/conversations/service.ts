@@ -2,6 +2,7 @@ import type { Conversation, Db, Message } from '@nexus/db';
 import type { ConversationType, MessagePageType, MessageType } from '@nexus/types';
 
 import { ensureExists, InternalError, NotFoundError } from '../../../errors';
+import { ArtifactService } from '../../artifacts/service';
 import { assertProjectAccess } from '../../projects/service';
 import { ConversationRepository } from './repository';
 
@@ -96,7 +97,13 @@ export function ConversationService(db: Db) {
 
   async function remove({ id, userId }: { id: string; userId: string }) {
     await requireOwned({ id, userId });
+
+    // The FK cascade removes artifact rows, so collect their S3 keys first.
+    const artifactService = ArtifactService(db);
+    const storageKeys = await artifactService.listStorageKeysByConversation(id);
+
     await repository.delete({ id, userId });
+    await artifactService.removeStorageObjects(storageKeys);
   }
 
   async function getMessages({

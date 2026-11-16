@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import type { Artifact, ArtifactVersion, Db } from '@nexus/db';
 import type {
+  ArtifactListItemType,
+  ArtifactSourceType,
   ArtifactType,
   ArtifactVersionType,
   CreateArtifactInputType,
@@ -17,23 +19,45 @@ export const MAX_ARTIFACT_CONTENT_BYTES = 1024 * 1024;
 
 export type ArtifactWriteResult = { artifact: ArtifactType; version: number };
 
+/** The client sends the conversation; the route supplies the project from its path. */
+type ArtifactCreateInput = CreateArtifactInputType & { projectId: string };
+
 export function ArtifactService(db: Db) {
   const repository = ArtifactRepository(db);
 
-  async function list(projectId: string): Promise<ArtifactType[]> {
-    const rows = await repository.listByProject(projectId);
-    return rows.map(toView);
+  async function list({
+    projectId,
+    conversationId,
+  }: {
+    projectId: string;
+    conversationId?: string;
+  }): Promise<ArtifactListItemType[]> {
+    const rows = await repository.listByProject({ projectId, conversationId });
+    return rows.map(toListView);
   }
 
-  async function create(input: CreateArtifactInputType, userId: string): Promise<ArtifactType> {
+  async function create(input: ArtifactCreateInput, userId: string): Promise<ArtifactType> {
     // `status` is left to the DB default; only the generation flow marks an artifact `ready`.
     const rows = await repository.insert({
       projectId: input.projectId,
+      conversationId: input.conversationId,
       name: input.name,
       type: input.type,
       createdBy: userId,
     });
     return toView(rows[0]!);
+  }
+
+  /** Chat artifact lookup; a same-name file in another conversation is a separate artifact. */
+  async function findByName({
+    conversationId,
+    name,
+  }: {
+    conversationId: string;
+    name: string;
+  }): Promise<ArtifactType | undefined> {
+    const row = await repository.findByConversationAndName({ conversationId, name });
+    return row ? toView(row) : undefined;
   }
 
   async function update(id: string, input: UpdateArtifactInputType): Promise<ArtifactType> {
@@ -60,11 +84,13 @@ export function ArtifactService(db: Db) {
     input,
     content,
     mimeType,
+    sources,
     userId,
   }: {
-    input: CreateArtifactInputType;
+    input: ArtifactCreateInput;
     content: string;
     mimeType: string;
+    sources: ArtifactSourceType[];
     userId: string;
   }): Promise<ArtifactWriteResult> {
     const body = toBody(content);
@@ -81,6 +107,7 @@ export function ArtifactService(db: Db) {
         const rows = await txRepository.insert({
           id: artifactId,
           projectId: input.projectId,
+          conversationId: input.conversationId,
           name: input.name,
           type: input.type,
           status: 'ready',
@@ -93,6 +120,7 @@ export function ArtifactService(db: Db) {
           storageKey,
           mimeType,
           size: body.length,
+          sources,
           createdBy: userId,
         });
         return rows[0]!;
@@ -110,11 +138,13 @@ export function ArtifactService(db: Db) {
     artifactId,
     content,
     mimeType,
+    sources,
     userId,
   }: {
     artifactId: string;
     content: string;
     mimeType: string;
+    sources: ArtifactSourceType[];
     userId: string;
   }): Promise<ArtifactWriteResult> {
     const existing = ensureExists(
@@ -147,6 +177,7 @@ export function ArtifactService(db: Db) {
           storageKey,
           mimeType,
           size: body.length,
+          sources,
           createdBy: userId,
         });
         // Re-saving `ready` also bumps `updatedAt`, so the list reflects the edit.
@@ -165,6 +196,67 @@ export function ArtifactService(db: Db) {
     }
   }
 
+  /**
+   * Rewrites one version in place. Only for a later `create_artifact` call in the same
+   * assistant reply: the reply gets one version, and the last content wins.
+   */
+  async function replaceVersionContent({
+    artifactId,
+    version,
+    content,
+    mimeType,
+    sources,
+  }: {
+    artifactId: string;
+    version: number;
+    content: string;
+    mimeType: string;
+    sources: ArtifactSourceType[];
+  }): Promise<ArtifactWriteResult> {
+    const existing = ensureExists(
+      await repository.getById(artifactId),
+      NotFoundError('Artifact not found.'),
+    );
+    const current = ensureExists(
+      await repository.getVersion({ artifactId, version }),
+      NotFoundError('Artifact version not found.'),
+    );
+
+    const body = toBody(content);
+    const storageKey = buildStorageKey({
+      projectId: existing.projectId,
+      artifactId,
+      versionId: randomUUID(),
+    });
+
+    await putKnowledgeObject(storageKey, body, mimeType);
+
+    try {
+      const artifact = await db.transaction(async (tx) => {
+        const txRepository = ArtifactRepository(tx);
+
+        ensureExists(await txRepository.lockById(artifactId), NotFoundError('Artifact not found.'));
+        await txRepository.updateVersion(current.id, {
+          storageKey,
+          mimeType,
+          size: body.length,
+          sources,
+        });
+
+        return ensureExists(
+          await txRepository.update(artifactId, { status: 'ready' }),
+          NotFoundError('Artifact not found.'),
+        );
+      });
+
+      await discardObject(current.storageKey);
+      return { artifact: toView(artifact), version };
+    } catch (error) {
+      await discardObject(storageKey);
+      throw error;
+    }
+  }
+
   /** Reads an artifact's text; the newest version unless `version` is given. */
   async function getContent({ artifactId, version }: { artifactId: string; version?: number }) {
     const row = ensureExists(
@@ -173,7 +265,12 @@ export function ArtifactService(db: Db) {
     );
 
     const object = await getKnowledgeObject(row.storageKey);
-    return { content: object.body.toString('utf8'), mimeType: row.mimeType, version: row.version };
+    return {
+      content: object.body.toString('utf8'),
+      mimeType: row.mimeType,
+      version: row.version,
+      sources: row.sources,
+    };
   }
 
   /** Newest first. `storageKey` is internal and never leaves the service. */
@@ -191,15 +288,29 @@ export function ArtifactService(db: Db) {
     await Promise.all(storageKeys.map((key) => discardObject(key)));
   }
 
+  /** Fetched before conversation deletion, while the artifact rows still exist. */
+  async function listStorageKeysByConversation(conversationId: string) {
+    return repository.listVersionStorageKeysByConversation(conversationId);
+  }
+
+  /** Best-effort; a failed S3 delete must not block the conversation deletion. */
+  async function removeStorageObjects(storageKeys: string[]) {
+    await Promise.all(storageKeys.map((key) => discardObject(key)));
+  }
+
   return {
     list,
     create,
+    findByName,
     update,
     createWithContent,
     addVersion,
+    replaceVersionContent,
     getContent,
     listVersions,
     remove,
+    listStorageKeysByConversation,
+    removeStorageObjects,
   };
 }
 
@@ -242,6 +353,7 @@ function toView(row: Artifact): ArtifactType {
   return {
     id: row.id,
     projectId: row.projectId,
+    conversationId: row.conversationId,
     name: row.name,
     type: row.type,
     status: row.status,
@@ -251,6 +363,10 @@ function toView(row: Artifact): ArtifactType {
   };
 }
 
+function toListView(row: Artifact & { latestVersion: number | null }): ArtifactListItemType {
+  return { ...toView(row), latestVersion: row.latestVersion };
+}
+
 function toVersionView(row: ArtifactVersion): ArtifactVersionType {
   return {
     id: row.id,
@@ -258,6 +374,7 @@ function toVersionView(row: ArtifactVersion): ArtifactVersionType {
     version: row.version,
     mimeType: row.mimeType,
     size: row.size,
+    sources: row.sources,
     createdBy: row.createdBy,
     createdAt: row.createdAt.toISOString(),
   };

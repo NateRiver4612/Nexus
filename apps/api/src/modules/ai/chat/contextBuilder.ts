@@ -1,7 +1,9 @@
 import type { Db } from '@nexus/db';
 
+import { ArtifactService } from '../../artifacts/service';
 import { MilestoneService } from '../../milestones/service';
 import { ProjectService } from '../../projects/service';
+import { formatConversationArtifacts } from './artifactContext';
 
 const MAX_DESCRIPTION_CHARS = 500;
 const MAX_TITLE_CHARS = 80;
@@ -60,4 +62,22 @@ export async function buildProjectGeneralContext({ db, projectId }: { db: Db; pr
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Artifacts already saved in this conversation. Read-only and conversation-scoped to match
+ * `create_artifact`, which versions a same-name file only within its own conversation.
+ * No access check here on purpose: the caller has already proven the user owns the conversation.
+ */
+export async function buildConversationArtifactContext({
+  db,
+  projectId,
+  conversationId,
+}: {
+  db: Db;
+  projectId: string;
+  conversationId: string;
+}) {
+  const artifacts = await ArtifactService(db).list({ projectId, conversationId });
+  return formatConversationArtifacts(artifacts);
 }

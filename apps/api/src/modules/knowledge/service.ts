@@ -155,6 +155,7 @@ export function KnowledgeService(db: Db) {
       // source name once ingestion succeeds.
       const youtube =
         source.sourceType === 'youtube' ? await extractFromYoutube(source.sourceRef) : null;
+
       const rawText = youtube ? youtube.content : await extractSourceText(source);
       const updatedName = youtube && youtube.title !== 'Untitled' ? youtube.title : undefined;
 

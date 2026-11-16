@@ -61,6 +61,7 @@ For a tricky helper inside the file, use a short `@example` instead of repeating
    *   flush() → { ... }
    */
   ```
+
 - Keep the header about the contract. Inline `//` comments stay next to the decision they explain.
 
 ## Example — JSON transform

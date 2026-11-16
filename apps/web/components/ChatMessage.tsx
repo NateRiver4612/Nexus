@@ -32,24 +32,6 @@ export function artifactsOf(metadata: MessageType['metadata']): ChatArtifactType
   return parsed.success ? parsed.data : [];
 }
 
-/**
- * Every artifact a conversation has produced, newest message first. An artifact re-saved with
- * more content bumps its `version`, so only the highest version per id is kept.
- */
-export function chatArtifactsOfMessages(messages: MessageType[]): ChatArtifactType[] {
-  const byId = new Map<string, ChatArtifactType>();
-
-  // Messages arrive oldest-first; reverse them so the list reads newest-first.
-  for (const message of [...messages].reverse()) {
-    for (const artifact of artifactsOf(message.metadata)) {
-      const known = byId.get(artifact.id);
-      if (!known || artifact.version > known.version) byId.set(artifact.id, artifact);
-    }
-  }
-
-  return [...byId.values()];
-}
-
 export function ChatMessage({
   role,
   content,
