@@ -174,30 +174,20 @@
       Global colors 
   **************************************************/
 
-  /* Global colors - Light mode */
-  --tt-bg-color: var(--white);
-  --tt-border-color: var(--tt-gray-light-a-200);
-  --tt-border-color-tint: var(--tt-gray-light-a-100);
-  --tt-sidebar-bg-color: var(--tt-gray-light-100);
-  --tt-scrollbar-color: var(--tt-gray-light-a-200);
-  --tt-cursor-color: var(--tt-brand-color-500);
-  --tt-selection-color: rgba(157, 138, 255, 0.2);
-  --tt-card-bg-color: var(--white);
-  --tt-card-border-color: var(--tt-gray-light-a-100);
+  /* Editor surfaces follow the active semantic theme. */
+  --tt-bg-color: var(--surface);
+  --tt-border-color: var(--border);
+  --tt-border-color-tint: color-mix(in srgb, var(--border) 50%, transparent);
+  --tt-sidebar-bg-color: var(--surface-secondary);
+  --tt-scrollbar-color: color-mix(in srgb, var(--border) 80%, transparent);
+  --tt-cursor-color: var(--action);
+  --tt-selection-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  --tt-card-bg-color: var(--card-background);
+  --tt-card-border-color: var(--border);
 }
 
-/* Global colors - Dark mode */
-.dark {
-  --tt-bg-color: var(--black);
-  --tt-border-color: var(--tt-gray-dark-a-200);
-  --tt-border-color-tint: var(--tt-gray-dark-a-100);
-  --tt-sidebar-bg-color: var(--tt-gray-dark-100);
-  --tt-scrollbar-color: var(--tt-gray-dark-a-200);
-  --tt-cursor-color: var(--tt-brand-color-400);
-  --tt-selection-color: rgba(122, 82, 255, 0.2);
-  --tt-card-bg-color: var(--tt-gray-dark-50);
-  --tt-card-border-color: var(--tt-gray-dark-a-50);
-
+/* Dark mode keeps only theme-specific elevation; colors come from the theme. */
+[data-theme='dark'] {
   --tt-shadow-elevated-md:
     0px 16px 48px 0px rgba(0, 0, 0, 0.5), 0px 12px 24px 0px rgba(0, 0, 0, 0.24),
     0px 6px 8px 0px rgba(0, 0, 0, 0.22), 0px 2px 3px 0px rgba(0, 0, 0, 0.12);
@@ -226,7 +216,7 @@
   --tt-color-text-red-contrast: hsla(8, 79%, 79%, 0.4);
 }
 
-.dark {
+[data-theme='dark'] {
   --tt-color-text-gray: hsl(0, 0%, 61%);
   --tt-color-text-brown: hsl(18, 35%, 58%);
   --tt-color-text-orange: hsl(25, 53%, 53%);
@@ -271,7 +261,7 @@
   --tt-color-highlight-pink-contrast: rgba(225, 136, 179, 0.27);
 }
 
-.dark {
+[data-theme='dark'] {
   --tt-color-highlight-yellow: #6b6524;
   --tt-color-highlight-green: #509568;
   --tt-color-highlight-blue: #6e92aa;

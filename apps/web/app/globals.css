@@ -3,6 +3,8 @@
 
 @import 'tailwindcss';
 
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @utility no-scrollbar {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
@@ -13,7 +15,7 @@
 
 @layer base {
   body {
-    @apply text-base font-medium;
+    @apply bg-background font-sans text-sm font-normal leading-relaxed text-foreground;
   }
 }
 
@@ -38,11 +40,11 @@
    Kept outside Tailwind layers so it wins over the markdown wrapper's `[&_pre]` utilities. */
 .syntax-block {
   overflow-x: auto;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   background: #2e2b29;
   color: #ffffff;
   padding: 0.75rem 1rem;
-  font-family: 'JetBrainsMono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.5;
   tab-size: 2;
@@ -139,7 +141,7 @@
 }
 .markdown-body .task-list-item input {
   margin-top: 0.4rem;
-  accent-color: var(--color-primary);
+  accent-color: var(--primary);
 }
 
 /* Long block math should scroll instead of overflowing the chat/panel column. */
@@ -151,8 +153,8 @@
 /* Markdown tables: accent-tinted header, zebra rows, subtle hover, rounded scroll container. */
 .markdown-table {
   overflow-x: auto;
-  border-radius: 0.75rem;
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-item);
+  border: 1px solid var(--border);
 }
 .markdown-table table {
   width: 100%;
@@ -160,24 +162,24 @@
   font-size: 0.875rem;
 }
 .markdown-table thead th {
-  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-card));
-  color: var(--color-foreground);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  color: var(--foreground);
   font-weight: 600;
   text-align: left;
   padding: 0.625rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .markdown-table tbody td {
   padding: 0.5rem 0.75rem;
   vertical-align: top;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }
 .markdown-table tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--color-muted) 45%, transparent);
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
 }
 .markdown-table tbody tr:hover {
-  background: var(--color-muted);
+  background: var(--muted);
 }
 .markdown-table th[align='center'],
 .markdown-table td[align='center'] {
@@ -188,41 +190,173 @@
   text-align: right;
 }
 
-@theme {
+:root,
+[data-theme='pastel'] {
+  color-scheme: light;
+
+  --shell-shadow: 0 20px 60px -15px rgb(17 17 17 / 0.08);
+
+  --background: #f8f9fb;
+  --foreground: #101415;
+  --surface: #ffffff;
+  --surface-secondary: #f8f9fb;
+
+  --primary: #c6d2fe;
+  --primary-soft: #e6ebff;
+  --primary-subtle: #f4f6ff;
+  --primary-foreground: #293185;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #101415;
+
+  --accent: #fcd34e;
+  --accent-soft: #ffeebc;
+  --accent-foreground: #5e4c11;
+  --accent-secondary: #e8b4f8;
+  --accent-secondary-soft: #f7e5fd;
+  --accent-secondary-foreground: #642776;
+  --accent-tertiary: #fb923c;
+  --accent-tertiary-soft: #fee4ce;
+  --accent-tertiary-foreground: #5d4733;
+
+  --muted: #f3f4f6;
+  --muted-foreground: #6c7173;
+  --placeholder: #9da2a4;
+  --border: #e0e6e7;
+  --destructive: #cc3d3d;
+  --destructive-foreground: #ffffff;
+
+  --action: #3b3f46;
+  --action-foreground: #ffffff;
+  --action-hover: #4b5051;
+  --focus-ring: #3b3f46;
+
+  --card-background: #ffffff;
+  --card-foreground: #101415;
+  --sidebar-background: #ffffff;
+  --sidebar-foreground: #101415;
+  --input-background: #ffffff;
+  --input-border: #e0e6e7;
+  --popover-background: #ffffff;
+  --popover-foreground: #101415;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --background: #171923;
+  --foreground: #f5f5f4;
+  --surface: #252a3a;
+  --surface-secondary: #1d2230;
+
+  --primary: #6477d8;
+  --primary-soft: #e6ebff;
+  --primary-subtle: #f4f6ff;
+  --primary-foreground: #111111;
+  --secondary: #303648;
+  --secondary-foreground: #f5f5f4;
+
+  --accent: #d69b48;
+  --accent-soft: #ffeebc;
+  --accent-foreground: #171923;
+  --accent-secondary: #b477c5;
+  --accent-secondary-soft: #f7e5fd;
+  --accent-secondary-foreground: #171923;
+  --accent-tertiary: #d98a50;
+  --accent-tertiary-soft: #fee4ce;
+  --accent-tertiary-foreground: #171923;
+
+  --muted: #2d3343;
+  --muted-foreground: #a9a9b3;
+  --placeholder: #9494a3;
+  --border: #3a4154;
+  --destructive: #f07178;
+  --destructive-foreground: #171923;
+
+  --action: #f5f5f4;
+  --action-foreground: #171923;
+  --action-hover: #e2e2e2;
+  --focus-ring: #a9c5fa;
+
+  --card-background: #252a3a;
+  --card-foreground: #f5f5f4;
+  --sidebar-background: #1d2230;
+  --sidebar-foreground: #f5f5f4;
+  --input-background: #1d2230;
+  --input-border: #3a4154;
+  --popover-background: #252a3a;
+  --popover-foreground: #f5f5f4;
+}
+
+/* Inline mappings make Tailwind utilities resolve runtime theme variables. */
+@theme inline {
   --animate-accordion-down: accordion-down 0.5s ease-out;
   --animate-accordion-up: accordion-up 0.5s ease-out;
   --animate-fade-in: fadeIn 500ms ease-out both;
 
-  --color-background: #f7f7f8;
-  --color-foreground: #323c46;
+  --font-sans:
+    var(--font-inter, Inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono, 'JetBrains Mono'), ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-card: #ffffff;
-  --color-card-foreground: #323c46;
+  --radius-control: 10px;
+  --radius-input: 12px;
+  --radius-item: 16px;
+  --radius-card: 24px;
+  --radius-shell: 32px;
+  --radius-pill: 9999px;
+  --shadow-shell: var(--shell-shadow);
 
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
-  --color-primary-foreground: #ffffff;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
 
-  --color-secondary: #e9eaec;
-  --color-secondary-dark: #c7c9cc;
-  --color-secondary-foreground: #323c46;
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
 
-  --color-muted: #f1f2f3;
-  --color-muted-foreground: #6e7681;
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-secondary-soft: var(--accent-secondary-soft);
+  --color-accent-secondary-foreground: var(--accent-secondary-foreground);
+  --color-accent-tertiary: var(--accent-tertiary);
+  --color-accent-tertiary-soft: var(--accent-tertiary-soft);
+  --color-accent-tertiary-foreground: var(--accent-tertiary-foreground);
 
-  --color-accent: #e7e9eb;
-  --color-accent-foreground: #323c46;
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-placeholder: var(--placeholder);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
 
-  --color-destructive: #d64545;
-  --color-destructive-foreground: #ffffff;
+  --color-action: var(--action);
+  --color-action-foreground: var(--action-foreground);
+  --color-action-hover: var(--action-hover);
+  --color-focus-ring: var(--focus-ring);
 
-  --color-error: #d64545;
-  --color-error-foreground: #ffffff;
+  --color-card-background: var(--card-background);
+  --color-card-foreground: var(--card-foreground);
+  --color-sidebar-background: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-input-background: var(--input-background);
+  --color-input-border: var(--input-border);
+  --color-popover-background: var(--popover-background);
+  --color-popover-foreground: var(--popover-foreground);
 
-  --color-loading: #c7c9cc;
-  --color-disabled: #e2e4e8;
-
-  --color-border: #e2e4e8;
-  --color-input: #e2e4e8;
-  --color-ring: #2563eb;
+  /* Compatibility aliases for utilities already used by the application. */
+  --color-card: var(--card-background);
+  --color-popover: var(--popover-background);
+  --color-input: var(--input-border);
+  --color-ring: var(--focus-ring);
+  --color-error: var(--destructive);
+  --color-error-foreground: var(--destructive-foreground);
+  --color-loading: var(--border);
+  --color-disabled: var(--muted);
 }
