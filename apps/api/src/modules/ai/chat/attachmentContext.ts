@@ -49,11 +49,12 @@ export function formatCurrentTurnAttachments(
 }
 
 /** One-line stubs for earlier-turn attachments; the model reopens them with read_attachment. */
-export function formatAttachmentStubs(
-  attachments: { name: string; chars: number }[],
-): string {
+export function formatAttachmentStubs(attachments: { name: string; chars: number }[]): string {
   if (attachments.length === 0) return '';
   return attachments
-    .map((attachment) => `[Attached: ${attachment.name}, ${attachment.chars} chars. Use read_attachment to reopen.]`)
+    .map(
+      (attachment) =>
+        `[Attached: ${attachment.name}, ${attachment.chars} chars. Use read_attachment to reopen.]`,
+    )
     .join('\n');
 }

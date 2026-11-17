@@ -273,10 +273,7 @@ export function useSendMessage({
  */
 export function useUploadAttachment(conversationId: string) {
   return useCallback(
-    async (
-      file: File,
-      onCreated?: (attachmentId: string) => void,
-    ): Promise<AttachmentType> => {
+    async (file: File, onCreated?: (attachmentId: string) => void): Promise<AttachmentType> => {
       const { attachmentId, url } = await createAttachmentUploadUrl(conversationId, {
         name: file.name,
         mimeType: file.type,

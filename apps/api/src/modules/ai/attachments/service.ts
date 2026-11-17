@@ -12,7 +12,11 @@ import {
   ValidationError,
 } from '../../../errors';
 import { deleteObject, getObjectSize, presignGetUrl, presignPutUrl } from '../../../storage';
-import { extractAudioFromBuffer, extractFromBuffer, fetchStoredObject } from '../../knowledge/extract';
+import {
+  extractAudioFromBuffer,
+  extractFromBuffer,
+  fetchStoredObject,
+} from '../../knowledge/extract';
 import { sanitizeExtractedText } from '../../knowledge/helpers';
 import { ConversationService } from '../conversations/service';
 import { AttachmentRepository } from './repository';

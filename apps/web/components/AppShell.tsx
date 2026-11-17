@@ -1,20 +1,14 @@
-'use client';
+import type { ReactNode } from 'react';
 
-import { useState } from 'react';
-
-import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
-
+export const AppShell = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
-      <div className="flex  min-w-0 flex-1 flex-col">
-        <Topbar collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
-        <main className="min-h-0 flex-1 p-6">{children}</main>
-      </div>
+    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
+      <Topbar />
+      <main className="min-h-0 w-full flex-1 px-4 pb-4 pt-5 sm:px-6 sm:pb-6 md:px-8 md:pb-8">
+        {children}
+      </main>
     </div>
   );
-}
+};

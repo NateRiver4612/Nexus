@@ -1,10 +1,6 @@
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
-import {
-  conversationAttachments,
-  type Db,
-  type NewConversationAttachment,
-} from '@nexus/db';
+import { conversationAttachments, type Db, type NewConversationAttachment } from '@nexus/db';
 
 export const AttachmentRepository = (db: Db) => ({
   async getById(id: string) {
@@ -91,10 +87,7 @@ export const AttachmentRepository = (db: Db) => ({
 
   async delete(id: string) {
     return (
-      await db
-        .delete(conversationAttachments)
-        .where(eq(conversationAttachments.id, id))
-        .returning()
+      await db.delete(conversationAttachments).where(eq(conversationAttachments.id, id)).returning()
     )[0];
   },
 

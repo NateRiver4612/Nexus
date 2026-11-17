@@ -33,11 +33,11 @@ export const GenerationProgress = ({ stage, className }: GenerationProgressProps
             <li key={step.stage} className="flex items-center gap-3">
               {isDone ? (
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Check className="size-3.5 text-primary" strokeWidth={2.5} />
+                  <Check className="size-3.5 text-primary-foreground" strokeWidth={2.5} />
                 </span>
               ) : isActive ? (
                 <LoaderCircle
-                  className="size-6 shrink-0 animate-spin text-primary"
+                  className="size-6 shrink-0 animate-spin text-primary-foreground"
                   strokeWidth={1.5}
                 />
               ) : (

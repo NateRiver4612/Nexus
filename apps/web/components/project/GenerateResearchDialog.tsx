@@ -58,7 +58,7 @@ export const GenerateResearchDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            <RefreshCw className="size-5 text-primary" />
+            <RefreshCw className="size-5 text-primary-foreground" />
             Generate new research?
           </AlertDialogTitle>
           <AlertDialogDescription>

@@ -1,28 +1,17 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { LoaderCircle, RefreshCw } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
-import { GenerateResearchDialog } from '@/components/project/GenerateResearchDialog';
 import ProjectGeneral from '@/components/project/ProjectGeneral';
 import ProjectMilestonesTasks, {
   type PlanMilestone,
   type PlanTask,
 } from '@/components/project/ProjectMilestonesTasks';
-import { ProjectResearchSources } from '@/components/project/ProjectResearchSources';
+import ProjectResearchHub from '@/components/project/ProjectResearchHub';
 import ProjectSummary from '@/components/project/ProjectSummary';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useGetAiRun } from '@/hooks/useAi';
 import { useGetMilestones, useUpdateMilestonesPositions } from '@/hooks/useMilestones';
 import { useGetProjectById } from '@/hooks/useProjects';
@@ -35,17 +24,6 @@ import {
 import { researchKeys } from '@/hooks/queryKeys';
 import { useReopenTask, useUpdateTask } from '@/hooks/useTasks';
 import { toastError } from '@/lib/toast';
-import { cn } from '@/lib/utils';
-
-const ResearchSkeleton = () => {
-  return (
-    <div className="flex flex-col gap-2">
-      {[0, 1].map((index) => (
-        <Skeleton key={index} className="h-12 w-full rounded-lg" />
-      ))}
-    </div>
-  );
-};
 
 export default function Page() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -76,11 +54,9 @@ export default function Page() {
   const activeResearchRunId = activeResearch?.runId ?? '';
   const { data: activeAiRun } = useGetAiRun({ variables: activeResearchRunId });
 
-  const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const handledRunRef = useRef<string | null>(null);
 
   const { mutate: startResearch, isPending: isStarting } = useStartProjectResearch({
-    onSuccess: () => setIsGenerateOpen(false),
     onError: toastError,
   });
 
@@ -156,19 +132,20 @@ export default function Page() {
     startResearch({ projectId, reason, sourceLimit });
   };
 
-  // History is oldest-first; assign 1-based versions and render newest first.
-  const versions = (researchHistory ?? [])
-    .map((research, index) => ({ research, version: index + 1 }))
-    .reverse();
-
   return (
     <div className="flex flex-col gap-4">
-      <ProjectGeneral data={project} isLoading={isProjectLoading}></ProjectGeneral>
-      <ProjectSummary
-        summary={project?.summary ?? null}
-        isLoading={isProjectLoading}
-      ></ProjectSummary>
+      <div className="grid gap-5 xl:grid-cols-12">
+        <ProjectGeneral data={project} isLoading={isProjectLoading} className="xl:col-span-7" />
+        <ProjectSummary
+          project={project}
+          milestones={milestones}
+          isLoading={isProjectLoading || isMilestonesLoading}
+          className="xl:col-span-5"
+        />
+      </div>
       <ProjectMilestonesTasks
+        projectId={projectId}
+        keyTopics={project?.summary?.keyTopics ?? []}
         milestones={milestones}
         isLoading={isMilestonesLoading}
         onContinueTask={handleContinueTask}
@@ -178,75 +155,14 @@ export default function Page() {
         onReopenTask={handleReopenTask}
       />
 
-      <Card className="flex flex-col gap-4 border border-gray-200 bg-white">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold">Research</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsGenerateOpen(true)}
-            disabled={isGenerating}
-          >
-            <RefreshCw className={cn('size-4', isGenerating && 'animate-spin')} />
-            Generate
-          </Button>
-        </div>
-
-        {isGenerating && (
-          <div className="flex items-center gap-2 rounded-lg border border-gray-200 p-4 text-sm text-muted-foreground">
-            <LoaderCircle className="size-4 animate-spin" />
-            {activeAiRun?.stage === 'retrying' ? 'Retrying research…' : 'Researching sources…'}
-          </div>
-        )}
-
-        {!isGenerating && researchFailed && (
-          <div className="rounded-lg border border-error/30 bg-error/5 p-4 text-sm text-error">
-            Research isn’t working right now — please try again later.
-          </div>
-        )}
-
-        {isHistoryLoading && versions.length === 0 && !isGenerating && <ResearchSkeleton />}
-
-        {!isHistoryLoading && !isGenerating && !researchFailed && versions.length === 0 && (
-          <div className="rounded-lg border border-gray-200 p-4 text-sm text-muted-foreground">
-            No research yet — generate sources for this project.
-          </div>
-        )}
-
-        {versions.map(({ research, version }, index) => (
-          <Accordion
-            key={research.id}
-            type="single"
-            collapsible
-            defaultValue={index === 0 ? `research-${research.id}` : undefined}
-            className="rounded-lg border border-gray-200 shadow"
-          >
-            <AccordionItem value={`research-${research.id}`} className="w-full border-b-0">
-              <div className="flex w-full items-center gap-1 rounded-t-lg px-3">
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex w-full items-center justify-between gap-3 pr-2">
-                    <span className="truncate text-sm font-medium text-gray-400">
-                      Version {version}
-                    </span>
-                    <span className="shrink-0 text-xs text-gray-400">
-                      {research.sources.length} sources
-                    </span>
-                  </div>
-                </AccordionTrigger>
-              </div>
-              <AccordionContent className="pb-2">
-                <ProjectResearchSources sources={research.sources} bare className="px-3" />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        ))}
-      </Card>
-
-      <GenerateResearchDialog
-        open={isGenerateOpen}
-        onOpenChange={setIsGenerateOpen}
-        onConfirm={handleGenerate}
-        isPending={isStarting}
+      <ProjectResearchHub
+        history={researchHistory ?? []}
+        isLoading={isHistoryLoading}
+        isGenerating={isGenerating}
+        activeStage={activeAiRun?.stage ?? null}
+        researchFailed={researchFailed}
+        isStarting={isStarting}
+        onStartResearch={handleGenerate}
       />
     </div>
   );

@@ -99,7 +99,7 @@ export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
         onClick={download}
         disabled={downloading}
         aria-label="Download artifact"
-        className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition hover:bg-accent disabled:opacity-50"
+        className="shrink-0 cursor-pointer rounded-control p-1 text-muted-foreground transition hover:bg-muted disabled:opacity-50"
       >
         {downloading ? (
           <Loader2 className="size-4 animate-spin" />

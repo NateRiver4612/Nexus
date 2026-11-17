@@ -24,7 +24,9 @@ const SourceCard = ({ source }: { source: ChatCitationType }) => {
       >
         <div className="flex items-center gap-3">
           <SourceFavicon favicon={source.favicon} />
-          <span className="line-clamp-1 text-sm font-semibold text-primary">{source.name}</span>
+          <span className="line-clamp-1 text-sm font-semibold text-primary-foreground">
+            {source.name}
+          </span>
         </div>
         <span className="mt-1 truncate pl-7 text-xs text-muted-foreground">{source.url}</span>
       </a>
