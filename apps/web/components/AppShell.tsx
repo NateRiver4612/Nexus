@@ -23,7 +23,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       <Topbar />
       <main
         className={cn(
-          'min-h-0 w-full flex-1 px-4 pb-4 pt-5 sm:px-6 sm:pb-6 md:px-8 md:pb-8',
+          'h-full w-full flex flex-col flex-1 px-4 pb-4 pt-5 sm:px-6 sm:pb-6 md:px-8 md:pb-8',
           isFullHeight && 'flex flex-col overflow-hidden',
         )}
       >

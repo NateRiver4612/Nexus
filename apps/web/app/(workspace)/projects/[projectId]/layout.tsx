@@ -41,7 +41,7 @@ const ProjectLayout = ({
   const activeTab = tabs.find((tab) => segments.includes(tab.href))?.href ?? 'overview';
 
   return (
-    <div className="flex min-h-full flex-col gap-5">
+    <div className="flex h-full grow flex-1 flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav
           aria-label="Breadcrumb"
@@ -87,7 +87,7 @@ const ProjectLayout = ({
         </nav>
       </div>
 
-      <div className="min-h-0 flex-1">{children}</div>
+      <div className="h-full grid grow flex-1">{children}</div>
     </div>
   );
 };
