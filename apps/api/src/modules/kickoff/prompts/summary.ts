@@ -28,11 +28,15 @@ plan's arc — grounded in the actual milestones, not a generic pitch. Do not ex
 The "keyTopics" array lists the most important topics the plan covers (each with topic + description).
 The "highlights" array lists 1-6 standout properties of the plan (e.g. it produces a demoable artifact, \
 it compresses fundamentals, its history of verifiable milestone endings).
+The "keywords" array lists 3-6 short tags for the plan — the concrete technologies, tools, or core \
+concepts the milestones actually use (e.g. "Rive Editor", "IK Constraints"). Use 1-3 words per tag, \
+not sentences or generic labels like "learning" or "basics".
 
 LENGTH BUDGET (hard limits, enforced) — keep the summary tight:
 - "overview": at most 750 characters (a tight 3-4 sentence paragraph).
 - each "keyTopics" entry: "topic" 10-100 characters, "description" 50-300 characters.
 - each "highlights" entry: 20-200 characters.
+- each "keywords" entry: 2-40 characters.
 Respect these limits exactly — fields that exceed them are rejected.
 
 Call the generate_project_summary tool with your result.`;

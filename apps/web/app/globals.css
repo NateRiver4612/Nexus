@@ -218,6 +218,10 @@
   --accent-tertiary-soft: #fee4ce;
   --accent-tertiary-foreground: #5d4733;
 
+  --success: #34d399;
+  --success-soft: #dcfce7;
+  --success-foreground: #166534;
+
   --muted: #f3f4f6;
   --muted-foreground: #6c7173;
   --placeholder: #9da2a4;
@@ -264,6 +268,10 @@
   --accent-tertiary: #d98a50;
   --accent-tertiary-soft: #fee4ce;
   --accent-tertiary-foreground: #171923;
+
+  --success: #34d399;
+  --success-soft: #123524;
+  --success-foreground: #bbf7d0;
 
   --muted: #2d3343;
   --muted-foreground: #a9a9b3;
@@ -328,6 +336,10 @@
   --color-accent-tertiary: var(--accent-tertiary);
   --color-accent-tertiary-soft: var(--accent-tertiary-soft);
   --color-accent-tertiary-foreground: var(--accent-tertiary-foreground);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
 
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);

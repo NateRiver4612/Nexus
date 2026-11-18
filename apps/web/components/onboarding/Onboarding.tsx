@@ -1,65 +1,62 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { useIsRestoring } from '@tanstack/react-query';
+import { useIsRestoring, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+
+import type { OnboardingStateType } from '@nexus/types';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { onboardingKeys } from '@/hooks/queryKeys';
+import { useGetKnowledgeSources } from '@/hooks/useKnowledge';
 import {
-  useSubmitProjectOnboarding,
   useGetOnboarding,
   useSaveOnboardingStep,
+  useSubmitProjectOnboarding,
 } from '@/hooks/useProjects';
 import { useOnboardingDraft } from '@/hooks/useOnboardingDraft';
+import { BlueprintPreview } from './BlueprintPreview';
 import { Step1 } from './Step1';
 import { Step2 } from './Step2';
 import { Step3 } from './Step3';
 import { Step4 } from './Step4';
-import { Step5 } from './Step5';
-import { type StepHandle } from './shared';
-import { useEffect, useRef, useState } from 'react';
+import { StepCard, type StepStatusTone } from './StepCard';
+import {
+  ONBOARDING_STEPS,
+  getCategoryMeta,
+  getLevelMeta,
+  getMilestoneCount,
+  type OnboardingStepId,
+} from './stepMeta';
+import type { StepHandle } from './shared';
 
-const steps = [
-  {
-    title: "Let's start your project",
-    description: 'A name and category is all we need to get going.',
-  },
-  {
-    title: 'What are you trying to accomplish?',
-    description:
-      "Describe your goal in your own words — a little about your background helps Nexus tailor the plan to where you're actually starting from.",
-  },
-  {
-    title: 'Context & Resources',
-    description: 'Add everything you already have.Nexus will index it for the project assistance.',
-  },
-  {
-    title: 'What deliverables for your need',
-    description: 'Select the output you want - Nexus will prepare them as the project progress.',
-  },
-  {
-    title: 'Review and generate',
-    description: "Everything looks good. Let's generate your plan.",
-  },
-];
+const STEP_COUNT = ONBOARDING_STEPS.length;
+
+type StepCompletion = Record<OnboardingStepId, boolean>;
+
+const clampStep = (step: number) => Math.min(Math.max(step, 0), STEP_COUNT - 1);
 
 const OnboardingSkeleton = () => {
   return (
-    <div className="mx-auto w-full max-w-3xl rounded-xl border-border bg-card p-8">
-      <Skeleton className="h-5 w-24" />
-      <div className="mt-3 flex gap-1.5">
-        {steps.map((_, index) => (
-          <Skeleton key={index} className="h-1 flex-1 rounded-full" />
-        ))}
+    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-6 w-52 rounded-pill" />
+        <Skeleton className="h-9 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
       </div>
-      <Skeleton className="mt-6 h-7 w-64" />
-      <Skeleton className="mt-1 h-6 w-3/4" />
-      <Skeleton className="mt-8 min-h-40 rounded-lg" />
-      <div className="mt-8 flex items-center justify-between">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-14 rounded-card" />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[3fr_2fr]">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-44 rounded-card" />
+          <Skeleton className="h-24 rounded-card" />
+          <Skeleton className="h-24 rounded-card" />
+          <Skeleton className="h-24 rounded-card" />
+        </div>
+        <Skeleton className="h-96 w-full rounded-card" />
       </div>
     </div>
   );
@@ -67,25 +64,28 @@ const OnboardingSkeleton = () => {
 
 export function Onboarding() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: onboarding, isLoading } = useGetOnboarding();
-
   const { mutateAsync: saveStep, isPending: isSaving } = useSaveOnboardingStep();
-
   const { mutateAsync: submitOnboarding, isPending: isGenerating } = useSubmitProjectOnboarding();
 
   const projectId = onboarding?.projectId;
 
   const { draft, setStep: setDraftStep, setStepData: setDraftStepData } = useOnboardingDraft();
+  const { step: draftStep, stepData: draftStepData } = draft;
 
-  const draftStep = draft.step;
-  const draftStepData = draft.stepData;
+  const { data: sources } = useGetKnowledgeSources({ variables: projectId ?? '' });
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const stepRef = useRef<StepHandle>(null);
-  const resumed = useRef(false);
+  const identityRef = useRef<StepHandle>(null);
+  const goalRef = useRef<StepHandle>(null);
+  const sourcesRef = useRef<StepHandle>(null);
+  const deliverablesRef = useRef<StepHandle>(null);
+  const stepRefs = [identityRef, goalRef, sourcesRef, deliverablesRef];
 
+  const resumed = useRef(false);
   const isRestoring = useIsRestoring();
   const notReady = isRestoring || isLoading;
 
@@ -96,154 +96,320 @@ export function Onboarding() {
 
     if (draftStep !== null) return;
 
-    setDraftStep(onboarding?.step ?? 0);
+    // Server step is 1-based; the UI index is 0-based and has no review step.
+    setDraftStep(clampStep((onboarding?.step ?? 1) - 1));
   }, [notReady, onboarding, draftStep, setDraftStep]);
 
-  const step = draftStep ?? 0;
-  const isLast = step === steps.length - 1;
-  const current = steps[step]!;
-
+  const initialStep = clampStep((onboarding?.step ?? 1) - 1);
+  const step = clampStep(draftStep ?? initialStep);
   const mergedData = { ...onboarding?.stepData, ...draftStepData };
+
+  const activeSources = (sources ?? []).filter((source) => source.status !== 'failed');
+  const deliverables = mergedData.step4?.deliverables ?? [];
+
+  const completion: StepCompletion = {
+    identity: Boolean(mergedData.step1?.name?.trim() && mergedData.step1?.category),
+    goal: Boolean(mergedData.step2?.context?.trim() && mergedData.step2?.level),
+    sources: activeSources.length > 0,
+    deliverables: deliverables.length > 0,
+  };
+  const completedCount = Object.values(completion).filter(Boolean).length;
+  const completionPercent = Math.round((completedCount / STEP_COUNT) * 100);
+
+  const categoryMeta = getCategoryMeta(mergedData.step1?.category);
+  const levelMeta = getLevelMeta(mergedData.step2?.level);
+  const milestones = getMilestoneCount(mergedData.step2?.level);
+  const sourceCount = activeSources.length;
+
+  const stepStatuses: Record<OnboardingStepId, { label: string; tone: StepStatusTone }> = {
+    identity: completion.identity
+      ? { label: 'Identity Ready', tone: 'ready' }
+      : { label: 'Add project details', tone: 'muted' },
+    goal:
+      levelMeta && milestones
+        ? { label: `${levelMeta.label} · ${milestones} Milestones`, tone: 'ready' }
+        : { label: 'Describe your goal', tone: 'muted' },
+    sources: sourceCount
+      ? { label: `${sourceCount} source${sourceCount === 1 ? '' : 's'} attached`, tone: 'ready' }
+      : { label: 'No sources yet', tone: 'muted' },
+    deliverables: deliverables.length
+      ? { label: `${deliverables.length} selected`, tone: 'accent' }
+      : { label: 'Nothing selected', tone: 'muted' },
+  };
+
+  const isBusy = isSubmitting || isGenerating || isSaving;
+  const canGenerate = completedCount === STEP_COUNT && !isBusy;
+
+  const saveStepAt = async (index: number) => {
+    const handle = stepRefs[index]?.current;
+    if (!handle) return true;
+
+    try {
+      const ok = await handle.save();
+      if (!ok) {
+        setDraftStep(index);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save this step.');
+      setDraftStep(index);
+      return false;
+    }
+  };
+
+  const saveStepsBefore = async (bound: number) => {
+    for (let index = 0; index < bound; index += 1) {
+      if (!(await saveStepAt(index))) return false;
+    }
+    return true;
+  };
+
+  const goToStep = async (target: number) => {
+    setError(null);
+    const next = clampStep(target);
+
+    if (next > step) {
+      const ok = await saveStepsBefore(next);
+      if (!ok) return;
+    }
+
+    setDraftStep(next);
+  };
+
+  const saveDraft = async () => {
+    setError(null);
+    const ok = await saveStepsBefore(STEP_COUNT);
+    if (ok) toast.success('Blueprint saved as draft.');
+  };
+
+  const handleFinish = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const ok = await saveStepsBefore(STEP_COUNT);
+      if (!ok) return;
+
+      const state = queryClient.getQueryData<OnboardingStateType>(onboardingKeys.all);
+      if (!state?.projectId || !state.id) return;
+
+      if (state.status === 'submitted') {
+        router.push('/new-project/preview');
+        return;
+      }
+
+      const { runId } = await submitOnboarding({
+        projectId: state.projectId,
+        onboardingId: state.id,
+      });
+
+      if (runId) router.push('/new-project/preview');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the project.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (notReady) {
     return <OnboardingSkeleton />;
   }
 
-  async function handleFinish() {
-    setIsSubmitting(true);
-    try {
-      if (!projectId || !onboarding.id) {
-        return;
-      }
-
-      if (onboarding.status === 'submitted') {
-        return router.push('/new-project/preview');
-      }
-
-      const { runId } = await submitOnboarding({
-        projectId,
-        onboardingId: onboarding.id,
-      });
-
-      if (runId) {
-        router.push('/new-project/preview');
-
-        setIsSubmitting(false);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create the project.');
-    }
-  }
-
-  async function handleNext() {
-    setError(null);
-    if (!isLast && stepRef.current) {
-      const ok = await stepRef.current.save();
-      if (!ok) return;
-    }
-    if (isLast) {
-      await handleFinish();
-      return;
-    }
-    setDraftStep(step + 1);
-  }
-
-  const isDisabled = isSubmitting || isGenerating || isSaving;
+  const stepBodies = [
+    <Step1
+      key="identity"
+      ref={identityRef}
+      defaults={mergedData.step1}
+      onSave={async (data) => {
+        await saveStep({ step: 1, data });
+        setDraftStepData('step1', data);
+      }}
+      onDraftChange={(data) => setDraftStepData('step1', data)}
+    />,
+    <Step2
+      key="goal"
+      ref={goalRef}
+      defaults={mergedData.step2}
+      onSave={async (data) => {
+        await saveStep({ step: 2, data });
+        setDraftStepData('step2', data);
+      }}
+      onDraftChange={(data) => setDraftStepData('step2', data)}
+    />,
+    <Step3
+      key="sources"
+      ref={sourcesRef}
+      projectId={projectId}
+      defaults={mergedData.step3}
+      onSave={async (data) => {
+        await saveStep({ step: 3, data });
+        setDraftStepData('step3', data);
+      }}
+    />,
+    <Step4
+      key="deliverables"
+      ref={deliverablesRef}
+      projectId={projectId}
+      defaults={mergedData.step4}
+      onSave={async (data) => {
+        await saveStep({ step: 4, data });
+        setDraftStepData('step4', data);
+      }}
+      onDraftChange={(data) => setDraftStepData('step4', data)}
+    />,
+  ];
 
   return (
-    <form
-      onSubmit={(e) => e.preventDefault()}
-      className="mx-auto w-full max-w-3xl rounded-xl border-border bg-card p-8"
-    >
-      <p className="text-sm text-muted-foreground">
-        Step {step + 1} of {steps.length}
-      </p>
+    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6">
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-pill bg-primary-soft px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground">
+            <Sparkles className="size-3.5" aria-hidden="true" />
+            Connected Single-Screen Workflow
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Configure your project in one continuous flow
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Fill in each step on the left — every change feeds your live AI plan on the right.
+          </p>
+        </div>
 
-      <div className="mt-3 flex gap-1.5">
-        {steps.map((_, index) => (
-          <div
-            key={index}
-            className={cn(
-              'h-1 flex-1 rounded-full transition-colors',
-              index <= step ? 'bg-primary/70' : 'bg-muted',
-            )}
-          />
-        ))}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-card border border-border bg-surface px-4 py-3">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            {ONBOARDING_STEPS.map((item, index) => {
+              const done = completion[item.id];
+              const active = index === step;
+
+              return (
+                <div key={item.id} className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void goToStep(index)}
+                    disabled={isBusy}
+                    aria-current={active ? 'step' : undefined}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                      active
+                        ? 'border-action bg-action text-action-foreground'
+                        : done
+                          ? 'border-primary/40 bg-primary-soft text-primary-foreground hover:border-primary'
+                          : 'border-border bg-surface-secondary text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'size-1.5 rounded-full',
+                        active ? 'bg-accent' : done ? 'bg-primary' : 'bg-placeholder',
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="tabular-nums">{String(index + 1).padStart(2, '0')}</span>
+                    {item.shortTitle}
+                  </button>
+                  {index < STEP_COUNT - 1 && (
+                    <ArrowRight className="size-3.5 text-placeholder" aria-hidden="true" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs font-medium text-muted-foreground">
+            Step {step + 1} of {STEP_COUNT} active · {completionPercent}% complete
+          </p>
+        </div>
+      </header>
+
+      {error && (
+        <p className="rounded-control bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[3fr_2fr] xl:items-start">
+        <div className="flex min-w-0 flex-col gap-4">
+          {ONBOARDING_STEPS.map((item, index) => {
+            const isLast = index === STEP_COUNT - 1;
+            // Same rules each step's save enforces, kept live by its draft sync.
+            const stepReady = completion[item.id];
+
+            return (
+              <StepCard
+                key={item.id}
+                index={index}
+                title={item.title}
+                description={item.description}
+                status={stepStatuses[item.id]}
+                open={index === step}
+                disabled={isBusy}
+                onToggle={() => void goToStep(index)}
+                className="w-full"
+                footer={
+                  isLast ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        All {STEP_COUNT} steps connect into your live blueprint.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={!canGenerate}
+                        isLoading={isGenerating || isSubmitting}
+                        onClick={() => void handleFinish()}
+                      >
+                        Complete &amp; Generate Plan
+                        {!(isGenerating || isSubmitting) && (
+                          <ArrowRight className="size-3.5" aria-hidden="true" />
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        {index === 0 && categoryMeta
+                          ? `Feeds ${categoryMeta.label} context into the next step.`
+                          : 'Continues your connected workflow.'}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          'font-semibold',
+                          stepReady && 'bg-accent text-action hover:bg-accent/90',
+                        )}
+                        disabled={isBusy}
+                        onClick={() => void goToStep(index + 1)}
+                      >
+                        Next: {item.nextLabel}
+                        <ArrowRight className="size-3.5" aria-hidden="true" />
+                      </Button>
+                    </>
+                  )
+                }
+              >
+                {stepBodies[index]}
+              </StepCard>
+            );
+          })}
+        </div>
+
+        <BlueprintPreview
+          projectName={mergedData.step1?.name}
+          category={mergedData.step1?.category}
+          level={mergedData.step2?.level}
+          goal={mergedData.step2?.context}
+          sources={activeSources}
+          deliverables={deliverables}
+          completion={completion}
+          completionPercent={completionPercent}
+          canGenerate={canGenerate}
+          isGenerating={isGenerating || isSubmitting}
+          onGenerate={() => void handleFinish()}
+          onSaveDraft={() => void saveDraft()}
+        />
       </div>
-
-      <h2 className="mt-6 text-xl font-bold">{current.title}</h2>
-      <p className="mt-1 font-medium text-muted-foreground">{current.description}</p>
-
-      <div className="mt-8 min-h-40 rounded-lg border-border border-dashed text-center text-sm text-muted-foreground">
-        {step === 0 && (
-          <Step1
-            ref={stepRef}
-            defaults={mergedData.step1}
-            onSave={async (data) => {
-              await saveStep({ step: 1, data });
-              setDraftStepData('step1', data);
-            }}
-            onDraftChange={(data) => setDraftStepData('step1', data)}
-          />
-        )}
-        {step === 1 && (
-          <Step2
-            ref={stepRef}
-            defaults={mergedData.step2}
-            onSave={async (data) => {
-              await saveStep({ step: 2, data });
-              setDraftStepData('step2', data);
-            }}
-            onDraftChange={(data) => setDraftStepData('step2', data)}
-          />
-        )}
-        {step === 2 && (
-          <Step3
-            ref={stepRef}
-            projectId={projectId}
-            defaults={mergedData.step3}
-            onSave={async (data) => {
-              await saveStep({ step: 3, data });
-              setDraftStepData('step3', data);
-            }}
-          />
-        )}
-        {step === 3 && (
-          <Step4
-            ref={stepRef}
-            projectId={projectId}
-            defaults={mergedData.step4}
-            onSave={async (data) => {
-              await saveStep({ step: 4, data });
-              setDraftStepData('step4', data);
-            }}
-          />
-        )}
-        {step === 4 && projectId && <Step5 state={onboarding} projectId={onboarding?.projectId} />}
-      </div>
-
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
-      <div className="mt-8 flex items-center justify-between">
-        {step > 0 ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isDisabled}
-            onClick={() => setDraftStep(Math.max(0, step - 1))}
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-        ) : (
-          <span />
-        )}
-
-        <Button type="button" onClick={handleNext} disabled={isDisabled}>
-          {isGenerating ? 'Submiting…' : isLast ? 'Generate plan' : 'Continue'}
-          {!isGenerating && <ArrowRight className="size-4" />}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 }

@@ -1,27 +1,27 @@
-'use client';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 
-import { useRouter } from 'next/navigation';
-import React from 'react';
-
-const layout = ({ children }: { children: React.ReactNode }) => {
-  const router = useRouter();
-
+const NewProjectLayout = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="flex h-full flex-col gap-12">
-      <div className="flex items-center gap-2">
-        <p
-          onClick={() => router.push('/projects')}
-          className="cursor-pointer text-gray-400 font-normal hover:underline"
+    <div className="flex h-full flex-col gap-6">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
+        <Link
+          href="/projects"
+          className="rounded-control text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring/70"
         >
           Projects
-        </p>
-        <p>/</p>
-        <h1>Create new project</h1>
-      </div>
+        </Link>
+        <span aria-hidden="true" className="text-placeholder">
+          /
+        </span>
+        <span aria-current="page" className="truncate font-semibold text-foreground">
+          Create new project
+        </span>
+      </nav>
 
-      <div className="overflow-y-auto no-scrollbar min-h-0 flex-1">{children}</div>
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">{children}</div>
     </div>
   );
 };
 
-export default layout;
+export default NewProjectLayout;

@@ -1,7 +1,6 @@
 'use client';
 
-import * as React from 'react';
-import { useImperativeHandle } from 'react';
+import { useImperativeHandle, type Ref } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { onboardingStep2Schema } from '@nexus/zod-schemas';
@@ -9,16 +8,27 @@ import type { OnboardingStep2InputType } from '@nexus/types';
 import { ONBOARDING_LEVELS } from '@nexus/zod-schemas/constants';
 
 import { FormTextArea } from '@/components/FormTextArea';
+import {
+  CardRadioGroup,
+  type CardRadioOption,
+  type CardRadioTone,
+} from '@/components/CardRadioGroup';
 
 import type { StepHandle } from './shared';
 import { useDraftSync } from './useDraftSync';
-import { CardRadioGroup, type CardRadioOption } from '../CardRadioGroup';
+import { LEVEL_PACE, getMilestoneCount } from './stepMeta';
 
 type Step2Props = {
-  ref?: React.Ref<StepHandle>;
+  ref?: Ref<StepHandle>;
   defaults?: Partial<OnboardingStep2InputType>;
   onSave: (data: OnboardingStep2InputType) => Promise<unknown>;
   onDraftChange?: (data: Partial<OnboardingStep2InputType>) => void;
+};
+
+const LEVEL_TONES: Record<string, CardRadioTone> = {
+  beginner: 'amber',
+  intermediate: 'amber',
+  advanced: 'violet',
 };
 
 const levelOptions: CardRadioOption[] = ONBOARDING_LEVELS.map((level) => ({
@@ -26,6 +36,8 @@ const levelOptions: CardRadioOption[] = ONBOARDING_LEVELS.map((level) => ({
   label: level.label,
   description: level.description,
   icon: level.icon,
+  tone: LEVEL_TONES[level.value] ?? 'slate',
+  meta: `${getMilestoneCount(level.value) ?? 0} Milestones · ${LEVEL_PACE[level.value]}`,
 }));
 
 export function Step2({ ref, defaults, onSave, onDraftChange }: Step2Props) {
@@ -61,12 +73,13 @@ export function Step2({ ref, defaults, onSave, onDraftChange }: Step2Props) {
 
   return (
     <FormProvider {...form}>
-      <FormTextArea
-        name="context"
-        rows={6}
-        placeholder="I need to research competitors, identify pricing strategies, and prepare a presentation for leadership."
-      />
-      <div>
+      <div className="space-y-6 text-left">
+        <FormTextArea
+          name="context"
+          label="What are you trying to accomplish?"
+          rows={6}
+          placeholder="I need to research competitors, identify pricing strategies, and prepare a presentation for leadership."
+        />
         <CardRadioGroup
           name="level"
           label="Where are you starting from?"
