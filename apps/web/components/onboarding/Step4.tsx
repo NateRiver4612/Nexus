@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect, useImperativeHandle, type Ref } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 
 import type { OnboardingStep4InputType } from '@nexus/types';
@@ -17,14 +17,26 @@ import type { StepHandle } from './shared';
 import { DELIVERABLE_KIND_ICONS } from '@nexus/zod-schemas/constants';
 
 type Step4Props = {
-  ref?: React.Ref<StepHandle>;
+  ref?: Ref<StepHandle>;
   projectId?: string;
   defaults?: Partial<OnboardingStep4InputType>;
   onSave: (data: OnboardingStep4InputType) => Promise<unknown>;
+  onDraftChange?: (data: Partial<OnboardingStep4InputType>) => void;
 };
 
 // The card group keeps { label, value: rowId }; stepData stores { id, name } — mapped on save.
 type Step4Form = { deliverables: CardCheckboxValue[] };
+
+/** Display copy for the preset deliverable kinds; custom rows use their own label. */
+const DELIVERABLE_DESCRIPTIONS: Record<string, string> = {
+  word_report: 'Structured long-form spec or final document',
+  spreadsheet: 'Comparison tables, metrics, or tracking grid',
+  presentation: 'Slide-by-slide executive narrative & key takeaways',
+  timeline: 'Phased milestone schedule with exit gates',
+  meeting_notes: 'Auto-generated structured notes per session',
+  research_summary: 'Citation-backed synthesis of attached sources',
+  financial_model: 'Cost assumptions, forecasts, and scenario math',
+};
 
 const Step4Skeleton = () => {
   return (
@@ -39,7 +51,7 @@ const Step4Skeleton = () => {
   );
 };
 
-export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
+export function Step4({ ref, projectId, defaults, onSave, onDraftChange }: Step4Props) {
   const { data: deliverables, isLoading } = useGetDeliverables({
     variables: projectId,
   });
@@ -59,6 +71,35 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
     formState: { isDirty },
   } = form;
 
+  // Mirror the selection into the draft so the live blueprint preview updates
+  // as cards are toggled, without waiting for the step to be saved.
+  useEffect(() => {
+    if (!onDraftChange) return;
+
+    const subscription = form.watch((values) => {
+      const rowById = new Map((deliverables ?? []).map((row) => [row.id, row]));
+
+      const next = (values.deliverables ?? []).flatMap((item) => {
+        if (!item?.value || !item.label) return [];
+
+        const row = rowById.get(item.value);
+
+        return [
+          {
+            id: item.value,
+            name: item.label,
+            kind: row?.kind ?? 'custom',
+            isCustom: row?.isCustom ?? false,
+          },
+        ];
+      });
+
+      onDraftChange({ deliverables: next });
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, deliverables, onDraftChange]);
+
   const onCreateCustom = async (label: string): Promise<string> => {
     const res = await createDeliverable.mutateAsync({
       projectId: projectId!,
@@ -69,7 +110,7 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
     return `${res.data.id}`;
   };
 
-  React.useImperativeHandle(ref, () => ({
+  useImperativeHandle(ref, () => ({
     save: async () => {
       const values = form.getValues('deliverables') ?? [];
 
@@ -111,14 +152,13 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
     );
   }
 
-  const options: CardCheckboxOption[] = [
-    ...(deliverables ?? []).map((row) => ({
-      value: row.id,
-      label: row.name,
-      icon: DELIVERABLE_KIND_ICONS[row.kind],
-      isCustom: row.isCustom,
-    })),
-  ];
+  const options: CardCheckboxOption[] = (deliverables ?? []).map((row) => ({
+    value: row.id,
+    label: row.name,
+    icon: DELIVERABLE_KIND_ICONS[row.kind],
+    description: DELIVERABLE_DESCRIPTIONS[row.kind],
+    isCustom: row.isCustom,
+  }));
 
   return (
     <FormProvider {...form}>
@@ -126,7 +166,6 @@ export function Step4({ ref, projectId, defaults, onSave }: Step4Props) {
         <CardCheckboxGroup
           projectId={projectId}
           name="deliverables"
-          label="What deliverables do you need?"
           options={options}
           otherOption={{
             label: 'Custom deliverable',

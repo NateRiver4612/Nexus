@@ -128,6 +128,7 @@ function toProjectDetailView(row: ProjectDetailsRow): ProjectDetailType {
     progressPercentage: row.progressPercentage,
     lastOpenedAt: row.lastOpenedAt ? row.lastOpenedAt.toISOString() : null,
     currentTask: row.currentTask,
+    currentMilestone: row.currentMilestone,
     numOfTasks: row.numOfTasks,
     numOfCompletedTasks: row.numOfCompletedTasks,
     numOfMilestones: row.numOfMilestones,

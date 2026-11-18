@@ -64,6 +64,9 @@ which theme is active.
 | `border`                      | Standard borders and dividers                            |
 | `destructive`                 | Destructive actions and error emphasis                   |
 | `destructive-foreground`      | Text and icons placed on `destructive`                   |
+| `success`                     | Positive/completed state emphasis                        |
+| `success-soft`                | Soft mint surface for completed pills and checklist rows |
+| `success-foreground`          | Deep ink placed on success and success-soft surfaces     |
 
 ### Interactive Colors
 
@@ -123,6 +126,9 @@ in every theme.
 | `border`                      | `#E0E6E7` |
 | `destructive`                 | `#CC3D3D` |
 | `destructive-foreground`      | `#FFFFFF` |
+| `success`                     | `#34D399` |
+| `success-soft`                | `#DCFCE7` |
+| `success-foreground`          | `#166534` |
 | `action`                      | `#3B3F46` |
 | `action-foreground`           | `#FFFFFF` |
 | `action-hover`                | `#4B5051` |
@@ -165,6 +171,9 @@ in every theme.
 | `border`                      | `#3A4154` |
 | `destructive`                 | `#F07178` |
 | `destructive-foreground`      | `#171923` |
+| `success`                     | `#34D399` |
+| `success-soft`                | `#123524` |
+| `success-foreground`          | `#BBF7D0` |
 | `action`                      | `#F5F5F4` |
 | `action-foreground`           | `#171923` |
 | `action-hover`                | `#E2E2E2` |
@@ -205,6 +214,7 @@ Verified soft-surface pairings:
 | `accent-foreground` on `accent-soft`                     | `7.23:1` |
 | `accent-secondary-foreground` on `accent-secondary-soft` | `8.40:1` |
 | `accent-tertiary-foreground` on `accent-tertiary-soft`   | `7.12:1` |
+| `success-foreground` on `success-soft`                   | `6.49:1` |
 
 Accent pairings in the Dark theme:
 

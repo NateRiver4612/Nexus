@@ -1,6 +1,6 @@
 import type { KickoffPlanType } from '@nexus/types';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
-import { kickoffSummarySchema } from '@nexus/zod-schemas';
+import { kickoffSummaryGenerationSchema } from '@nexus/zod-schemas';
 import { buildSummarySystemPrompt, buildSummaryUserPrompt, type KickoffContext } from '../prompts';
 import { attemptToolCallWithRetry, type AttemptToolCallFailure } from './toolCall';
 import type { ChatMessage } from '../../ai/types';
@@ -20,8 +20,8 @@ function buildSummaryCorrection({
   if (issues.length > 0) {
     return (
       `Your previous response failed validation. Fix exactly these issues and re-output the FULL ` +
-      `summary object — overview, keyTopics, highlights — grounded in the plan above, respecting ` +
-      `each field's length limit:\n` +
+      `summary object — overview, keyTopics, highlights, keywords — grounded in the plan above, ` +
+      `respecting each field's length limit:\n` +
       issues.map((issue) => `- ${issue}`).join('\n')
     );
   }
@@ -30,7 +30,7 @@ function buildSummaryCorrection({
     return (
       `Your previous response was incomplete: it was missing required field(s): ` +
       `${missingKeys.join(', ')}. Re-generate the FULL summary object — overview, keyTopics, ` +
-      `highlights — grounded in the plan above.`
+      `highlights, keywords — grounded in the plan above.`
     );
   }
 
@@ -49,8 +49,8 @@ export async function generateSummary(
   const { data, usage } = await attemptToolCallWithRetry({
     messages,
     toolName: SUMMARY_TOOL_NAME,
-    toolParamsSchema: kickoffSummarySchema,
-    validateSchema: kickoffSummarySchema,
+    toolParamsSchema: kickoffSummaryGenerationSchema,
+    validateSchema: kickoffSummaryGenerationSchema,
     maxTokens: SUMMARY_MAX_TOKENS,
     maxTokensRetry: SUMMARY_MAX_TOKENS_RETRY,
     label: 'summary generation',

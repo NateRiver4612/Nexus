@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Controller, useFormContext, type FieldPath, type FieldValues } from 'react-hook-form';
 import { Plus, X, type LucideIcon } from 'lucide-react';
 
@@ -67,13 +67,13 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
   } = useFormContext<TFieldValues>();
 
   const fieldError = errors[name as string];
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [isEditingOther, setIsEditingOther] = React.useState(false);
-  const [draft, setDraft] = React.useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isEditingOther, setIsEditingOther] = useState(false);
+  const [draft, setDraft] = useState('');
 
-  const [customOption, setCustomOption] = React.useState<CardCheckboxOption>();
+  const [customOption, setCustomOption] = useState<CardCheckboxOption>();
 
-  const [deleteItem, setDeleteItem] = React.useState<string>();
+  const [deleteItem, setDeleteItem] = useState<string>();
 
   const { mutateAsync: deleteDeliverable } = useDeleteDeliverable({
     onSuccess: () => {
@@ -84,7 +84,7 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isEditingOther) inputRef.current?.focus();
   }, [isEditingOther]);
 
@@ -105,11 +105,13 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
       control={control}
       render={({ field }) => {
         const values: CardCheckboxValue[] = (field.value ?? []) as CardCheckboxValue[];
+        const allOptions = customOption ? [...options, customOption] : options;
 
-        const isSelected = (optionValue: string) => values.some((v) => v.value === optionValue);
+        const isOptionSelected = (optionValue: string) =>
+          values.some((v) => v.value === optionValue);
 
         const toggle = (option: CardCheckboxOption) => {
-          const exists = isSelected(option.value);
+          const exists = isOptionSelected(option.value);
           const next = exists
             ? values.filter((v) => v.value !== option.value)
             : [...values, { label: option.label, value: option.value }];
@@ -143,7 +145,7 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
 
             setCustomOption(undefined);
 
-            const next = isSelected(option.value)
+            const next = isOptionSelected(option.value)
               ? values
               : [...values, { label: option.label, value: option.value }];
             field.onChange(next);
@@ -155,87 +157,85 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
           <div className={cn('flex flex-col gap-3', className)}>
             {label && <FormLabel>{label}</FormLabel>}
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {[...options, ...[customOption]]
-                .filter((o) => !!o)
-                .map((option) => {
-                  const isSelected = values.some((v) => v.value === option.value);
-                  const isDeleting = option.value === deleteItem;
-                  const Icon = option.icon;
-                  const isAddingOption = option.value === 'proccessing';
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {allOptions.map((option) => {
+                const isSelected = values.some((v) => v.value === option.value);
+                const isDeleting = option.value === deleteItem;
+                const Icon = option.icon;
+                const isAddingOption = option.value === 'proccessing';
 
-                  return (
-                    <label
-                      key={option.value}
-                      className={cn(
-                        'flex min-h-[50px] cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
-                        (disabled || isDeleting || isAddingOption) &&
-                          'cursor-not-allowed opacity-50',
-                        isAddingOption && 'animate-bounce',
-                        isDeleting && 'animate-pulse',
-                        isSelected
-                          ? 'border-primary bg-blue-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300',
-                      )}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        value={option.value}
-                        disabled={disabled || isDeleting}
-                        onCheckedChange={() => toggle(option)}
-                        aria-label={option.label}
-                      />
-                      <span className="flex min-w-0 flex-1 flex-col text-left">
-                        <span
-                          className={cn(
-                            'truncate text-sm font-medium',
-                            isSelected ? 'text-primary-foreground' : 'text-foreground',
-                          )}
-                        >
-                          {option.label}
-                        </span>
-                        {option.description && (
-                          <span className="text-xs text-gray-500">{option.description}</span>
-                        )}
+                return (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      'group flex min-h-[76px] cursor-pointer items-center gap-3 rounded-item border px-4 py-3 text-left transition-colors',
+                      (disabled || isDeleting || isAddingOption) && 'cursor-not-allowed opacity-50',
+                      isAddingOption && 'animate-bounce',
+                      isDeleting && 'animate-pulse',
+                      isSelected
+                        ? 'border-action bg-primary-subtle'
+                        : 'border-border bg-surface hover:border-placeholder',
+                    )}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      value={option.value}
+                      disabled={disabled || isDeleting}
+                      onCheckedChange={() => toggle(option)}
+                      aria-label={option.label}
+                      className="size-5 rounded-md data-[state=checked]:border-action data-[state=checked]:bg-action data-[state=checked]:text-action-foreground"
+                    />
+
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
+                      <span className="truncate text-sm font-semibold text-foreground">
+                        {option.label}
                       </span>
-                      {Icon && (
-                        <Icon
-                          size={20}
-                          className={cn(
-                            'shrink-0',
-                            isSelected ? 'text-primary-foreground' : 'text-muted-foreground',
-                          )}
-                        />
-                      )}
-                      {option.isCustom && (
-                        <span
-                          role="button"
-                          tabIndex={-1}
-                          className="shrink-0 cursor-pointer rounded-full p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
-                        >
-                          <X
-                            size={18}
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              // const next = values.filter((v) => v !== option.value);
-
-                              await handleDeleteCustomDeliverable(option.value);
-
-                              // field.onChange(next);
-                              // onValueChange?.(next);
-                            }}
-                          />
+                      {option.description && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {option.description}
                         </span>
                       )}
-                    </label>
-                  );
-                })}
+                    </span>
+
+                    {Icon && (
+                      <span
+                        className={cn(
+                          'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                          isSelected
+                            ? 'bg-action text-action-foreground'
+                            : 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        <Icon size={18} />
+                      </span>
+                    )}
+
+                    {option.isCustom && (
+                      <span
+                        role="button"
+                        tabIndex={-1}
+                        aria-label={`Remove ${option.label}`}
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          await handleDeleteCustomDeliverable(option.value);
+                        }}
+                        className="shrink-0 cursor-pointer rounded-full p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                      >
+                        <X size={16} />
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+
               {otherOption &&
                 (isEditingOther ? (
                   <div
                     key="other-input"
-                    className="row-span-1 flex w-full items-center gap-3 rounded-lg border border-primary bg-blue-50 px-4 py-3 text-left"
+                    className="flex min-h-[76px] w-full items-center gap-3 rounded-item border border-action bg-surface-secondary px-4 py-3 text-left"
                   >
+                    <Plus className="size-5 shrink-0 text-muted-foreground" />
                     <input
                       ref={inputRef}
                       value={draft}
@@ -255,7 +255,7 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
                       }}
                       onBlur={() => void commitDraft()}
                       placeholder="Custom deliverable…"
-                      className="flex-1 bg-transparent text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400"
+                      className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-placeholder"
                     />
                   </div>
                 ) : (
@@ -265,18 +265,22 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
                     disabled={disabled}
                     onClick={() => setIsEditingOther(true)}
                     className={cn(
-                      'flex min-h-[50px] cursor-pointer items-center gap-3 rounded-lg border border-dashed border-gray-300 px-4 py-3 text-left transition-colors',
-                      'hover:border-gray-400',
+                      'flex min-h-[76px] cursor-pointer items-center justify-center gap-2 rounded-item border border-dashed border-border px-4 py-3 text-center transition-colors',
+                      'hover:border-placeholder hover:bg-surface-secondary',
                       disabled && 'cursor-not-allowed opacity-50',
                     )}
                   >
-                    <Plus className="size-5 shrink-0 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-500">{otherOption.label}</span>
+                    <Plus className="size-5 shrink-0 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {otherOption.label}
+                    </span>
                   </button>
                 ))}
             </div>
 
-            {fieldError && <p className="text-xs text-red-600">{fieldError.message as string}</p>}
+            {fieldError && (
+              <p className="text-destructive text-sm">{fieldError.message as string}</p>
+            )}
           </div>
         );
       }}

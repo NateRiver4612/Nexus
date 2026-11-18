@@ -1,6 +1,6 @@
 # Onboarding
 
-A project is created through a **5-step onboarding wizard**, then an **AI kickoff**
+A project is created through a **4-step onboarding wizard**, then an **AI kickoff**
 run generates the first plan. This doc is the reference for the flow, its data
 model, and the `level` input that scopes the generated plan.
 
@@ -8,11 +8,15 @@ model, and the `level` input that scopes the generated plan.
 
 | #   | Step                | Captures                          | Notes                                                                    |
 | --- | ------------------- | --------------------------------- | ------------------------------------------------------------------------ |
-| 1   | Basics              | `name`, `description`, `category` | Creates the draft project + `project_onboarding` row.                    |
-| 2   | Goal                | `context` (the goal), `level`     | `level` is **required** — it scopes the plan (see below).                |
-| 3   | Context & resources | knowledge sources                 | Files / links / YouTube / copied text — see `docs/knowledge-sources.md`. |
+| 1   | Identity & category | `name`, `description`, `category` | Creates the draft project + `project_onboarding` row.                    |
+| 2   | Goal & track        | `context` (the goal), `level`     | `level` is **required** — it scopes the plan (see below).                |
+| 3   | Knowledge sources   | knowledge sources                 | Files / links / YouTube / copied text — see `docs/knowledge-sources.md`. |
 | 4   | Deliverables        | preset + custom deliverables      | Attached to the project via the assignment table.                        |
-| 5   | Review & generate   | —                                 | Fires the kickoff AI run on entry; the plan is reviewed, then committed. |
+
+The four steps render as one connected, single-screen workflow: only the current
+step is expanded, and a sticky **live blueprint preview** on the right reviews
+everything entered so far. There is no separate review step — **Generate
+Project Plan** saves all four steps and fires the kickoff.
 
 Each step persists its payload into `project_onboarding.step_data` (jsonb). The
 per-step shape is the matching `onboardingStepN` schema in `@nexus/zod-schemas`;
@@ -43,7 +47,7 @@ that scopes how much of the arc the generated plan covers. It's applied through
 ## AI kickoff flow
 
 ```
-Submit (step 5, fires on entry)
+Submit ("Generate Project Plan")
   → insert ai_runs row (status queued), set project_onboarding.ai_run, enqueue "kickoff" job (jobId = run id)
   → worker: build context → generate_project_plan tool call → validate with kickoffPlanSchema
   → store the plan on ai_runs.data, status completed | failed
@@ -54,7 +58,7 @@ Preview page (polls the run via project_onboarding.ai_run):
   │     ├─ Complete → commit (milestones + tasks + deliverables assignment,
   │     │              project_onboarding.status = completed, project.status = active,
   │     │              seed project_progress) — final, no going back past this point
-  │     └─ Back → return to an earlier step, edit, resubmit from step 5
+  │     └─ Back → return to an earlier step, edit, resubmit via Generate Project Plan
   │                → new ai_runs row + job, project_onboarding.ai_run repointed to it
   │
   └─ status: failed → show error state
@@ -74,7 +78,8 @@ at the most recent run; earlier runs remain in `ai_runs` as history but are
 no longer referenced by the onboarding record.
 
 - **Back** — available on both `completed` and `failed` states. Returns the
-  user to an earlier step to edit `step_data`, then resubmits from step 5.
+  user to an earlier step to edit `step_data`, then resubmits via Generate
+  Project Plan.
   This is the only path forward from a completed plan the user doesn't want
   as-is — there is no plain retry-with-same-inputs once generation succeeds.
 - **Regenerate** — available only on `failed` state. Resubmits the current
@@ -98,5 +103,5 @@ after.
 
 - **API:** `apps/api/src/modules/projects/routes` — `getOnboarding`, `saveOnboarding`,
   `submitOnboarding`, `completeOnboarding`, and the project-scoped deliverable routes.
-- **Web:** `apps/web/components/onboarding/` (`Step1`–`Step5`, `Onboarding.tsx`) and the
-  `new-project/preview` page.
+- **Web:** `apps/web/components/onboarding/` (`Step1`–`Step4`, `Onboarding.tsx`,
+  `StepCard`, `BlueprintPreview`) and the `new-project/preview` page.

@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  BookOpen,
   Calculator,
   CalendarRange,
   Code,
@@ -13,7 +14,7 @@ import {
   ScrollText,
   Sprout,
   Table,
-  UserStar,
+  User,
   Wrench,
 } from 'lucide-react';
 
@@ -50,6 +51,16 @@ export const ACCEPTED_UPLOAD_TYPES = [...ACCEPTED_FILE_TYPES, ...ACCEPTED_AUDIO_
 
 export const DEFAULT_ONBOARDING_CATEGORIES = [
   {
+    label: 'Engineering',
+    value: 'engineering',
+    icon: Code,
+  },
+  {
+    label: 'Research',
+    value: 'research',
+    icon: BookOpen,
+  },
+  {
     label: 'Marketing',
     value: 'marketing',
     icon: Megaphone,
@@ -60,19 +71,9 @@ export const DEFAULT_ONBOARDING_CATEGORIES = [
     icon: DollarSign,
   },
   {
-    label: 'Research',
-    value: 'research',
-    icon: ScrollText,
-  },
-  {
-    label: 'Engineering',
-    value: 'engineering',
-    icon: Code,
-  },
-  {
     label: 'Personal',
     value: 'personal',
-    icon: UserStar,
+    icon: User,
   },
   {
     label: 'Other',

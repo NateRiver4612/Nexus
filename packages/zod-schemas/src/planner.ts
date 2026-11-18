@@ -227,10 +227,26 @@ export const kickoffKeyTopicSchema = z.object({
   description: z.string().min(50).max(300),
 });
 
+export const kickoffKeywordSchema = z
+  .string()
+  .min(2)
+  .max(40)
+  .describe(
+    'A short, concrete tag for this plan — a technology, tool, or core concept (e.g. "Rive Editor", ' +
+      '"IK Constraints"). 1-3 words, not a sentence.',
+  );
+
 export const kickoffSummarySchema = z.object({
   overview: z.string().min(50).max(750),
   keyTopics: z.array(kickoffKeyTopicSchema).min(1).max(12),
   highlights: z.array(z.string().min(20).max(200)).min(1).max(6),
+  // Defaulted so summaries persisted before keywords existed still parse at the read boundary.
+  keywords: z.array(kickoffKeywordSchema).max(8).default([]),
+});
+
+/** Strict generation gate: new summaries must actually include keyword tags. */
+export const kickoffSummaryGenerationSchema = kickoffSummarySchema.extend({
+  keywords: z.array(kickoffKeywordSchema).min(3).max(8),
 });
 
 /** Call-1 draft shape: only the milestones — the summary is generated separately. */
@@ -350,6 +366,17 @@ export const completeOnboardingSchema = kickoffPlanSchema
   .extend({ project: projectSchema })
   .openapi('CompleteOnboarding');
 
+/** Live progress for the milestone the card's active task belongs to. */
+export const projectMilestoneProgressSchema = z
+  .object({
+    id: idSchema,
+    title: z.string(),
+    position: z.number().int(),
+    numOfTasks: z.number().int(),
+    numOfCompletedTasks: z.number().int(),
+  })
+  .openapi('ProjectMilestoneProgress');
+
 /**
  * Project + live aggregates: workspace/detail views (project list & detail)
  * surface progress, the current task, and resource counts alongside the
@@ -361,6 +388,7 @@ export const projectDetailSchema = projectSchema
     summary: kickoffSummarySchema.nullable(),
     lastOpenedAt: z.string().nullish(),
     currentTask: taskSchema.nullish(),
+    currentMilestone: projectMilestoneProgressSchema.nullable(),
     progressPercentage: z.number().nullish(),
     numOfTasks: z.number().int(),
     numOfCompletedTasks: z.number().int(),

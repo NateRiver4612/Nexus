@@ -1,15 +1,13 @@
 'use client';
 
 import { X, type LucideIcon } from 'lucide-react';
-import * as React from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Controller, useFormContext, type FieldValues, type FieldPath } from 'react-hook-form';
-import { FormLabel } from './ui/form';
-import { slugify } from '@/lib/utils';
 
-// Minimal className combiner — swap for your existing `cn` from lib/utils if you have one.
-function cn(...classes: Array<string | false | undefined | null>) {
-  return classes.filter(Boolean).join(' ');
-}
+import { FormLabel } from './ui/form';
+import { cn, slugify } from '@/lib/utils';
+
+export type CardRadioTone = 'violet' | 'pink' | 'amber' | 'green' | 'peach' | 'slate' | 'blue';
 
 export type CardRadioOption = {
   value: string;
@@ -17,6 +15,10 @@ export type CardRadioOption = {
   isCustom?: boolean;
   icon?: LucideIcon;
   description?: string;
+  /** Icon-tile palette, kept here so option data never carries raw colors. */
+  tone?: CardRadioTone;
+  /** Optional footer line, e.g. "4 Milestones · ~45m/day" on the level cards. */
+  meta?: string;
 };
 
 type CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> = {
@@ -31,6 +33,16 @@ type CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> = {
   onCreateOption?: (option: CardRadioOption) => void;
   layout?: 'row' | 'column';
   gridClassName?: string;
+};
+
+const TONE_TILE: Record<CardRadioTone, string> = {
+  violet: 'bg-accent-secondary-soft text-accent-secondary-foreground',
+  pink: 'bg-accent-secondary-soft text-accent-secondary-foreground',
+  amber: 'bg-accent-soft text-accent-foreground',
+  green: 'bg-success-soft text-success-foreground',
+  peach: 'bg-accent-tertiary-soft text-accent-tertiary-foreground',
+  slate: 'bg-muted text-muted-foreground',
+  blue: 'bg-primary-soft text-primary-foreground',
 };
 
 /**
@@ -57,13 +69,13 @@ export const CardRadioGroup = ({
   } = useFormContext();
 
   const fieldError = errors[name as string];
-  const groupRef = React.useRef<HTMLDivElement>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Options the user has typed in via "Other", kept alongside the static list.
-  const [customOptions, setCustomOptions] = React.useState<CardRadioOption[]>([]);
-  const [isEditingOther, setIsEditingOther] = React.useState(false);
-  const [draft, setDraft] = React.useState('');
+  const [customOptions, setCustomOptions] = useState<CardRadioOption[]>([]);
+  const [isEditingOther, setIsEditingOther] = useState(false);
+  const [draft, setDraft] = useState('');
 
   const otherOption = otherValue ? options.find((o) => o.value === otherValue) : undefined;
   const staticOptions = otherOption ? options.filter((o) => o.value !== otherValue) : options;
@@ -72,7 +84,7 @@ export const CardRadioGroup = ({
     ? [...staticOptions, ...customOptions, otherOption]
     : [...staticOptions, ...customOptions];
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isEditingOther) inputRef.current?.focus();
   }, [isEditingOther]);
 
@@ -88,7 +100,7 @@ export const CardRadioGroup = ({
           items?.[index]?.focus();
         };
 
-        const handleKeyDown = (e: React.KeyboardEvent) => {
+        const handleKeyDown = (e: KeyboardEvent) => {
           if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key)) return;
           e.preventDefault();
           const dir = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;
@@ -110,6 +122,7 @@ export const CardRadioGroup = ({
             label,
             isCustom: true,
             icon: customOptionIcon ?? otherOption?.icon ?? staticOptions[0]?.icon,
+            tone: 'slate',
           };
 
           setCustomOptions((prev) => [...prev, newOption]);
@@ -132,23 +145,28 @@ export const CardRadioGroup = ({
               role="radiogroup"
               aria-invalid={!!fieldError}
               onKeyDown={handleKeyDown}
-              className={cn('grid grid-cols-1 gap-2 sm:grid-cols-2', gridClassName)}
+              className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2', gridClassName)}
             >
               {allOptions.map((option) => {
                 const isSelected = field.value === option.value;
                 const Icon = option.icon;
                 const isOtherTrigger = otherOption && option.value === otherOption.value;
+                const tone = option.tone ?? 'slate';
 
                 if (isOtherTrigger && isEditingOther) {
                   return (
                     <div
                       key="other-input"
-                      className={cn(
-                        'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left',
-                        'border-blue-600 bg-blue-50',
-                      )}
+                      className="flex w-full items-center gap-3 rounded-item border border-action bg-surface-secondary px-3 py-3 text-left"
                     >
-                      {Icon && <Icon className="h-5 w-5 shrink-0 text-blue-600" />}
+                      <span
+                        className={cn(
+                          'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                          TONE_TILE[tone],
+                        )}
+                      >
+                        {Icon && <Icon size={20} />}
+                      </span>
                       <input
                         ref={inputRef}
                         value={draft}
@@ -168,7 +186,7 @@ export const CardRadioGroup = ({
                         }}
                         onBlur={commitDraft}
                         placeholder="Type a category…"
-                        className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-placeholder"
                       />
                     </div>
                   );
@@ -191,76 +209,89 @@ export const CardRadioGroup = ({
                     }}
                     onBlur={field.onBlur}
                     className={cn(
-                      'group relative flex w-full cursor-pointer items-center rounded-lg border transition-colors',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
+                      'group relative flex w-full cursor-pointer rounded-item border text-left transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring/70 focus-visible:ring-offset-1',
                       disabled && 'cursor-not-allowed opacity-50',
                       isSelected
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300',
+                        ? 'border-action bg-action'
+                        : 'border-border bg-surface hover:border-placeholder',
                       layout === 'column'
-                        ? 'min-h-[140px] flex-col rounded-xl justify-center gap-2 px-4 py-6 text-center'
-                        : 'min-h-[50px] gap-3 px-4 py-3 text-left',
+                        ? 'min-h-[164px] flex-col items-start gap-3 px-4 py-4'
+                        : 'min-h-[64px] items-center gap-3 px-3 py-3',
                     )}
                   >
-                    {layout === 'column' ? (
-                      <div className="flex flex-col items-center gap-2">
-                        {Icon && (
-                          <Icon
-                            size={24}
-                            className={cn(isSelected ? 'text-blue-600' : 'text-gray-500')}
-                          />
+                    <span
+                      className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                        isSelected
+                          ? 'bg-action-foreground/10 text-action-foreground'
+                          : TONE_TILE[tone],
+                      )}
+                    >
+                      {Icon && <Icon size={20} />}
+                    </span>
+
+                    <span
+                      className={cn(
+                        'flex min-w-0 flex-col gap-0.5',
+                        layout === 'column' ? 'w-full' : 'flex-1',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'text-sm font-semibold',
+                          isSelected ? 'text-action-foreground' : 'text-foreground',
                         )}
-                        <span className="flex flex-col items-center gap-0.5">
-                          <span
-                            className={cn(
-                              'text-sm font-medium',
-                              isSelected ? 'text-blue-600' : 'text-gray-900',
-                            )}
-                          >
-                            {option.label}
-                          </span>
-                          {option.description && (
-                            <span className="text-xs text-gray-500">{option.description}</span>
+                      >
+                        {option.label}
+                      </span>
+                      {option.description && (
+                        <span
+                          className={cn(
+                            'text-xs leading-relaxed',
+                            isSelected ? 'text-action-foreground/70' : 'text-muted-foreground',
                           )}
+                        >
+                          {option.description}
                         </span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-1 items-center gap-3">
-                        {Icon && (
-                          <Icon
-                            size={20}
-                            className={cn(
-                              'shrink-0',
-                              isSelected ? 'text-blue-600' : 'text-gray-500',
-                            )}
-                          />
+                      )}
+                    </span>
+
+                    {layout === 'column' && option.meta && (
+                      <span
+                        className={cn(
+                          'mt-auto text-[11px] font-semibold',
+                          isSelected ? 'text-action-foreground' : 'text-muted-foreground',
                         )}
-                        <span className="flex flex-col">
-                          <span
-                            className={cn(
-                              'text-sm',
-                              isSelected ? 'text-blue-600' : 'text-gray-900',
-                            )}
-                          >
-                            {option.label}
-                          </span>
-                          {option.description && (
-                            <span className="text-xs text-gray-500">{option.description}</span>
-                          )}
-                        </span>
-                      </div>
+                      >
+                        {option.meta}
+                      </span>
+                    )}
+
+                    {layout === 'column' && isSelected && !option.isCustom && (
+                      <span className="absolute right-3 top-3 rounded-pill bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
+                        Selected
+                      </span>
                     )}
 
                     {option.isCustom && (
-                      <div
-                        onClick={() => handleRemoveCustomOption(option)}
+                      <span
+                        role="button"
+                        tabIndex={-1}
+                        aria-label={`Remove ${option.label}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleRemoveCustomOption(option);
+                        }}
                         className={cn(
-                          'rounded-full p-1 opacity-0 transition hover:bg-gray-200 group-hover:opacity-100',
-                          layout === 'column' ? 'absolute right-2 top-2' : 'text-end',
+                          'rounded-full p-1 transition hover:bg-black/10',
+                          layout === 'column' ? 'absolute right-3 top-3' : 'ml-auto shrink-0',
+                          isSelected ? 'text-action-foreground' : 'text-muted-foreground',
                         )}
                       >
-                        <X size={18} />
-                      </div>
+                        <X size={16} />
+                      </span>
                     )}
                   </button>
                 );

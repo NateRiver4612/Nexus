@@ -51,6 +51,41 @@ const projectDetailsFields = {
     select ${taskJsonObject} from ${tasks} where ${tasks.id} = ${projectProgress.currentTaskId}
   )`,
 
+  // The milestone the current task belongs to; with no active task, fall back to
+  // the plan's first milestone so the card always has a meaningful stage to show.
+  currentMilestone: sql<{
+    id: string;
+    title: string;
+    position: number;
+    numOfTasks: number;
+    numOfCompletedTasks: number;
+  } | null>`(
+    select jsonb_build_object(
+      'id', ${milestones.id},
+      'title', ${milestones.title},
+      'position', ${milestones.position},
+      'numOfTasks', (
+        select count(*)::int from ${tasks} where ${tasks.milestoneId} = ${milestones.id}
+      ),
+      'numOfCompletedTasks', (
+        select count(*)::int from ${tasks}
+        where ${tasks.milestoneId} = ${milestones.id} and ${tasks.status} = 'completed'
+      )
+    )
+    from ${milestones}
+    where ${milestones.projectId} = ${projects.id}
+    order by
+      case
+        when ${milestones.id} = (
+          select ${tasks.milestoneId} from ${tasks}
+          where ${tasks.id} = ${projectProgress.currentTaskId}
+        ) then 0
+        else 1
+      end,
+      ${milestones.position} asc
+    limit 1
+  )`,
+
   // counts — correlated subqueries too, but scalar instead of row
   numOfTasks: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id})`,
   numOfCompletedTasks: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id} and ${tasks.status} = 'completed')`,
