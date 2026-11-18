@@ -34,7 +34,10 @@ export function aiRoutes() {
     { route: deleteConversationRoute.route, handler: deleteConversationRoute.handler },
     { route: getMessagesRoute.route, handler: getMessagesRoute.handler },
     { route: postMessageRoute.route, handler: postMessageRoute.handler },
-    { route: createAttachmentUploadUrlRoute.route, handler: createAttachmentUploadUrlRoute.handler },
+    {
+      route: createAttachmentUploadUrlRoute.route,
+      handler: createAttachmentUploadUrlRoute.handler,
+    },
     { route: confirmAttachmentRoute.route, handler: confirmAttachmentRoute.handler },
     { route: deleteAttachmentRoute.route, handler: deleteAttachmentRoute.handler },
     { route: getAttachmentDownloadUrlRoute.route, handler: getAttachmentDownloadUrlRoute.handler },

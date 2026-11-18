@@ -173,7 +173,7 @@ export const SuggestionMenu: React.FC<SuggestionMenuProps> = ({
               <DropdownMenuItem
                 key={item.id}
                 onSelect={() => handleSelect(item)}
-                className="flex items-center justify-between px-2.5 py-1.5 cursor-pointer rounded-md text-foreground hover:bg-accent focus:bg-accent"
+                className="flex cursor-pointer items-center justify-between rounded-control px-2.5 py-1.5 text-foreground hover:bg-muted focus:bg-muted"
               >
                 <div className="flex items-center gap-2.5">
                   <Icon className="w-4 h-4 text-muted-foreground shrink-0" />

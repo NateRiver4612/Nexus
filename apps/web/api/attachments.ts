@@ -38,11 +38,11 @@ export async function deleteAttachment(
   attachmentId: string,
 ): Promise<OkType> {
   return (await handleResponse(
-    await apiClient.api.v1.ai.conversations[':conversationId'].attachments[
-      ':attachmentId'
-    ].$delete({
-      param: { conversationId, attachmentId },
-    }),
+    await apiClient.api.v1.ai.conversations[':conversationId'].attachments[':attachmentId'].$delete(
+      {
+        param: { conversationId, attachmentId },
+      },
+    ),
   )) as OkType;
 }
 
@@ -51,9 +51,9 @@ export async function getAttachmentDownloadUrl(
   attachmentId: string,
 ): Promise<AttachmentDownloadUrlType> {
   return (await handleResponse(
-    await apiClient.api.v1.ai.conversations[':conversationId'].attachments[
-      ':attachmentId'
-    ]['download-url'].$get({
+    await apiClient.api.v1.ai.conversations[':conversationId'].attachments[':attachmentId'][
+      'download-url'
+    ].$get({
       param: { conversationId, attachmentId },
     }),
   )) as AttachmentDownloadUrlType;

@@ -189,7 +189,7 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
                         <span
                           className={cn(
                             'truncate text-sm font-medium',
-                            isSelected ? 'text-primary' : 'text-gray-900',
+                            isSelected ? 'text-primary-foreground' : 'text-foreground',
                           )}
                         >
                           {option.label}
@@ -201,7 +201,10 @@ export const CardCheckboxGroup = <TFieldValues extends FieldValues = FieldValues
                       {Icon && (
                         <Icon
                           size={20}
-                          className={cn('shrink-0', isSelected ? 'text-primary' : 'text-gray-300')}
+                          className={cn(
+                            'shrink-0',
+                            isSelected ? 'text-primary-foreground' : 'text-muted-foreground',
+                          )}
                         />
                       )}
                       {option.isCustom && (

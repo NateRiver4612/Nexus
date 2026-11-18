@@ -91,11 +91,11 @@ export const ProjectResearchSources = ({
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col justify-center rounded-xl border border-border bg-background px-4 py-3 transition-colors hover:bg-accent"
+              className="group flex flex-col justify-center rounded-item border border-border bg-surface-secondary px-4 py-3 transition-colors hover:bg-muted"
             >
               <div className="flex items-center gap-3">
                 <SourceFavicon favicon={source.favicon} />
-                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-primary">
+                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-foreground">
                   {source.title}
                 </span>
               </div>
@@ -125,11 +125,11 @@ export const ProjectResearchSources = ({
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className=" flex flex-col no-underline! justify-center rounded-xl border border-border bg-background px-4 py-3 transition-colors hover:bg-accent"
+              className="flex flex-col justify-center rounded-item border border-border bg-surface-secondary px-4 py-3 no-underline! transition-colors hover:bg-muted"
             >
               <div className="flex items-center gap-3">
                 <SourceFavicon favicon={source.favicon} />
-                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-primary">
+                <span className="line-clamp-1 text-[15px] font-semibold leading-snug text-foreground">
                   {source.title}
                 </span>
               </div>

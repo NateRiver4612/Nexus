@@ -1,5 +1,14 @@
-import type { ChatArtifactType, ChatAttachmentType, ChatCitationType, MessageType } from '@nexus/types';
-import { chatArtifactsSchema, chatAttachmentsSchema, chatCitationsSchema } from '@nexus/zod-schemas';
+import type {
+  ChatArtifactType,
+  ChatAttachmentType,
+  ChatCitationType,
+  MessageType,
+} from '@nexus/types';
+import {
+  chatArtifactsSchema,
+  chatAttachmentsSchema,
+  chatCitationsSchema,
+} from '@nexus/zod-schemas';
 
 import { ArtifactCard, ArtifactCardSkeleton } from './ArtifactCard';
 import { ChatAttachmentChip } from './ChatAttachmentChip';

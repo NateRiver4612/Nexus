@@ -119,9 +119,7 @@ export function ChatPanel({
     for (const entry of entries) {
       if (entry.status !== 'uploading') continue;
 
-      uploadAttachment(entry.file, (attachmentId) =>
-        updateAttachment(entry.key, { attachmentId }),
-      )
+      uploadAttachment(entry.file, (attachmentId) => updateAttachment(entry.key, { attachmentId }))
         .then((result) => {
           if (result.status === 'ready') {
             updateAttachment(entry.key, { status: 'ready', attachmentId: result.id });
@@ -192,7 +190,7 @@ export function ChatPanel({
     >
       {isDragging && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5">
-          <p className="text-sm font-medium text-primary">Drop files to attach</p>
+          <p className="text-sm font-medium text-primary-foreground">Drop files to attach</p>
         </div>
       )}
 

@@ -1,17 +1,31 @@
+import type { HTMLAttributes } from 'react';
+
 import { cn } from '@/lib/utils';
 
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-xl border-border p-6', className)} {...props} />;
-}
+export const Card = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => {
+  return (
+    <div
+      className={cn(
+        'rounded-card border border-border bg-card p-6 text-card-foreground shadow-2xs',
+        className,
+      )}
+      {...props}
+    />
+  );
+};
 
-export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('mb-4', className)} {...props} />;
-}
+export const CardHeader = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => {
+  return <div className={cn('mb-4 space-y-1.5', className)} {...props} />;
+};
 
-export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn('text-lg font-semibold', className)} {...props} />;
-}
+export const CardTitle = ({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) => {
+  return (
+    <h3 className={cn('text-base font-bold tracking-tight sm:text-lg', className)} {...props} />
+  );
+};
 
-export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('text-sm text-muted-foreground', className)} {...props} />;
-}
+export const CardContent = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => {
+  return (
+    <div className={cn('text-sm leading-relaxed text-muted-foreground', className)} {...props} />
+  );
+};

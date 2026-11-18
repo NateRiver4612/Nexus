@@ -28,7 +28,10 @@ function TaskRow({ task }: { task: Task }) {
       <div className="flex items-start gap-3">
         <StatusIcon
           size={18}
-          className={cn('mt-0.5 shrink-0', isCompleted ? 'text-primary' : 'text-gray-300')}
+          className={cn(
+            'mt-0.5 shrink-0',
+            isCompleted ? 'text-primary-foreground' : 'text-muted-foreground',
+          )}
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">

@@ -82,7 +82,7 @@ const TONE_CONTAINER: Record<string, string> = {
 
 const TONE_VALUE: Record<string, string> = {
   default: 'text-foreground',
-  primary: 'text-primary',
+  primary: 'text-primary-foreground',
   success: 'text-green-700',
   warning: 'text-amber-700',
   danger: 'text-red-700',
@@ -96,7 +96,7 @@ const stepIcon = (status?: string) => {
   const s = (status ?? '').toLowerCase();
   if (/done|complete/.test(s)) return <CheckCircle2 className="size-4 shrink-0 text-green-600" />;
   if (/in progress|in_progress|current|doing|active/.test(s)) {
-    return <CircleDot className="size-4 shrink-0 text-primary" />;
+    return <CircleDot className="size-4 shrink-0 text-primary-foreground" />;
   }
   return <Circle className="size-4 shrink-0 text-muted-foreground" />;
 };

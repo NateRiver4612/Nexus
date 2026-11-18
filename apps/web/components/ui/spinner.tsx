@@ -5,7 +5,7 @@ export function Spinner({ className, ...props }: React.ComponentProps<'svg'>) {
   return (
     <div className="flex items-center gap-4">
       <LoaderCircle
-        className={cn('size-6 animate-spin text-primary', className)}
+        className={cn('size-6 animate-spin text-primary-foreground', className)}
         strokeWidth={1.5}
         {...props}
       />

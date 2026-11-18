@@ -36,7 +36,7 @@ export const RegeneratePlanDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            <RotateCw className="size-5 text-primary" />
+            <RotateCw className="size-5 text-primary-foreground" />
             Regenerate plan?
           </AlertDialogTitle>
           <AlertDialogDescription>

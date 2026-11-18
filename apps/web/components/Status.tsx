@@ -17,62 +17,63 @@ const statusStyles: Record<StatusType, { label: string; className: string; dotCl
   {
     completed: {
       label: 'Completed',
-      className: 'border-emerald-300 bg-emerald-50 text-emerald-700',
-      dotClassName: 'bg-emerald-500',
+      className: 'border-primary/30 bg-primary-soft text-primary-foreground',
+      dotClassName: 'bg-primary',
     },
     active: {
       label: 'Active',
-      className: 'border-blue-300 bg-blue-50 text-blue-700',
-      dotClassName: 'bg-blue-500',
+      className: 'border-transparent bg-primary text-primary-foreground',
+      dotClassName: 'bg-primary-foreground',
     },
     draft: {
       label: 'Draft',
-      className: 'border-gray-300 bg-gray-50 text-gray-600',
-      dotClassName: 'bg-gray-400',
+      className: 'border-border bg-muted text-muted-foreground',
+      dotClassName: 'bg-muted-foreground',
     },
     paused: {
       label: 'Paused',
-      className: 'border-amber-300 bg-amber-50 text-amber-700',
-      dotClassName: 'bg-amber-500',
+      className: 'border-accent-tertiary/30 bg-accent-soft text-accent-foreground',
+      dotClassName: 'bg-accent-tertiary',
     },
     archived: {
       label: 'Archived',
-      className: 'border-violet-300 bg-violet-50 text-violet-700',
-      dotClassName: 'bg-violet-500',
+      className:
+        'border-accent-secondary/30 bg-accent-secondary-soft text-accent-secondary-foreground',
+      dotClassName: 'bg-accent-secondary',
     },
     in_progress: {
       label: 'In Progress',
-      className: 'border-[#2b5d9d] text-[#2b5d9d]',
-      dotClassName: 'bg-[#2b5d9d]',
+      className: 'border-primary/30 bg-primary-soft text-primary-foreground',
+      dotClassName: 'bg-primary',
     },
     todo: {
       label: 'Todo',
-      className: 'border-[#5bcdf0] text-[#5bcdf0]',
-      dotClassName: 'bg-[#5bcdf0]',
+      className: 'border-border bg-surface-secondary text-muted-foreground',
+      dotClassName: 'bg-muted-foreground',
     },
     cancelled: {
       label: 'Cancelled',
-      className: 'border-[#c9d1d4] text-[#c9d1d4]',
-      dotClassName: 'bg-[#c9d1d4]',
+      className: 'border-border bg-muted text-muted-foreground',
+      dotClassName: 'bg-muted-foreground',
     },
     reopen: {
       label: 'Re-open',
-      className: 'border-amber-300 bg-amber-50 text-amber-700',
-      dotClassName: 'bg-amber-500',
+      className: 'border-destructive/25 bg-destructive/10 text-destructive',
+      dotClassName: 'bg-destructive',
     },
   };
 
 const sizeStyles: Record<StatusSize, { container: string; dot: string }> = {
   sm: {
-    container: 'gap-1.5 px-2 py-0.5 text-xs',
+    container: 'gap-1.5 px-2.5 py-1 text-[11px]',
     dot: 'size-1.5',
   },
   md: {
-    container: 'gap-2 px-3 py-1 text-sm',
+    container: 'gap-2 px-3 py-1 text-xs',
     dot: 'size-2',
   },
   lg: {
-    container: 'gap-2.5 px-4 py-1.5 text-base',
+    container: 'gap-2.5 px-4 py-1.5 text-sm',
     dot: 'size-2.5',
   },
 };
@@ -95,7 +96,7 @@ export function taskStatusExplain(status: TaskStatusEnum): string {
   }
 }
 
-export function Status({ status, size = 'md', className = '', explain, ...props }: StatusProps) {
+export const Status = ({ status, size = 'md', className = '', explain, ...props }: StatusProps) => {
   const { label, className: variantClass, dotClassName } = statusStyles[status];
 
   const { container, dot } = sizeStyles[size];
@@ -103,7 +104,7 @@ export function Status({ status, size = 'md', className = '', explain, ...props 
   const pill = (
     <span
       role="status"
-      className={`inline-flex w-fit items-center rounded-full border font-medium ${container} ${variantClass} ${className}`}
+      className={`inline-flex w-fit items-center whitespace-nowrap rounded-pill border font-bold ${container} ${variantClass} ${className}`}
       {...props}
     >
       <span aria-hidden="true" className={`rounded-full ${dot} ${dotClassName}`} />
@@ -121,6 +122,6 @@ export function Status({ status, size = 'md', className = '', explain, ...props 
       <TooltipContent side="right">{explain}</TooltipContent>
     </Tooltip>
   );
-}
+};
 
 export default Status;
