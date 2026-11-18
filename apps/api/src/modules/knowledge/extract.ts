@@ -1,6 +1,6 @@
 import { UnrecoverableError } from 'bullmq';
 
-import { getKnowledgeObject } from '../../storage';
+import { getObject } from '../../storage';
 import { env } from '../../env';
 import { TRANSIENT_URL_FAILURE, withUnrecoverable } from '../../queue-errors';
 import { getOpenAIProvider, getTavilyProvider } from '../ai/providers';
@@ -22,7 +22,7 @@ export type ExtractableSource = {
 export async function fetchStoredObject(storageKey: string) {
   // A missing object won't appear on retry; other S3 errors (network, 5xx) are worth retrying.
   return withUnrecoverable({
-    promise: getKnowledgeObject(storageKey),
+    promise: getObject(storageKey),
     isUnrecoverable: (error) => {
       const { name, $metadata } = error as {
         name?: string;
@@ -54,14 +54,19 @@ export async function extractSourceText(source: ExtractableSource): Promise<stri
   }
 }
 
-async function extractFromFile(source: ExtractableSource): Promise<string> {
-  if (!source.storageKey) throw new UnrecoverableError('file source has no storageKey');
-
-  const object = await fetchStoredObject(source.storageKey);
-
-  const { body, contentType } = object;
-  const mime = source.mimeType ?? contentType;
-
+/**
+ * Extracts text from a file's bytes, dispatching on mime type. Shared between the knowledge
+ * ingestion worker (which fetches the bytes first) and chat attachments (which already hold
+ * them), so both paths get the exact same extraction. Audio is not here on purpose — it needs
+ * the source name plus an OpenAI key, so it stays on the `ExtractableSource` queue path.
+ */
+export async function extractFromBuffer({
+  body,
+  mime,
+}: {
+  body: Buffer;
+  mime: string;
+}): Promise<string> {
   if (mime === 'application/pdf') return extractPdf(body);
   if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     return extractDocx(body);
@@ -78,6 +83,14 @@ async function extractFromFile(source: ExtractableSource): Promise<string> {
   return body.toString('utf-8');
 }
 
+async function extractFromFile(source: ExtractableSource): Promise<string> {
+  if (!source.storageKey) throw new UnrecoverableError('file source has no storageKey');
+
+  const { body, contentType } = await fetchStoredObject(source.storageKey);
+
+  return extractFromBuffer({ body, mime: source.mimeType ?? contentType });
+}
+
 async function extractPdf(buffer: Buffer): Promise<string> {
   // pdf-parse ships without type declarations.
   // @ts-ignore
@@ -91,17 +104,33 @@ async function extractPdf(buffer: Buffer): Promise<string> {
 async function extractFromAudio(source: ExtractableSource): Promise<string> {
   if (!source.storageKey) throw new UnrecoverableError('audio source has no storageKey');
 
-  if (!env.OPENAI_API_KEY) {
-    throw new UnrecoverableError('Audio transcription is not configured.');
-  }
-
   const { body, contentType } = await fetchStoredObject(source.storageKey);
 
-  return getOpenAIProvider().transcribe({
+  return extractAudioFromBuffer({
     body,
     name: source.name,
     mimeType: source.mimeType ?? contentType,
   });
+}
+
+/**
+ * Transcribes audio bytes to text. Shared by the knowledge worker and chat attachments, so both
+ * go through the same provider. Needs the OpenAI key (whisper-class model).
+ */
+export async function extractAudioFromBuffer({
+  body,
+  name,
+  mimeType,
+}: {
+  body: Buffer;
+  name: string;
+  mimeType: string;
+}): Promise<string> {
+  if (!env.OPENAI_API_KEY) {
+    throw new UnrecoverableError('Audio transcription is not configured.');
+  }
+
+  return getOpenAIProvider().transcribe({ body, name, mimeType });
 }
 
 async function extractDocx(buffer: Buffer): Promise<string> {
@@ -109,6 +138,9 @@ async function extractDocx(buffer: Buffer): Promise<string> {
   const { value } = await mammoth.extractRawText({ buffer });
   return value;
 }
+
+/** A spreadsheet's extracted text is capped so a huge sheet can't flood the prompt or DB. */
+const MAX_SPREADSHEET_CHARS = 100_000;
 
 async function extractSpreadsheet(buffer: Buffer): Promise<string> {
   const XLSX = await import('xlsx');
@@ -120,7 +152,12 @@ async function extractSpreadsheet(buffer: Buffer): Promise<string> {
     parts.push(`# ${sheetName}`);
     parts.push(XLSX.utils.sheet_to_csv(sheet));
   }
-  return parts.join('\n\n');
+  const text = parts.join('\n\n');
+  // `sheet_to_csv` has already materialized the full sheet, so this bounds what we return and
+  // store — not peak memory. Slicing on a character boundary keeps the tail valid UTF-8 text.
+  return text.length <= MAX_SPREADSHEET_CHARS
+    ? text
+    : `${text.slice(0, MAX_SPREADSHEET_CHARS)}\n\n… (spreadsheet truncated)`;
 }
 
 async function extractImage(buffer: Buffer): Promise<string> {

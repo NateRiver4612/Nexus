@@ -3,6 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { idSchema, timestampSchema } from './common';
 import { kickoffPlanSchema } from './planner';
 import { chatArtifactTypeSchema } from './artifacts';
+import { ACCEPTED_UPLOAD_TYPES, MAX_FILE_SIZE } from './constants';
 
 export const aiTaskEnum = z.enum([
   'rewrite',
@@ -148,7 +149,7 @@ export const messageSchema = z
   })
   .openapi('Message');
 
-/** The client sends text only; role and conversation come from the server and the path. */
+/** The client sends text plus optional attachment ids; role and conversation come from the server and the path. */
 export const createMessageSchema = z.object({
   content: z
     .string()
@@ -156,6 +157,12 @@ export const createMessageSchema = z.object({
     .min(1)
     .max(20_000)
     .openapi({ example: 'How should we scope AI runs?' }),
+  /** Ids of attachments already confirmed `ready` in this conversation. */
+  attachmentIds: z
+    .array(idSchema)
+    .max(5)
+    .default([])
+    .openapi({ example: ['3fa85f64-5717-4562-b3fc-2c963f66afa6'] }),
 });
 
 export const messagePageQuerySchema = z.object({
@@ -254,3 +261,61 @@ export const chatArtifactSchema = z
 export const chatArtifactsSchema = z.array(chatArtifactSchema);
 
 export const chatArtifactEventSchema = z.object({ artifact: chatArtifactSchema });
+
+/** Mirrors `attachment_status` in packages/db/src/schema/attachments.ts. */
+export const attachmentStatusSchema = z.enum(['uploaded', 'processing', 'ready', 'failed']);
+
+/**
+ * A file attached to a chat message, as stored in `messages.metadata.attachments`.
+ * Only the fields the chip and the model context need; the extracted text stays server-side.
+ */
+export const chatAttachmentSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1).max(255),
+    mimeType: z.string().min(1).max(128),
+    size: z.number().int().nonnegative(),
+  })
+  .openapi('ChatAttachment');
+
+export const chatAttachmentsSchema = z.array(chatAttachmentSchema);
+
+/** Request a presigned PUT URL for one attachment in a conversation. */
+export const createAttachmentUploadUrlSchema = z.object({
+  name: z.string().min(1).max(255),
+  mimeType: z.enum(ACCEPTED_UPLOAD_TYPES),
+  size: z.number().int().positive().max(MAX_FILE_SIZE),
+});
+
+export const attachmentUploadUrlResponseSchema = z.object({
+  attachmentId: idSchema,
+  url: z.url({ error: 'Enter a valid URL' }),
+});
+
+/** Full attachment DTO, returned by confirm so the chip can show ready/failed. */
+export const attachmentSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1).max(255),
+    mimeType: z.string().min(1).max(128),
+    size: z.number().int().nonnegative(),
+    status: attachmentStatusSchema,
+    errorMessage: z.string().nullish(),
+  })
+  .openapi('Attachment');
+
+/** Path params for attachment endpoints scoped under a conversation. */
+export const conversationAttachmentParamsSchema = z.object({
+  conversationId: idSchema.openapi({
+    param: { name: 'conversationId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+  attachmentId: idSchema.openapi({
+    param: { name: 'attachmentId', in: 'path' },
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  }),
+});
+
+export const attachmentDownloadUrlSchema = z.object({
+  url: z.url({ error: 'Enter a valid URL' }),
+});

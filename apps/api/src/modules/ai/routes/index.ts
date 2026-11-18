@@ -1,6 +1,10 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 
 import { requireAuth } from '../../../auth-middleware';
+import { confirmAttachmentRoute } from '../attachments/routes/confirmAttachment';
+import { createAttachmentUploadUrlRoute } from '../attachments/routes/createUploadUrl';
+import { deleteAttachmentRoute } from '../attachments/routes/deleteAttachment';
+import { getAttachmentDownloadUrlRoute } from '../attachments/routes/getDownloadUrl';
 import { createAiSuggestionRoute } from './createAiSuggestion';
 import { createConversationRoute } from './createConversation';
 import { deleteAiSuggestionRoute } from './deleteAiSuggestion';
@@ -30,5 +34,9 @@ export function aiRoutes() {
     { route: deleteConversationRoute.route, handler: deleteConversationRoute.handler },
     { route: getMessagesRoute.route, handler: getMessagesRoute.handler },
     { route: postMessageRoute.route, handler: postMessageRoute.handler },
+    { route: createAttachmentUploadUrlRoute.route, handler: createAttachmentUploadUrlRoute.handler },
+    { route: confirmAttachmentRoute.route, handler: confirmAttachmentRoute.handler },
+    { route: deleteAttachmentRoute.route, handler: deleteAttachmentRoute.handler },
+    { route: getAttachmentDownloadUrlRoute.route, handler: getAttachmentDownloadUrlRoute.handler },
   ] as const);
 }

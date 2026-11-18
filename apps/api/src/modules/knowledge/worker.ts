@@ -2,7 +2,7 @@ import { Worker } from 'bullmq';
 
 import { getDb } from '@nexus/db';
 import { getRedis } from '../../redis';
-import { deleteKnowledgeObject } from '../../storage';
+import { deleteObject } from '../../storage';
 import { KnowledgeService } from './service';
 import {
   KNOWLEDGE_QUEUE,
@@ -23,7 +23,7 @@ const KnowledgeWorker = () => {
         case KNOWLEDGE_QUEUE_REMOVE:
           const { storageKey } = job.data as KnowledgeRemoveJob;
           console.log(`[worker] knowledge-remove ${job.id} key=${storageKey}`);
-          await deleteKnowledgeObject(storageKey);
+          await deleteObject(storageKey);
           return;
         case KNOWLEDGE_QUEUE_PROCESS: {
           const { sourceId } = job.data as KnowledgeProcessJob;

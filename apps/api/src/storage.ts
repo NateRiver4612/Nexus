@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -51,7 +52,7 @@ export function getS3Client() {
 }
 
 /** Presigned PUT URL the browser can upload directly to. */
-export async function presignKnowledgePutUrl(key: string, contentType: string) {
+export async function presignPutUrl(key: string, contentType: string) {
   const command = new PutObjectCommand({
     Bucket: s3Bucket(),
     Key: key,
@@ -63,7 +64,7 @@ export async function presignKnowledgePutUrl(key: string, contentType: string) {
 }
 
 /** Presigned GET URL that downloads an object with its original name. */
-export async function presignKnowledgeGetUrl({ key, filename }: { key: string; filename: string }) {
+export async function presignGetUrl({ key, filename }: { key: string; filename: string }) {
   const command = new GetObjectCommand({
     Bucket: s3Bucket(),
     Key: key,
@@ -74,8 +75,8 @@ export async function presignKnowledgeGetUrl({ key, filename }: { key: string; f
   return { url };
 }
 
-/** Fetch an object's bytes (used by the ingestion worker to extract text). */
-export async function getKnowledgeObject(key: string) {
+/** Fetch an object's bytes. */
+export async function getObject(key: string) {
   const command = new GetObjectCommand({ Bucket: s3Bucket(), Key: key });
   const response = await getS3Client().send(command);
   const bytes = await response.Body!.transformToByteArray();
@@ -86,7 +87,7 @@ export async function getKnowledgeObject(key: string) {
 }
 
 /** Upload raw bytes (e.g. after processing). */
-export async function putKnowledgeObject(
+export async function putObject(
   key: string,
   body: Buffer,
   contentType = 'application/octet-stream',
@@ -100,8 +101,27 @@ export async function putKnowledgeObject(
   await getS3Client().send(command);
 }
 
-/** Delete an S3 object (used by the source-removal worker). */
-export async function deleteKnowledgeObject(key: string) {
+/** Delete an S3 object. */
+export async function deleteObject(key: string) {
   const command = new DeleteObjectCommand({ Bucket: s3Bucket(), Key: key });
   await getS3Client().send(command);
+}
+
+/** Size of a stored object in bytes, or null when it doesn't exist. */
+export async function getObjectSize(key: string): Promise<number | null> {
+  const command = new HeadObjectCommand({ Bucket: s3Bucket(), Key: key });
+  try {
+    const response = await getS3Client().send(command);
+    return response.ContentLength ?? null;
+  } catch (error) {
+    const { name, $metadata } = error as {
+      name?: string;
+      $metadata?: { httpStatusCode?: number };
+    };
+    // A missing object is a normal "upload never happened" outcome, not a failure to throw.
+    if (name === 'NoSuchKey' || name === 'NotFound' || $metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    throw error;
+  }
 }

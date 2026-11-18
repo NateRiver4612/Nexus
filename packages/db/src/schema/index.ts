@@ -1,5 +1,6 @@
 export * from './ai';
 export * from './artifacts';
+export * from './attachments';
 export * from './calendar';
 export * from './columns';
 export * from './conversations';

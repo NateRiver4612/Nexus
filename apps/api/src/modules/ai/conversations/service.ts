@@ -1,9 +1,16 @@
 import type { Conversation, Db, Message } from '@nexus/db';
-import type { ConversationType, MessagePageType, MessageType } from '@nexus/types';
+import type {
+  ChatAttachmentType,
+  ConversationType,
+  MessagePageType,
+  MessageType,
+} from '@nexus/types';
 
 import { ensureExists, InternalError, NotFoundError } from '../../../errors';
 import { ArtifactService } from '../../artifacts/service';
 import { assertProjectAccess } from '../../projects/service';
+import { AttachmentRepository } from '../attachments/repository';
+import { AttachmentService } from '../attachments/service';
 import { ConversationRepository } from './repository';
 
 export const DEFAULT_CONVERSATION_TITLE = 'New conversation';
@@ -98,12 +105,19 @@ export function ConversationService(db: Db) {
   async function remove({ id, userId }: { id: string; userId: string }) {
     await requireOwned({ id, userId });
 
-    // The FK cascade removes artifact rows, so collect their S3 keys first.
+    // The FK cascade removes the artifact and attachment rows, so collect their S3 keys first.
     const artifactService = ArtifactService(db);
-    const storageKeys = await artifactService.listStorageKeysByConversation(id);
+    const attachmentService = AttachmentService(db);
+    const [artifactKeys, attachmentKeys] = await Promise.all([
+      artifactService.listStorageKeysByConversation(id),
+      attachmentService.listStorageKeysByConversation(id),
+    ]);
 
     await repository.delete({ id, userId });
-    await artifactService.removeStorageObjects(storageKeys);
+    await Promise.all([
+      artifactService.removeStorageObjects(artifactKeys),
+      attachmentService.removeStorageObjects(attachmentKeys),
+    ]);
   }
 
   async function getMessages({
@@ -138,6 +152,7 @@ export function ConversationService(db: Db) {
     content,
     sourceId,
     metadata,
+    attachmentIds = [],
   }: {
     conversationId: string;
     userId: string;
@@ -145,6 +160,7 @@ export function ConversationService(db: Db) {
     content: string;
     sourceId?: string | null;
     metadata?: Record<string, unknown> | null;
+    attachmentIds?: string[];
   }): Promise<MessageType> {
     return db.transaction(async (tx) => {
       const txRepository = ConversationRepository(tx);
@@ -157,9 +173,23 @@ export function ConversationService(db: Db) {
         sourceId: sourceId ?? null,
       });
 
+      const saved = ensureExists(message, InternalError('Failed to append message'));
+
+      if (attachmentIds.length > 0) {
+        // Link this message's attachments in the same transaction so a send is atomic: either
+        // the message and its files both land, or neither does. The scoped update can't touch
+        // another user's or another message's rows.
+        await AttachmentRepository(tx).linkToMessage({
+          conversationId,
+          userId,
+          messageId: saved.id,
+          attachmentIds,
+        });
+      }
+
       await txRepository.touch({ id: conversationId, userId });
 
-      return toMessageView(ensureExists(message, InternalError('Failed to append message')));
+      return toMessageView(saved);
     });
   }
 
@@ -167,14 +197,24 @@ export function ConversationService(db: Db) {
     conversationId,
     userId,
     content,
+    attachments = [],
   }: {
     conversationId: string;
     userId: string;
     content: string;
+    attachments?: ChatAttachmentType[];
   }): Promise<MessageType> {
     await requireOwned({ id: conversationId, userId });
 
-    return appendMessage({ conversationId, userId, role: 'user', content });
+    return appendMessage({
+      conversationId,
+      userId,
+      role: 'user',
+      content,
+      // Only the chip fields are stored; the extracted text never lands in `messages.content`.
+      metadata: attachments.length ? { attachments } : undefined,
+      attachmentIds: attachments.map((attachment) => attachment.id),
+    });
   }
 
   /**

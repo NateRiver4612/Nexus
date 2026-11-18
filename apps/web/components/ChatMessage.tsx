@@ -1,7 +1,8 @@
-import type { ChatArtifactType, ChatCitationType, MessageType } from '@nexus/types';
-import { chatArtifactsSchema, chatCitationsSchema } from '@nexus/zod-schemas';
+import type { ChatArtifactType, ChatAttachmentType, ChatCitationType, MessageType } from '@nexus/types';
+import { chatArtifactsSchema, chatAttachmentsSchema, chatCitationsSchema } from '@nexus/zod-schemas';
 
 import { ArtifactCard, ArtifactCardSkeleton } from './ArtifactCard';
+import { ChatAttachmentChip } from './ChatAttachmentChip';
 import { ChatSources } from './ChatSources';
 import { Markdown } from './Markdown';
 
@@ -11,6 +12,7 @@ type ChatMessageProps = {
   /** The reply was cut short (the user stopped it, or the provider failed mid-stream). */
   partial?: boolean;
   isStreaming?: boolean;
+  attachments?: ChatAttachmentType[];
   sources?: ChatCitationType[];
   artifacts?: ChatArtifactType[];
   /** `create_artifact` is running — show a skeleton card in its place. */
@@ -32,10 +34,17 @@ export function artifactsOf(metadata: MessageType['metadata']): ChatArtifactType
   return parsed.success ? parsed.data : [];
 }
 
+/** Saved in `metadata.attachments`; anything malformed is simply not shown. */
+export function attachmentsOf(metadata: MessageType['metadata']): ChatAttachmentType[] {
+  const parsed = chatAttachmentsSchema.safeParse(metadata?.attachments);
+  return parsed.success ? parsed.data : [];
+}
+
 export function ChatMessage({
   role,
   content,
   partial,
+  attachments,
   artifacts,
   creatingArtifact,
   onOpenArtifact,
@@ -46,9 +55,23 @@ export function ChatMessage({
   if (role === 'user') {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[90%] rounded-2xl bg-secondary px-4 py-2 text-sm whitespace-pre-wrap break-words">
-          {content}
-        </p>
+        <div className="flex max-w-[90%] flex-col items-end gap-1.5">
+          {attachments?.length ? (
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {attachments.map((attachment) => (
+                <ChatAttachmentChip
+                  key={attachment.id}
+                  name={attachment.name}
+                  mimeType={attachment.mimeType}
+                  size={attachment.size}
+                />
+              ))}
+            </div>
+          ) : null}
+          <p className="rounded-2xl bg-secondary px-4 py-2 text-sm whitespace-pre-wrap break-words">
+            {content}
+          </p>
+        </div>
       </div>
     );
   }
