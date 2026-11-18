@@ -2,6 +2,7 @@ import {
   getActiveProjectResearch,
   getProjectResearch,
   getProjectResearchHistory,
+  removeProjectResearchSource,
   startProjectResearch,
 } from '@/api/research';
 
@@ -59,6 +60,18 @@ export const useStartProjectResearch = createMutationHook(
       queryClient.invalidateQueries({ queryKey: researchKeys.active(variables.projectId) });
       // The latest attempt flips to pending, which clears the previous failure note.
       queryClient.invalidateQueries({ queryKey: researchKeys.project(variables.projectId) });
+    },
+  }),
+);
+
+/** Removes one grounded source from the project's latest research version. */
+export const useRemoveProjectResearchSource = createMutationHook(
+  ({ projectId, sourceUrl }: { projectId: string; sourceUrl: string }) =>
+    removeProjectResearchSource(projectId, { sourceUrl }),
+  (queryClient) => ({
+    onSuccess: (research, variables) => {
+      queryClient.setQueryData(researchKeys.project(variables.projectId), research);
+      queryClient.invalidateQueries({ queryKey: researchKeys.history(variables.projectId) });
     },
   }),
 );

@@ -171,7 +171,7 @@ export function AssistantView({ projectId }: { projectId: string }) {
           // Storage unavailable — resizing still works for this session.
         }
       }}
-      className="h-full min-h-0 overflow-hidden rounded-xl border border-border bg-card"
+      className="h-full flex-1 min-h-full overflow-hidden rounded-xl border border-border bg-card"
     >
       <ResizablePanel
         id="sidebar"

@@ -1,16 +1,30 @@
 'use client';
 
+import type { KickoffPlanType } from '@nexus/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, RotateCw, TriangleAlert } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  CircleCheck,
+  Clock,
+  ListChecks,
+  Milestone as MilestoneIcon,
+  RotateCw,
+  TriangleAlert,
+  type LucideIcon,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { KickoffPlanList } from '@/components/KickoffPlanList';
+import { KickoffPlanList, kickoffTaskKey } from '@/components/KickoffPlanList';
 import AISummary from '@/components/project/AISummary';
 import { GenerationProgress } from '@/components/project/GenerationProgress';
 import { ProjectResearchSources } from '@/components/project/ProjectResearchSources';
 import { RegeneratePlanDialog } from '@/components/project/RegeneratePlanDialog';
+import { getCategoryMeta, getLevelMeta } from '@/components/onboarding/stepMeta';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetAiRun } from '@/hooks/useAi';
 import { useOnboardingDraft } from '@/hooks/useOnboardingDraft';
 import {
@@ -19,9 +33,39 @@ import {
   useSubmitProjectOnboarding,
 } from '@/hooks/useProjects';
 import { onboardingKeys, researchKeys } from '@/hooks/queryKeys';
-import { useGetProjectResearch } from '@/hooks/useResearch';
+import { useGetProjectResearch, useRemoveProjectResearchSource } from '@/hooks/useResearch';
 import { toastError } from '@/lib/toast';
-import { cn } from '@/lib/utils';
+import { cn, formatTimeMinutes, totalEstimatedMinutes } from '@/lib/utils';
+
+type MetricCardProps = {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  tone: string;
+};
+
+// Compact by default so the plan fits laptop viewports; large monitors get the
+// roomier sizing back at `2xl`.
+const MetricCard = ({ label, value, icon: Icon, tone }: MetricCardProps) => (
+  <div
+    className={cn(
+      'flex items-center justify-between gap-2 rounded-card px-4 py-3 2xl:gap-3 2xl:px-5 2xl:py-4',
+      tone,
+    )}
+  >
+    <div className="min-w-0">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/70 2xl:text-[11px]">
+        {label}
+      </p>
+      <p className="mt-0.5 truncate text-base font-extrabold tracking-tight text-foreground sm:text-lg 2xl:text-xl">
+        {value}
+      </p>
+    </div>
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface/70 text-foreground 2xl:size-9">
+      <Icon className="size-3.5 2xl:size-4" aria-hidden="true" />
+    </span>
+  </div>
+);
 
 export default function Page() {
   const { data: onboarding } = useGetOnboarding();
@@ -30,6 +74,7 @@ export default function Page() {
   const queryClient = useQueryClient();
 
   const [isRegenerateOpen, setIsRegenerateOpen] = useState(false);
+  const [excludedTaskKeys, setExcludedTaskKeys] = useState<Set<string>>(() => new Set());
 
   const { mutate: completeOnboarding, isPending: isCompletingOnboarding } =
     useCompleteProjectOnboarding({
@@ -55,6 +100,8 @@ export default function Page() {
     variables: projectId ?? '',
   });
 
+  const removeSource = useRemoveProjectResearchSource();
+
   // Research is finalized before plan generation, so once the run completes its
   // row is guaranteed to exist. Refetch it then: the initial request can land
   // before the worker inserts the row and the research query would stay on `null`.
@@ -66,6 +113,12 @@ export default function Page() {
 
   const { clear: clearDraft } = useOnboardingDraft();
   const { mutateAsync: submitOnboarding, isPending: isGenerating } = useSubmitProjectOnboarding();
+
+  // A regenerated plan is a new set of drafts, so stale position keys must not
+  // keep tasks excluded in the replacement plan.
+  useEffect(() => {
+    setExcludedTaskKeys(new Set());
+  }, [aiRun?.id]);
 
   const kickoffPlanData = aiRun?.data;
 
@@ -106,15 +159,35 @@ export default function Page() {
     }
   };
 
+  /**
+   * Drops the tasks the user unchecked. A milestone whose tasks are all excluded is
+   * dropped whole — its schema requires at least one task, and creating an empty
+   * milestone would be worse than omitting it.
+   */
+  const buildSelectedPlan = (plan: KickoffPlanType): KickoffPlanType => ({
+    summary: plan.summary,
+    milestones: plan.milestones.flatMap((milestone, milestoneIndex) => {
+      const tasks = milestone.tasks.filter(
+        (_, taskIndex) => !excludedTaskKeys.has(kickoffTaskKey({ milestoneIndex, taskIndex })),
+      );
+
+      return tasks.length > 0 ? [{ ...milestone, tasks }] : [];
+    }),
+  });
+
   const handleCompleteOnboarding = () => {
     if (disabled || !kickoffPlanData) {
       return;
     }
 
+    const plan = buildSelectedPlan(kickoffPlanData);
+
+    if (plan.milestones.length === 0) return;
+
     completeOnboarding({
       projectId,
       onboardingId,
-      plan: kickoffPlanData,
+      plan,
     });
   };
 
@@ -161,43 +234,206 @@ export default function Page() {
     );
   }
 
+  const stepData = onboarding?.stepData;
+  const projectName = stepData?.step1?.name?.trim() || 'Untitled project';
+  const categoryMeta = getCategoryMeta(stepData?.step1?.category);
+  const levelMeta = getLevelMeta(stepData?.step2?.level);
+  const sequenceLabel = kickoffPlanData?.summary?.keywords?.[0]
+    ? `${kickoffPlanData.summary.keywords[0]} Sequence`
+    : 'Standard Sequence';
+
+  const milestones = kickoffPlanData?.milestones ?? [];
+  const totalTasks = milestones.reduce((total, milestone) => total + milestone.tasks.length, 0);
+  // Shape the plan the same way it will be submitted, so these counts can't drift.
+  const selectedMilestones = kickoffPlanData ? buildSelectedPlan(kickoffPlanData).milestones : [];
+  const keptMilestoneCount = selectedMilestones.length;
+  const droppedMilestoneCount = milestones.length - keptMilestoneCount;
+  const selectedTaskCount = selectedMilestones.reduce(
+    (total, milestone) => total + milestone.tasks.length,
+    0,
+  );
+  const sourceCount = projectResearch?.sources.length ?? 0;
+  const totalMinutes = totalEstimatedMinutes(
+    selectedMilestones.flatMap((milestone) => milestone.tasks),
+  );
+  const totalTime = formatTimeMinutes(totalMinutes);
+  const canCreate = selectedTaskCount > 0 && !disabled;
+
+  const removalUrl = removeSource.isPending ? (removeSource.variables?.sourceUrl ?? null) : null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-gray-400">Summary</h2>
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      <header className="flex shrink-0 flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl 2xl:text-3xl">
+            {projectName}
+          </h1>
+          {categoryMeta && (
+            <span className="rounded-pill bg-primary px-3 py-1 text-[11px] font-bold text-primary-foreground">
+              {categoryMeta.label}
+            </span>
+          )}
+          {levelMeta && (
+            <span className="rounded-pill border border-border bg-surface px-3 py-1 text-[11px] font-bold text-foreground">
+              {levelMeta.label} · {kickoffPlanData?.summary?.keywords?.[0] ?? 'General'}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="size-8 p-0"
-            aria-label="Regenerate plan"
-            title="Regenerate plan"
+            className="2xl:h-10 2xl:px-5 2xl:text-sm"
+            onClick={handleGoBack}
+            disabled={disabled}
+          >
+            <ArrowLeft className="size-3.5" aria-hidden="true" />
+            Edit Inputs
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="2xl:h-10 2xl:px-5 2xl:text-sm"
             disabled={disabled}
             onClick={() => setIsRegenerateOpen(true)}
           >
-            <RotateCw className={cn('size-4', isGenerating && 'animate-spin')} />
+            <RotateCw
+              className={cn('size-3.5', isGenerating && 'animate-spin')}
+              aria-hidden="true"
+            />
+            Regenerate
           </Button>
         </div>
-        <AISummary summary={kickoffPlanData?.summary} isLoading={isAiRunLoading}></AISummary>
+      </header>
+
+      <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricCard
+          label="Milestones"
+          value={
+            droppedMilestoneCount > 0
+              ? `${keptMilestoneCount} / ${milestones.length} Stages`
+              : `${milestones.length} Stages`
+          }
+          icon={MilestoneIcon}
+          tone="bg-accent"
+        />
+        <MetricCard
+          label="Action Tasks"
+          value={`${selectedTaskCount} / ${totalTasks} Selected`}
+          icon={ListChecks}
+          tone="bg-primary"
+        />
+        <MetricCard
+          label="Grounded Sources"
+          value={`${sourceCount} References`}
+          icon={BookOpen}
+          tone="bg-accent-secondary"
+        />
+        <MetricCard
+          label="Estimated Scope"
+          value={totalTime ?? 'No estimates'}
+          icon={Clock}
+          tone="bg-accent-tertiary-soft"
+        />
       </div>
-      <div className="flex flex-col gap-3">
-        <h2 className="font-semibold text-gray-400">Milestones & Tasks</h2>
-        <KickoffPlanList
-          milestones={kickoffPlanData?.milestones}
-          isLoading={isAiRunLoading}
-        ></KickoffPlanList>
-        <ProjectResearchSources sources={projectResearch?.sources} isLoading={isResearchLoading} />
-        <p className="px-1 text-xs text-muted-foreground">
-          Want more sources? You can generate more after creating the project.
-        </p>
+
+      {/* Only the plan body scrolls — header, metrics, and the action bar stay put. */}
+      <div className="no-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto pr-1 xl:overflow-hidden">
+        <div className="grid grid-cols-1 gap-4 xl:h-full xl:min-h-0 xl:grid-cols-[3fr_2fr] xl:items-stretch">
+          <KickoffPlanList
+            milestones={milestones}
+            isLoading={isAiRunLoading}
+            sequenceLabel={sequenceLabel}
+            onExcludedChange={setExcludedTaskKeys}
+            className="min-w-0 xl:h-full"
+          />
+
+          <div className="flex min-w-0 flex-col gap-4 rounded-card border border-border bg-surface p-5 xl:h-full xl:min-h-0">
+            <Tabs defaultValue="summary" className="flex min-h-0 flex-1 flex-col gap-0">
+              <TabsList className="grid h-auto w-full shrink-0 grid-cols-2 rounded-pill bg-surface-secondary p-1">
+                <TabsTrigger
+                  value="summary"
+                  className="rounded-pill py-2 text-xs font-bold data-[state=active]:bg-action data-[state=active]:text-action-foreground data-[state=active]:shadow-none"
+                >
+                  Summary &amp; Topics ({kickoffPlanData?.summary.keyTopics.length ?? 0})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="sources"
+                  className="rounded-pill py-2 text-xs font-bold data-[state=active]:bg-action data-[state=active]:text-action-foreground data-[state=active]:shadow-none"
+                >
+                  Grounded Sources ({sourceCount})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent
+                value="summary"
+                className="no-scrollbar mt-4 min-h-0 min-w-0 flex-1 overflow-y-auto xl:pr-1"
+              >
+                <AISummary summary={kickoffPlanData?.summary} isLoading={isAiRunLoading} />
+              </TabsContent>
+
+              <TabsContent
+                value="sources"
+                className="mt-4 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+              >
+                <ProjectResearchSources
+                  sources={projectResearch?.sources}
+                  isLoading={isResearchLoading}
+                  removingUrl={removalUrl}
+                  onRemoveSource={(source) => {
+                    if (!projectId) return;
+
+                    removeSource.mutate({ projectId, sourceUrl: source.url });
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
-      <div className="w-full flex justify-between">
-        <Button variant="outline" disabled={disabled} onClick={handleGoBack} className="border">
-          <ArrowLeft size={18}></ArrowLeft>
+
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-surface px-4 py-2 2xl:px-5 2xl:py-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="2xl:h-10 2xl:px-5 2xl:text-sm"
+          onClick={handleGoBack}
+          disabled={disabled}
+        >
+          <ArrowLeft className="size-3.5" aria-hidden="true" />
           Back
         </Button>
-        <Button disabled={disabled} onClick={handleCompleteOnboarding}>
-          Create workspace <ArrowRight size={18}></ArrowRight>
+
+        <p className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground md:flex 2xl:text-sm">
+          {droppedMilestoneCount > 0 ? (
+            <>
+              <TriangleAlert className="size-3.5 text-destructive" aria-hidden="true" />
+              Ready to create <span className="font-bold text-foreground">
+                {projectName}
+              </span> with {keptMilestoneCount} of {milestones.length} milestones,{' '}
+              {selectedTaskCount} tasks &amp; {sourceCount} sources — {droppedMilestoneCount} stage
+              {droppedMilestoneCount === 1 ? '' : 's'} excluded
+            </>
+          ) : (
+            <>
+              <CircleCheck className="size-3.5 text-success" aria-hidden="true" />
+              Ready to create <span className="font-bold text-foreground">
+                {projectName}
+              </span> with {milestones.length} milestones, {selectedTaskCount} tasks &amp;{' '}
+              {sourceCount} sources
+            </>
+          )}
+        </p>
+
+        <Button
+          size="sm"
+          className="2xl:h-10 2xl:px-5 2xl:text-sm"
+          onClick={handleCompleteOnboarding}
+          disabled={!canCreate}
+        >
+          Create workspace
+          <ArrowRight className="size-3.5" aria-hidden="true" />
         </Button>
       </div>
 

@@ -1,11 +1,12 @@
 'use client';
 
 import { useId, type ReactNode } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-export type StepStatusTone = 'ready' | 'accent' | 'muted';
+export type StepCardTone = 'action' | 'primary' | 'secondary' | 'accent';
+export type StepStatusTone = 'success' | 'primary' | 'secondary' | 'accent' | 'muted';
 
 type StepStatus = {
   label: string;
@@ -14,6 +15,7 @@ type StepStatus = {
 
 type StepCardProps = {
   index: number;
+  tone?: StepCardTone;
   title: string;
   description?: string;
   status?: StepStatus;
@@ -25,8 +27,17 @@ type StepCardProps = {
   className?: string;
 };
 
+const BADGE_TONES: Record<StepCardTone, string> = {
+  action: 'bg-action text-action-foreground',
+  primary: 'bg-primary-soft text-primary-foreground',
+  secondary: 'bg-accent-secondary-soft text-accent-secondary-foreground',
+  accent: 'bg-accent-soft text-accent-foreground',
+};
+
 const STATUS_TONES: Record<StepStatusTone, string> = {
-  ready: 'bg-primary-soft text-primary-foreground',
+  success: 'bg-success-soft text-success-foreground',
+  primary: 'bg-primary-soft text-primary-foreground',
+  secondary: 'bg-accent-secondary-soft text-accent-secondary-foreground',
   accent: 'bg-accent-soft text-accent-foreground',
   muted: 'bg-muted text-muted-foreground',
 };
@@ -34,27 +45,23 @@ const STATUS_TONES: Record<StepStatusTone, string> = {
 const StepCardStatus = ({ label, tone = 'muted' }: StepStatus) => (
   <span
     className={cn(
-      'inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-semibold',
+      'inline-flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-bold',
       STATUS_TONES[tone],
     )}
   >
-    {tone === 'ready' ? (
-      <Check className="size-3" aria-hidden="true" />
-    ) : (
-      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-    )}
+    {tone === 'success' && <CircleCheck className="size-3" aria-hidden="true" />}
     {label}
   </span>
 );
 
 /**
  * One card in the connected onboarding workflow. Collapsed by default; only the
- * current step is opened by the parent. `children` stay mounted while collapsed
- * (hidden from the tab order) so each step's form state and draft sync survive
- * a collapse.
+ * current step is opened by the parent. The body stays mounted and animates via
+ * a grid-rows slide, so form state and draft sync survive a collapse.
  */
 export const StepCard = ({
   index,
+  tone = 'primary',
   title,
   description,
   status,
@@ -70,8 +77,8 @@ export const StepCard = ({
   return (
     <section
       className={cn(
-        'flex min-w-0 flex-col rounded-card border border-border bg-surface p-5',
-        open ? 'shadow-xs' : 'shadow-none',
+        'relative flex min-w-0 flex-col rounded-card border bg-surface p-6 transition-colors',
+        open ? 'border-action/60 shadow-xs' : 'border-border shadow-none',
         disabled && 'opacity-60',
         className,
       )}
@@ -87,40 +94,40 @@ export const StepCard = ({
         <span
           className={cn(
             'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums',
-            open ? 'bg-action text-action-foreground' : 'bg-muted text-muted-foreground',
+            BADGE_TONES[tone],
           )}
         >
           {String(index + 1).padStart(2, '0')}
         </span>
 
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="text-base font-semibold text-foreground">{title}</span>
-            {status && <StepCardStatus {...status} />}
-          </span>
+          <span className="text-base font-bold text-foreground">{title}</span>
           {description && (
             <span className="text-xs leading-relaxed text-muted-foreground">{description}</span>
           )}
         </span>
 
-        <ChevronDown
-          className={cn(
-            'mt-1.5 size-4 shrink-0 text-muted-foreground transition-transform',
-            open && 'rotate-180',
-          )}
-          aria-hidden="true"
-        />
+        {status && <StepCardStatus {...status} />}
       </button>
 
-      <div id={contentId} hidden={!open} className="mt-5">
-        {children}
-      </div>
-
-      {open && footer && (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          {footer}
+      {/* Grid-rows animation slides the body open/closed while keeping it mounted,
+          so RHF state and the draft sync aren't torn down on collapse. */}
+      <div
+        id={contentId}
+        className={cn(
+          'grid transition-all duration-300 ease-out',
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+        )}
+      >
+        <div className="min-h-0 overflow-hidden" inert={!open}>
+          <div className="mt-5">{children}</div>
+          {footer && (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              {footer}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </section>
   );
 };

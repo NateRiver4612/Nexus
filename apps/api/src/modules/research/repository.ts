@@ -135,4 +135,22 @@ export const ResearchRepository = (db: Db) => ({
       .returning();
     return rows[0];
   },
+
+  async updateSources({
+    id,
+    sources,
+  }: {
+    id: string;
+    sources: ProjectResearch['sources'];
+  }): Promise<ProjectResearch | undefined> {
+    const rows = await db
+      .update(projectResearch)
+      .set({
+        sources,
+        updatedAt: new Date(),
+      })
+      .where(eq(projectResearch.id, id))
+      .returning();
+    return rows[0];
+  },
 });

@@ -113,6 +113,7 @@ import {
   researchBriefSchema,
   researchDigestSchema,
   startProjectResearchInputSchema,
+  removeResearchSourceInputSchema,
   projectResearchRunSchema,
   projectResearchListSchema,
   taskStatusSchema,
@@ -287,6 +288,7 @@ export type ResearchDigestType = z.infer<typeof researchDigestSchema>;
 export type ProjectResearchType = z.infer<typeof projectResearchSchema>;
 export type ProjectResearchListType = z.infer<typeof projectResearchListSchema>;
 export type StartProjectResearchInputType = z.infer<typeof startProjectResearchInputSchema>;
+export type RemoveResearchSourceInputType = z.infer<typeof removeResearchSourceInputSchema>;
 export type ProjectResearchRunType = z.infer<typeof projectResearchRunSchema>;
 
 /** The abstract research provider the kickoff research stage depends on, so the

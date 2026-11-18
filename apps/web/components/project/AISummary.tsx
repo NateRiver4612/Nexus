@@ -1,4 +1,8 @@
+'use client';
+
 import type { KickoffPlanType } from '@nexus/types';
+import type { ReactNode } from 'react';
+
 import Overview from '../Overview';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Skeleton } from '../ui/skeleton';
@@ -8,48 +12,28 @@ type AISummaryProps = {
   isLoading?: boolean;
 };
 
-function AccordionItemHeader({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex w-full items-start justify-between gap-3 pr-2">
-      <div className="flex min-w-0 items-start gap-3">
-        <div className="min-w-0">
-          <span className="block truncate text-sm font-semibold text-gray-900">{title}</span>
-          {/* {description && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{description}</p>} */}
-        </div>
-      </div>
-    </div>
-  );
-}
+const SectionLabel = ({ children }: { children: ReactNode }) => (
+  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{children}</p>
+);
 
 const AISummarySkeleton = () => {
   return (
-    <div className="rounded-lg border border-border bg-white p-4">
-      <div>
-        <h2 className="text-base font-semibold tracking-tight text-foreground">Overview</h2>
-        <div className="mt-1 space-y-1">
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-2/3" />
-        </div>
+    <div className="flex flex-col gap-5">
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-24 w-full rounded-item" />
       </div>
 
-      <div className="mt-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Key topics
-        </h3>
-        <div className="mt-2 space-y-2">
-          <Skeleton className="h-12 w-full rounded-lg" />
-          <Skeleton className="h-12 w-full rounded-lg" />
-        </div>
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-11 w-full rounded-item" />
+        <Skeleton className="h-11 w-full rounded-item" />
+        <Skeleton className="h-11 w-full rounded-item" />
       </div>
 
-      <div className="mt-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Highlights
-        </h3>
-        <div className="mt-2 space-y-1">
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-3/4" />
-        </div>
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-44" />
+        <Skeleton className="h-24 w-full rounded-item" />
       </div>
     </div>
   );
@@ -61,54 +45,55 @@ const AISummary = ({ summary, isLoading }: AISummaryProps) => {
   }
 
   return (
-    <div className=" rounded-lg border border-border bg-white p-4">
-      <Overview data={summary?.overview}></Overview>
+    <div className="flex flex-col gap-5">
+      <section className="flex flex-col gap-2">
+        <SectionLabel>Plan Overview</SectionLabel>
+        <div className="rounded-item bg-surface-secondary p-4">
+          <Overview data={summary.overview} showTitle={false} />
+        </div>
+      </section>
 
       {summary.keyTopics.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Key topics
-          </h3>
-
-          <Accordion
-            type="multiple"
-            className="rounded-xl my-3 border border-gray-200 bg-white shadow-sm"
-          >
+        <section className="flex flex-col gap-2">
+          <SectionLabel>Key Topics ({summary.keyTopics.length})</SectionLabel>
+          <Accordion type="multiple" className="gap-2">
             {summary.keyTopics.map((topic, index) => (
               <AccordionItem
-                className="border-b-0"
                 key={`${topic.topic}-${index}`}
                 value={`topic-${index}`}
+                className="rounded-item border border-border bg-surface px-4"
               >
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <AccordionItemHeader
-                    title={topic.topic}
-                    description={topic.description}
-                  ></AccordionItemHeader>
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <span className="min-w-0 flex-1 truncate text-xs font-bold text-foreground">
+                    {topic.topic}
+                  </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-sm px-4 pb-3 text-muted-foreground">
+                <AccordionContent className="pb-3 text-xs leading-relaxed text-muted-foreground">
                   {topic.description}
                 </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
-        </div>
+        </section>
       )}
 
       {summary.highlights.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Highlights
-          </h3>
-          <ul className="mt-2 space-y-1">
+        <section className="flex flex-col gap-2">
+          <SectionLabel>Architectural Highlights</SectionLabel>
+          <ul className="flex flex-col gap-2 rounded-item border border-accent/50 bg-accent-soft/50 p-4">
             {summary.highlights.map((highlight, index) => (
-              <li key={`${highlight}-${index}`} className="flex gap-2 text-sm">
-                <span className="select-none text-muted-foreground">–</span>
-                <span className="text-muted-foreground">{highlight}</span>
+              <li key={`${highlight}-${index}`} className="flex gap-2">
+                <span
+                  className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent-tertiary"
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1 text-xs font-medium leading-relaxed text-foreground">
+                  {highlight}
+                </span>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
     </div>
   );

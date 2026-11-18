@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIsRestoring, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Circle, CircleCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { OnboardingStateType } from '@nexus/types';
@@ -26,6 +26,7 @@ import { Step3 } from './Step3';
 import { Step4 } from './Step4';
 import { StepCard, type StepStatusTone } from './StepCard';
 import {
+  LEVEL_PACE,
   ONBOARDING_STEPS,
   getCategoryMeta,
   getLevelMeta,
@@ -123,14 +124,20 @@ export function Onboarding() {
 
   const stepStatuses: Record<OnboardingStepId, { label: string; tone: StepStatusTone }> = {
     identity: completion.identity
-      ? { label: 'Identity Ready', tone: 'ready' }
+      ? { label: 'Identity Ready', tone: 'success' }
       : { label: 'Add project details', tone: 'muted' },
     goal:
       levelMeta && milestones
-        ? { label: `${levelMeta.label} · ${milestones} Milestones`, tone: 'ready' }
+        ? {
+            label: `${levelMeta.label} · ${milestones} Milestones · ${LEVEL_PACE[levelMeta.value]}`,
+            tone: 'primary',
+          }
         : { label: 'Describe your goal', tone: 'muted' },
     sources: sourceCount
-      ? { label: `${sourceCount} source${sourceCount === 1 ? '' : 's'} attached`, tone: 'ready' }
+      ? {
+          label: `${sourceCount} source${sourceCount === 1 ? '' : 's'} attached`,
+          tone: 'secondary',
+        }
       : { label: 'No sources yet', tone: 'muted' },
     deliverables: deliverables.length
       ? { label: `${deliverables.length} selected`, tone: 'accent' }
@@ -264,7 +271,7 @@ export function Onboarding() {
     <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6">
       <header className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-pill bg-primary-soft px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-pill bg-accent-soft px-3 py-1 text-[11px] font-semibold text-accent-foreground">
             <Sparkles className="size-3.5" aria-hidden="true" />
             Connected Single-Screen Workflow
           </span>
@@ -272,7 +279,10 @@ export function Onboarding() {
             Configure your project in one continuous flow
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Fill in each step on the left — every change feeds your live AI plan on the right.
+            Follow the connected spine from{' '}
+            <span className="font-semibold text-foreground">01 Identity</span> down to{' '}
+            <span className="font-semibold text-foreground">04 Deliverables</span> — each step feeds
+            directly into your live AI plan on the right.
           </p>
         </div>
 
@@ -294,17 +304,15 @@ export function Onboarding() {
                       active
                         ? 'border-action bg-action text-action-foreground'
                         : done
-                          ? 'border-primary/40 bg-primary-soft text-primary-foreground hover:border-primary'
+                          ? 'border-success/40 bg-success-soft text-success-foreground hover:border-success'
                           : 'border-border bg-surface-secondary text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    <span
-                      className={cn(
-                        'size-1.5 rounded-full',
-                        active ? 'bg-accent' : done ? 'bg-primary' : 'bg-placeholder',
-                      )}
-                      aria-hidden="true"
-                    />
+                    {done ? (
+                      <CircleCheck className="size-3.5" aria-hidden="true" />
+                    ) : (
+                      <Circle className="size-3.5" aria-hidden="true" />
+                    )}
                     <span className="tabular-nums">{String(index + 1).padStart(2, '0')}</span>
                     {item.shortTitle}
                   </button>
@@ -315,7 +323,7 @@ export function Onboarding() {
               );
             })}
           </div>
-          <p className="text-xs font-medium text-muted-foreground">
+          <p className="text-xs font-semibold text-muted-foreground">
             Step {step + 1} of {STEP_COUNT} active · {completionPercent}% complete
           </p>
         </div>
@@ -328,7 +336,11 @@ export function Onboarding() {
       )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[3fr_2fr] xl:items-start">
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="relative isolate flex min-w-0 flex-col gap-4">
+          <span
+            aria-hidden="true"
+            className="absolute bottom-6 left-10 top-6 -z-10 w-px bg-border"
+          />
           {ONBOARDING_STEPS.map((item, index) => {
             const isLast = index === STEP_COUNT - 1;
             // Same rules each step's save enforces, kept live by its draft sync.
@@ -340,6 +352,7 @@ export function Onboarding() {
                 index={index}
                 title={item.title}
                 description={item.description}
+                tone={item.tone}
                 status={stepStatuses[item.id]}
                 open={index === step}
                 disabled={isBusy}
@@ -348,12 +361,13 @@ export function Onboarding() {
                 footer={
                   isLast ? (
                     <>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground">
                         All {STEP_COUNT} steps connect into your live blueprint.
                       </p>
                       <Button
                         type="button"
                         size="sm"
+                        className="font-bold"
                         disabled={!canGenerate}
                         isLoading={isGenerating || isSubmitting}
                         onClick={() => void handleFinish()}
@@ -366,14 +380,14 @@ export function Onboarding() {
                     </>
                   ) : (
                     <>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground">
                         {index === 0 && categoryMeta
-                          ? `Feeds ${categoryMeta.label} context into the next step.`
+                          ? `Feeds ${categoryMeta.label} domain lens into Step 02 & 03.`
                           : 'Continues your connected workflow.'}
                       </p>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         className={cn(
                           'font-semibold',
