@@ -331,6 +331,8 @@ export function Onboarding() {
         <div className="flex min-w-0 flex-col gap-4">
           {ONBOARDING_STEPS.map((item, index) => {
             const isLast = index === STEP_COUNT - 1;
+            // Same rules each step's save enforces, kept live by its draft sync.
+            const stepReady = completion[item.id];
 
             return (
               <StepCard
@@ -373,6 +375,10 @@ export function Onboarding() {
                         type="button"
                         variant="outline"
                         size="sm"
+                        className={cn(
+                          'font-semibold',
+                          stepReady && 'bg-accent text-action hover:bg-accent/90',
+                        )}
                         disabled={isBusy}
                         onClick={() => void goToStep(index + 1)}
                       >
