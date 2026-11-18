@@ -297,8 +297,8 @@
 
 /* Inline mappings make Tailwind utilities resolve runtime theme variables. */
 @theme inline {
-  --animate-accordion-down: accordion-down 0.5s ease-out;
-  --animate-accordion-up: accordion-up 0.5s ease-out;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-fade-in: fadeIn 500ms ease-out both;
 
   --font-sans:

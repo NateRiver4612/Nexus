@@ -74,16 +74,17 @@ export function Step1({ ref, defaults, onSave, onDraftChange }: Step1Props) {
   return (
     <FormProvider {...form}>
       <div className="space-y-6 text-left">
-        <FormInput name="name" label="Project name" placeholder="Market Research Report" />
+        <FormInput name="name" label="Project Name" placeholder="Market Research Report" />
         <FormTextArea
           name="description"
-          label="Project description"
-          description="Optional context — what this workspace is for."
+          label="Project Description"
+          labelHint="(optional context)"
           placeholder="Describe your project in a few sentences..."
         />
         <CardRadioGroup
           name="category"
           label="Category"
+          labelHint="Suggests technical specs, milestone timelines, and repo/doc sources."
           options={categoryOptions}
           otherValue="other"
           gridClassName="lg:grid-cols-3"

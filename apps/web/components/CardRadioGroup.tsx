@@ -30,6 +30,8 @@ type CardRadioGroupProps<TFieldValues extends FieldValues = FieldValues> = {
   otherValue?: string;
   customOptionIcon?: LucideIcon;
   label?: string;
+  /** Muted hint shown to the right of the label, e.g. category suggestions. */
+  labelHint?: string;
   onCreateOption?: (option: CardRadioOption) => void;
   layout?: 'row' | 'column';
   gridClassName?: string;
@@ -56,6 +58,7 @@ export const CardRadioGroup = ({
   options,
   className,
   label,
+  labelHint,
   disabled,
   otherValue = 'other',
   customOptionIcon,
@@ -139,7 +142,14 @@ export const CardRadioGroup = ({
 
         return (
           <div className={cn('flex flex-col gap-3', className)}>
-            {label && <FormLabel>{label}</FormLabel>}
+            {(label || labelHint) && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {label && <FormLabel>{label}</FormLabel>}
+                {labelHint && (
+                  <span className="text-[11px] font-medium text-muted-foreground">{labelHint}</span>
+                )}
+              </div>
+            )}
             <div
               ref={groupRef}
               role="radiogroup"
@@ -261,7 +271,7 @@ export const CardRadioGroup = ({
                       <span
                         className={cn(
                           'mt-auto text-[11px] font-semibold',
-                          isSelected ? 'text-action-foreground' : 'text-muted-foreground',
+                          isSelected ? 'text-accent' : 'text-muted-foreground',
                         )}
                       >
                         {option.meta}

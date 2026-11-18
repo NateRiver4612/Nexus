@@ -14,6 +14,7 @@ import { getProjectResearchRoute } from '../../research/routes/getProjectResearc
 import { getProjectResearchHistoryRoute } from '../../research/routes/getProjectResearchHistory';
 import { startProjectResearchRoute } from '../../research/routes/startProjectResearch';
 import { getActiveResearchRoute } from '../../research/routes/getActiveResearch';
+import { removeResearchSourceRoute } from '../../research/routes/removeResearchSource';
 import { getProjectsRoute } from './getProjects';
 import { removeDeliverableRoute } from './removeDeliverable';
 import { submitProjectOnboardingRoute } from './submitOnboarding';
@@ -50,6 +51,7 @@ export function projectRoutes() {
     },
     { route: startProjectResearchRoute.route, handler: startProjectResearchRoute.handler },
     { route: getActiveResearchRoute.route, handler: getActiveResearchRoute.handler },
+    { route: removeResearchSourceRoute.route, handler: removeResearchSourceRoute.handler },
     {
       route: updateProjectMilestonePositionsRoute.route,
       handler: updateProjectMilestonePositionsRoute.handler,

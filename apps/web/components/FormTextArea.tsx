@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useFormContext, type FieldValues, type FieldPath } from 'react-hook-form';
 import { Textarea } from './ui/textarea';
 import {
@@ -18,6 +19,8 @@ type FormTextAreaProps<
 > = {
   name: TName;
   label?: string;
+  /** Muted inline suffix on the label, e.g. "(optional context)". */
+  labelHint?: ReactNode;
   description?: string;
   placeholder?: string;
   rows?: number;
@@ -32,6 +35,7 @@ export function FormTextArea<
 >({
   name,
   label,
+  labelHint,
   description,
   placeholder,
   rows = 4,
@@ -49,8 +53,15 @@ export function FormTextArea<
         const length = typeof field.value === 'string' ? field.value.length : 0;
 
         return (
-          <FormItem className={cn('flex flex-col gap-3', className)}>
-            {label && <FormLabel>{label}</FormLabel>}
+          <FormItem className={cn('flex flex-col gap-1', className)}>
+            {label && (
+              <FormLabel>
+                {label}
+                {labelHint && (
+                  <span className="font-normal text-muted-foreground">{labelHint}</span>
+                )}
+              </FormLabel>
+            )}
             <FormControl>
               <Textarea
                 {...field}

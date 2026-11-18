@@ -4,7 +4,7 @@ import { kickoffSummarySchema, researchDigestSchema } from '@nexus/zod-schemas';
 
 import { env } from '../../env';
 import { modelForTask } from '../../lib/client';
-import { ConflictError, ensure, ValidationError } from '../../errors';
+import { ConflictError, ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
 import { OnboardingRepository } from '../onboarding/repository';
 import { enqueueResearch } from './queues';
 import { ResearchRepository } from './repository';
@@ -127,7 +127,29 @@ export function ResearchService(db: Db) {
     return { runId: aiRun.id };
   }
 
-  return { getLatest, getActive, start, list };
+  /** Removes a source URL from the latest research row for the project. */
+  async function removeSource({
+    projectId,
+    sourceUrl,
+  }: {
+    projectId: string;
+    sourceUrl: string;
+  }): Promise<ProjectResearchType> {
+    const row = ensureExists(
+      await repository.getLatestByProjectId(projectId),
+      NotFoundError('Research not found'),
+    );
+
+    const nextSources = (row.sources ?? []).filter((source) => source.url !== sourceUrl);
+    const updated = ensureExists(
+      await repository.updateSources({ id: row.id, sources: nextSources }),
+      NotFoundError('Research not found'),
+    );
+
+    return toProjectResearchView(updated);
+  }
+
+  return { getLatest, getActive, start, list, removeSource };
 }
 
 export type ResearchServiceType = ReturnType<typeof ResearchService>;

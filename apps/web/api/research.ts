@@ -2,6 +2,7 @@ import type {
   ProjectResearchListType,
   ProjectResearchRunType,
   ProjectResearchType,
+  RemoveResearchSourceInputType,
   StartProjectResearchInputType,
 } from '@nexus/types';
 
@@ -39,4 +40,16 @@ export async function startProjectResearch(
       json: input,
     }),
   )) as ProjectResearchRunType;
+}
+
+export async function removeProjectResearchSource(
+  projectId: string,
+  input: RemoveResearchSourceInputType,
+): Promise<ProjectResearchType> {
+  return (await handleResponse(
+    await apiClient.api.v1.projects[':projectId'].research.sources.$delete({
+      param: { projectId },
+      json: input,
+    }),
+  )) as ProjectResearchType;
 }

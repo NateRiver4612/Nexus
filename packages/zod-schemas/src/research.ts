@@ -191,3 +191,13 @@ export const projectResearchRunSchema = z
 export const projectResearchRunResponseSchema = projectResearchRunSchema
   .nullable()
   .openapi('ProjectResearchRunResponse');
+
+/** Body for removing a single source URL from a project's research. */
+export const removeResearchSourceInputSchema = z
+  .object({
+    sourceUrl: z
+      .string()
+      .min(1)
+      .openapi({ example: 'https://docs.docker.com/build/building/multi-stage/' }),
+  })
+  .openapi('RemoveResearchSourceInput');

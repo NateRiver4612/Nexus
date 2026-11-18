@@ -7,6 +7,7 @@ import { DEFAULT_ONBOARDING_CATEGORIES, ONBOARDING_LEVELS } from '@nexus/zod-sch
 export const ONBOARDING_STEPS = [
   {
     id: 'identity',
+    tone: 'action',
     title: 'Project Identity & Category',
     shortTitle: 'Identity & Category',
     description: 'Give your workspace a clear name, context summary, and domain lens.',
@@ -14,6 +15,7 @@ export const ONBOARDING_STEPS = [
   },
   {
     id: 'goal',
+    tone: 'primary',
     title: 'Goal, Background & Starting Track',
     shortTitle: 'Goal & Track',
     description: 'Share your experience level so Nexus calibrates milestone depth and pace.',
@@ -21,6 +23,7 @@ export const ONBOARDING_STEPS = [
   },
   {
     id: 'sources',
+    tone: 'secondary',
     title: 'Knowledge Sources & Context',
     shortTitle: 'Knowledge Sources',
     description: 'Attach courses, docs, or repositories so Nexus grounds every milestone.',
@@ -28,6 +31,7 @@ export const ONBOARDING_STEPS = [
   },
   {
     id: 'deliverables',
+    tone: 'accent',
     title: 'Target Deliverables & Outputs',
     shortTitle: 'Deliverables',
     description: 'Select the artifacts Nexus should scaffold and keep updated as you progress.',
