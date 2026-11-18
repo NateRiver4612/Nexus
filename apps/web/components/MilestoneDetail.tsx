@@ -1,7 +1,7 @@
 'use client';
 
 import type { KickoffPlanType } from '@nexus/types';
-import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, TriangleAlert } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 import { cn, formatTimeMinutes, totalEstimatedMinutes } from '@/lib/utils';
@@ -145,6 +145,7 @@ export const MilestoneDetail = ({
   className,
 }: MilestoneDetailProps) => {
   const duration = formatTimeMinutes(totalEstimatedMinutes(milestone.tasks));
+  const noneSelected = milestone.tasks.every((_, taskIndex) => !isSelected(taskIndex));
 
   return (
     <div className={cn('flex min-h-0 flex-col', className)}>
@@ -174,6 +175,15 @@ export const MilestoneDetail = ({
             </p>
           )}
         </div>
+      )}
+
+      {noneSelected && (
+        <p className="mt-4 flex items-start gap-2 rounded-control bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          <span>
+            Every task is excluded — this milestone will be removed from the created plan.
+          </span>
+        </p>
       )}
 
       <div

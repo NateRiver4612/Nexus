@@ -1,7 +1,7 @@
 'use client';
 
 import type { KickoffPlanType } from '@nexus/types';
-import { ArrowLeft, ArrowRight, Maximize2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Maximize2, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 
 import { cn, formatTimeMinutes, totalEstimatedMinutes } from '@/lib/utils';
@@ -61,17 +61,20 @@ const MilestonePill = ({
   const duration = formatTimeMinutes(totalEstimatedMinutes(milestone.tasks));
   const total = milestone.tasks.length;
   const tone = MILESTONE_TONES[index % MILESTONE_TONES.length] ?? MILESTONE_TONES[0];
+  const willBeRemoved = selectedCount === 0;
 
   return (
     <button
       type="button"
       aria-pressed={active}
+      aria-label={willBeRemoved ? `${milestone.title} — will be removed` : undefined}
       onClick={onClick}
       className={cn(
         'flex min-w-0 cursor-pointer flex-col gap-2 rounded-item border p-3 text-left transition-all',
         active
           ? 'border-action bg-action text-action-foreground shadow-sm'
           : 'border-border bg-surface text-foreground hover:border-foreground/20 hover:shadow-xs',
+        willBeRemoved && !active && 'border-destructive/40 bg-destructive/5',
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -96,7 +99,14 @@ const MilestonePill = ({
       </div>
 
       <div className="min-w-0">
-        <p className="truncate text-xs font-bold leading-snug">{milestone.title}</p>
+        <p
+          className={cn(
+            'truncate text-xs font-bold leading-snug',
+            willBeRemoved && 'text-muted-foreground line-through',
+          )}
+        >
+          {milestone.title}
+        </p>
         <p
           className={cn(
             'mt-0.5 text-[11px] font-semibold tabular-nums',
@@ -105,6 +115,19 @@ const MilestonePill = ({
         >
           {selectedCount}/{total} tasks
         </p>
+        {willBeRemoved && (
+          <span
+            className={cn(
+              'mt-1.5 inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[10px] font-bold',
+              active
+                ? 'bg-destructive text-destructive-foreground'
+                : 'bg-destructive/10 text-destructive',
+            )}
+          >
+            <TriangleAlert className="size-3" aria-hidden="true" />
+            Will be removed
+          </span>
+        )}
       </div>
     </button>
   );
@@ -150,6 +173,10 @@ export const KickoffPlanList = ({
 
   const isSelected = (milestoneIndex: number, taskIndex: number) =>
     !excluded.has(kickoffTaskKey({ milestoneIndex, taskIndex }));
+
+  // One predicate for both the pill count and the "will be removed" state.
+  const selectedCountFor = (milestoneIndex: number, milestone: Milestone) =>
+    milestone.tasks.filter((_, taskIndex) => isSelected(milestoneIndex, taskIndex)).length;
 
   const toggleTask = (key: string) => {
     const next = new Set(excluded);
@@ -199,9 +226,7 @@ export const KickoffPlanList = ({
               index={index}
               milestone={milestone}
               active={index === activeIndex}
-              selectedCount={
-                milestone.tasks.filter((_, taskIndex) => isSelected(index, taskIndex)).length
-              }
+              selectedCount={selectedCountFor(index, milestone)}
               onClick={() => setActiveIndex(index)}
             />
           ))}

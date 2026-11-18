@@ -244,9 +244,18 @@ export default function Page() {
 
   const milestones = kickoffPlanData?.milestones ?? [];
   const totalTasks = milestones.reduce((total, milestone) => total + milestone.tasks.length, 0);
-  const selectedTaskCount = Math.max(0, totalTasks - excludedTaskKeys.size);
+  // Shape the plan the same way it will be submitted, so these counts can't drift.
+  const selectedMilestones = kickoffPlanData ? buildSelectedPlan(kickoffPlanData).milestones : [];
+  const keptMilestoneCount = selectedMilestones.length;
+  const droppedMilestoneCount = milestones.length - keptMilestoneCount;
+  const selectedTaskCount = selectedMilestones.reduce(
+    (total, milestone) => total + milestone.tasks.length,
+    0,
+  );
   const sourceCount = projectResearch?.sources.length ?? 0;
-  const totalMinutes = totalEstimatedMinutes(milestones.flatMap((milestone) => milestone.tasks));
+  const totalMinutes = totalEstimatedMinutes(
+    selectedMilestones.flatMap((milestone) => milestone.tasks),
+  );
   const totalTime = formatTimeMinutes(totalMinutes);
   const canCreate = selectedTaskCount > 0 && !disabled;
 
@@ -301,7 +310,11 @@ export default function Page() {
       <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard
           label="Milestones"
-          value={`${milestones.length} Stages`}
+          value={
+            droppedMilestoneCount > 0
+              ? `${keptMilestoneCount} / ${milestones.length} Stages`
+              : `${milestones.length} Stages`
+          }
           icon={MilestoneIcon}
           tone="bg-accent"
         />
@@ -392,10 +405,25 @@ export default function Page() {
           Back
         </Button>
 
-        <p className="hidden items-center gap-1.5 text-xs 2xl:text-sm font-medium text-muted-foreground md:flex">
-          <CircleCheck className="size-3.5 text-success" aria-hidden="true" />
-          Ready to create <span className="font-bold text-foreground">{projectName}</span> with{' '}
-          {milestones.length} milestones, {selectedTaskCount} tasks &amp; {sourceCount} sources
+        <p className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground md:flex 2xl:text-sm">
+          {droppedMilestoneCount > 0 ? (
+            <>
+              <TriangleAlert className="size-3.5 text-destructive" aria-hidden="true" />
+              Ready to create <span className="font-bold text-foreground">
+                {projectName}
+              </span> with {keptMilestoneCount} of {milestones.length} milestones,{' '}
+              {selectedTaskCount} tasks &amp; {sourceCount} sources — {droppedMilestoneCount} stage
+              {droppedMilestoneCount === 1 ? '' : 's'} excluded
+            </>
+          ) : (
+            <>
+              <CircleCheck className="size-3.5 text-success" aria-hidden="true" />
+              Ready to create <span className="font-bold text-foreground">
+                {projectName}
+              </span> with {milestones.length} milestones, {selectedTaskCount} tasks &amp;{' '}
+              {sourceCount} sources
+            </>
+          )}
         </p>
 
         <Button
