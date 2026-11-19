@@ -8,7 +8,7 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from 'react';
-import type { ChatArtifactType } from '@nexus/types';
+import type { ArtifactRefType, ChatAttachmentType } from '@nexus/types';
 import { Paperclip, SendHorizontal, Square } from 'lucide-react';
 import { fileSchema } from '@nexus/zod-schemas';
 
@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useGetMessages, useSendMessage, useUploadAttachment } from '@/hooks/useAi';
 import { deleteAttachment } from '@/api/attachments';
 import { ChatMessage, artifactsOf, attachmentsOf, citationsOf } from './ChatMessage';
+import { ChatAttachmentDialog, type ChatAttachmentTarget } from './ChatAttachmentDialog';
 import { ChatAttachmentCardSkeleton, ChatAttachmentChip } from './ChatAttachmentChip';
 
 const ACCEPTED_EXTENSIONS =
@@ -44,7 +45,7 @@ export function ChatPanel({
   projectId: string;
   conversationId: string;
   /** Opens the artifact panel (both on card click and when the assistant saves one). */
-  onOpenArtifact?: (artifact: ChatArtifactType) => void;
+  onOpenArtifact?: (artifact: ArtifactRefType) => void;
 }) {
   const { data, isLoading } = useGetMessages({
     variables: { conversationId },
@@ -59,6 +60,7 @@ export function ChatPanel({
   const [draft, setDraft] = useState('');
   const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<ChatAttachmentTarget | null>(null);
 
   // Follow the stream, but only while the user is already at the bottom.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -79,6 +81,10 @@ export function ChatPanel({
         attachment.key === key ? { ...attachment, ...patch } : attachment,
       ),
     );
+
+  // The dialog needs the thread id, which sent-message metadata doesn't carry.
+  const openSentAttachment = (attachment: ChatAttachmentType) =>
+    setPreviewAttachment({ conversationId, ...attachment });
 
   const removeAttachment = (attachment: DraftAttachment) => {
     setAttachments((current) => current.filter((entry) => entry.key !== attachment.key));
@@ -217,21 +223,30 @@ export function ChatPanel({
               key={message.id}
               role={message.role}
               content={message.content}
+              conversationId={conversationId}
               partial={message.metadata?.partial === true}
               attachments={attachmentsOf(message.metadata)}
               sources={citationsOf(message.metadata)}
               artifacts={artifactsOf(message.metadata)}
               onOpenArtifact={onOpenArtifact}
+              onOpenAttachment={openSentAttachment}
             />
           ))
         )}
 
         {pending && (
           <>
-            <ChatMessage role="user" content={pending.content} attachments={pending.attachments} />
+            <ChatMessage
+              role="user"
+              content={pending.content}
+              conversationId={conversationId}
+              attachments={pending.attachments}
+              onOpenAttachment={openSentAttachment}
+            />
             <ChatMessage
               role="assistant"
               content={pending.text}
+              conversationId={conversationId}
               sources={pending.sources}
               artifacts={pending.artifacts}
               creatingArtifact={pending.creatingArtifact}
@@ -252,21 +267,40 @@ export function ChatPanel({
       <div className="border-t border-border p-3">
         {attachments.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
-            {attachments.map((attachment) =>
-              attachment.status === 'uploading' ? (
-                <ChatAttachmentCardSkeleton key={attachment.key} />
-              ) : (
+            {attachments.map((attachment) => {
+              if (attachment.status === 'uploading') {
+                return <ChatAttachmentCardSkeleton key={attachment.key} />;
+              }
+
+              const attachmentId = attachment.attachmentId;
+              const canPreview = attachment.status === 'ready' && attachmentId !== undefined;
+
+              return (
                 <ChatAttachmentChip
                   key={attachment.key}
+                  conversationId={conversationId}
+                  attachmentId={attachmentId}
                   name={attachment.name}
                   mimeType={attachment.mimeType}
                   size={attachment.size}
                   status={attachment.status}
                   errorMessage={attachment.errorMessage}
+                  onOpen={
+                    canPreview
+                      ? () =>
+                          setPreviewAttachment({
+                            conversationId,
+                            id: attachmentId,
+                            name: attachment.name,
+                            mimeType: attachment.mimeType,
+                            size: attachment.size,
+                          })
+                      : undefined
+                  }
                   onRemove={() => removeAttachment(attachment)}
                 />
-              ),
-            )}
+              );
+            })}
           </div>
         )}
 
@@ -321,6 +355,11 @@ export function ChatPanel({
           onChange={onFileChange}
         />
       </div>
+
+      <ChatAttachmentDialog
+        attachment={previewAttachment}
+        onClose={() => setPreviewAttachment(null)}
+      />
     </div>
   );
 }

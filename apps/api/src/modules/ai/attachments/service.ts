@@ -11,7 +11,13 @@ import {
   NotFoundError,
   ValidationError,
 } from '../../../errors';
-import { deleteObject, getObjectSize, presignGetUrl, presignPutUrl } from '../../../storage';
+import {
+  deleteObject,
+  getObject,
+  getObjectSize,
+  presignGetUrl,
+  presignPutUrl,
+} from '../../../storage';
 import {
   extractAudioFromBuffer,
   extractFromBuffer,
@@ -192,6 +198,25 @@ export function AttachmentService(db: Db) {
   }
 
   /**
+   * Raw bytes for an in-app preview. Kept separate from `getDownloadUrl`: previews fetch through
+   * the authenticated API (no S3 CORS), while downloads use a presigned URL.
+   */
+  async function getFile({
+    conversationId,
+    attachmentId,
+    userId,
+  }: {
+    conversationId: string;
+    attachmentId: string;
+    userId: string;
+  }) {
+    const attachment = await requireOwned({ conversationId, attachmentId, userId });
+    const object = await getObject(attachment.storageKey);
+
+    return { body: object.body, mimeType: attachment.mimeType, name: attachment.name };
+  }
+
+  /**
    * Loads the attachments for a send and rejects anything that isn't ready, isn't in this
    * conversation/user's scope, or is already attached to a message. Returns the full rows so
    * the caller can build the inline context from `extractedText`.
@@ -271,6 +296,7 @@ export function AttachmentService(db: Db) {
     confirm,
     remove,
     getDownloadUrl,
+    getFile,
     listReadyForSend,
     getCharCounts,
     findByName,

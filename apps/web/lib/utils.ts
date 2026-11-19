@@ -51,6 +51,18 @@ export function downloadTextFile({
   URL.revokeObjectURL(url);
 }
 
+/** Triggers a browser download for fetched binary bytes. Client-only. */
+export function downloadBlob({ filename, blob }: { filename: string; blob: Blob }) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 const ARTIFACT_EXTENSION: Record<string, string> = {
   'text/markdown': '.md',
   'text/vnd.mermaid': '.mmd',
@@ -70,4 +82,43 @@ export function isAudioFile(file: File) {
   // Some browsers report an empty type for .m4a/.flac; fall back to the extension.
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   return AUDIO_EXTENSIONS.includes(ext) && !file.type.startsWith('video/');
+}
+
+/** MIME predicates used to pick a preview renderer. Keep them permissive — browsers vary. */
+export function isTextLikeMime(mimeType: string) {
+  const mime = mimeType.toLowerCase();
+  return (
+    // mime.startsWith('text/') ||
+    mime === 'application/json' || mime === 'application/xml' || mime === 'application/javascript'
+  );
+}
+
+export function isImageMime(mimeType: string) {
+  return mimeType.startsWith('image/');
+}
+
+export function isAudioMime(mimeType: string) {
+  return mimeType.startsWith('audio/');
+}
+
+export function isVideoMime(mimeType: string) {
+  return mimeType.startsWith('video/');
+}
+
+export function isPdfMime(mimeType: string) {
+  return mimeType === 'application/pdf';
+}
+
+export function isDocxMime(mimeType: string) {
+  return mimeType.includes('wordprocessingml.document');
+}
+
+export function isSpreadsheetMime(mimeType: string) {
+  return (
+    mimeType.includes('spreadsheetml.sheet') ||
+    mimeType === 'text/csv' ||
+    mimeType === 'application/csv' ||
+    mimeType === 'application/vnd.ms-excel' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
 }

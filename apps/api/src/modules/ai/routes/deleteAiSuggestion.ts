@@ -5,7 +5,7 @@ import { errorResponseSchema, idParamsSchema, okSchema } from '@nexus/zod-schema
 export const deleteAiSuggestionRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'delete',
-    path: '/suggestions/items/{id}',
+    path: '/suggestions/{id}',
     request: {
       params: idParamsSchema,
     },

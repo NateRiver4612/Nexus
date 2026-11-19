@@ -6,7 +6,7 @@ import type {
   OkType,
 } from '@nexus/types';
 
-import { apiClient, handleResponse } from '@/lib/client';
+import { apiClient, fetchArrayBuffer, handleResponse } from '@/lib/client';
 
 export async function createAttachmentUploadUrl(
   conversationId: string,
@@ -57,4 +57,14 @@ export async function getAttachmentDownloadUrl(
       param: { conversationId, attachmentId },
     }),
   )) as AttachmentDownloadUrlType;
+}
+
+/** Raw bytes for an in-app preview; downloads use the presigned URL endpoint instead. */
+export async function getAttachmentFile(
+  conversationId: string,
+  attachmentId: string,
+): Promise<ArrayBuffer> {
+  return fetchArrayBuffer(
+    `/api/v1/ai/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}/file`,
+  );
 }

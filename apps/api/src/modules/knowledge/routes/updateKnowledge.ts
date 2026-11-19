@@ -14,7 +14,7 @@ import { bearerSecurity } from '../../../openapi';
 export const updateKnowledgeRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
-    path: '/items/{id}',
+    path: '/{id}',
     security: bearerSecurity,
     request: {
       params: idParamsSchema,

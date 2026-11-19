@@ -11,6 +11,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
+import { conversationAttachments } from './attachments';
 import { idColumn, timestamps } from './columns';
 import { conversations } from './conversations';
 import { projects } from './projects';
@@ -26,6 +27,11 @@ export const artifactType = pgEnum('artifact_type', [
   'diagram',
   'study_guide',
   'code',
+  // Non-generated files sent through chat and stored as artifacts.
+  'image',
+  'audio',
+  'video',
+  'file',
 ]);
 
 export const artifactStatus = pgEnum('artifact_status', [
@@ -76,6 +82,12 @@ export const artifactVersions = pgTable(
       .references(() => artifacts.id, { onDelete: 'cascade' }),
     version: integer('version').notNull().default(1),
     storageKey: text('storage_key').notNull(),
+    // Set when the bytes are borrowed from a chat attachment instead of owned by the artifact.
+    // Such objects are deleted with the conversation, never when the artifact alone is removed.
+    sourceAttachmentId: uuid('source_attachment_id').references(
+      () => conversationAttachments.id,
+      { onDelete: 'set null' },
+    ),
     mimeType: varchar('mime_type', { length: 128 }).notNull(),
     size: bigint('size', { mode: 'number' }).notNull().default(0),
     sources: jsonb('sources').$type<ArtifactSource[]>().notNull().default([]),

@@ -1,4 +1,5 @@
 import type {
+  ArtifactRefType,
   ChatArtifactType,
   ChatAttachmentType,
   ChatCitationType,
@@ -18,6 +19,8 @@ import { Markdown } from './Markdown';
 type ChatMessageProps = {
   role: MessageType['role'];
   content: string;
+  /** Thread the message belongs to; chat file previews are scoped to it. */
+  conversationId: string;
   /** The reply was cut short (the user stopped it, or the provider failed mid-stream). */
   partial?: boolean;
   isStreaming?: boolean;
@@ -26,7 +29,9 @@ type ChatMessageProps = {
   artifacts?: ChatArtifactType[];
   /** `create_artifact` is running — show a skeleton card in its place. */
   creatingArtifact?: boolean;
-  onOpenArtifact?: (artifact: ChatArtifactType) => void;
+  onOpenArtifact?: (artifact: ArtifactRefType) => void;
+  /** Opens the attachment detail dialog. */
+  onOpenAttachment?: (attachment: ChatAttachmentType) => void;
   /** The tool running right now, shown while the reply is still being produced. */
   activity?: string | null;
 };
@@ -52,11 +57,13 @@ export function attachmentsOf(metadata: MessageType['metadata']): ChatAttachment
 export function ChatMessage({
   role,
   content,
+  conversationId,
   partial,
   attachments,
   artifacts,
   creatingArtifact,
   onOpenArtifact,
+  onOpenAttachment,
   isStreaming,
   sources,
   activity,
@@ -70,9 +77,14 @@ export function ChatMessage({
               {attachments.map((attachment) => (
                 <ChatAttachmentChip
                   key={attachment.id}
+                  conversationId={conversationId}
+                  attachmentId={attachment.id}
                   name={attachment.name}
                   mimeType={attachment.mimeType}
                   size={attachment.size}
+                  onOpen={
+                    onOpenAttachment ? () => onOpenAttachment(attachment) : undefined
+                  }
                 />
               ))}
             </div>

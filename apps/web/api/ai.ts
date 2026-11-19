@@ -51,13 +51,13 @@ export async function updateAiSuggestion(
   input: UpdateAiSuggestionInputType,
 ): Promise<AiSuggestionType> {
   return (await handleResponse(
-    await apiClient.api.v1.ai.suggestions.items[':id'].$patch({ param: { id }, json: input }),
+    await apiClient.api.v1.ai.suggestions[':id'].$patch({ param: { id }, json: input }),
   )) as AiSuggestionType;
 }
 
 export async function deleteAiSuggestion(id: string): Promise<OkType> {
   return (await handleResponse(
-    await apiClient.api.v1.ai.suggestions.items[':id'].$delete({ param: { id } }),
+    await apiClient.api.v1.ai.suggestions[':id'].$delete({ param: { id } }),
   )) as OkType;
 }
 

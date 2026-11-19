@@ -1,33 +1,69 @@
 'use client';
 
 import { useState } from 'react';
-import type { ChatArtifactType } from '@nexus/types';
-import { Code, Download, FileText, Loader2, Workflow } from 'lucide-react';
+import type { ArtifactRefType } from '@nexus/types';
+import {
+  Code,
+  Download,
+  File,
+  FileText,
+  Image,
+  Loader2,
+  Music,
+  Presentation,
+  Table,
+  Video,
+  Workflow,
+  type LucideIcon,
+} from 'lucide-react';
 
-import { getArtifactContent } from '@/api/artifacts';
+import { getArtifactDownloadUrl } from '@/api/artifacts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { artifactFilename, cn, downloadTextFile } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
-export const ARTIFACT_TYPE_LABELS: Record<ChatArtifactType['type'], string> = {
+export const ARTIFACT_TYPE_LABELS: Record<ArtifactRefType['type'], string> = {
   report: 'Report',
   proposal: 'Proposal',
   document: 'Document',
   study_guide: 'Study guide',
   diagram: 'Diagram',
   code: 'Code',
+  spreadsheet: 'Spreadsheet',
+  presentation: 'Presentation',
+  pdf: 'PDF',
+  image: 'Image',
+  audio: 'Audio',
+  video: 'Video',
+  file: 'File',
+};
+
+const ARTIFACT_TYPE_ICONS: Record<ArtifactRefType['type'], LucideIcon> = {
+  report: FileText,
+  proposal: FileText,
+  document: FileText,
+  study_guide: FileText,
+  diagram: Workflow,
+  code: Code,
+  spreadsheet: Table,
+  presentation: Presentation,
+  pdf: FileText,
+  image: Image,
+  audio: Music,
+  video: Video,
+  file: File,
 };
 
 /** `.md`/`.mmd` filenames decide the label/icon, even if the model saved a different `type`. */
-export function displayArtifactType({ name, type }: ChatArtifactType): ChatArtifactType['type'] {
+export function displayArtifactType({ name, type }: ArtifactRefType): ArtifactRefType['type'] {
   if (/\.(mmd|mermaid)$/i.test(name)) return 'diagram';
   if (/\.(md|markdown)$/i.test(name)) return 'document';
   return type;
 }
 
-type ArtifactTypeIconProps = { type: ChatArtifactType['type']; className?: string };
+type ArtifactTypeIconProps = { type: ArtifactRefType['type']; className?: string };
 
 export const ArtifactTypeIcon = ({ type, className }: ArtifactTypeIconProps) => {
-  const Icon = type === 'diagram' ? Workflow : type === 'code' ? Code : FileText;
+  const Icon = ARTIFACT_TYPE_ICONS[type];
   return <Icon className={className} />;
 };
 
@@ -43,25 +79,27 @@ export const ArtifactCardSkeleton = () => (
 );
 
 type ArtifactCardProps = {
-  artifact: ChatArtifactType;
-  onOpen?: (artifact: ChatArtifactType) => void;
+  artifact: ArtifactRefType;
+  onOpen?: (artifact: ArtifactRefType) => void;
 };
 
 export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
   const [downloading, setDownloading] = useState(false);
   const displayType = displayArtifactType(artifact);
 
-  // Fetched on demand — rendering a card shouldn't load every artifact's content.
+  // Presigned URL on demand — rendering a card shouldn't load every artifact's bytes.
   const download = async () => {
     if (downloading) return;
     setDownloading(true);
     try {
-      const data = await getArtifactContent({ id: artifact.id, version: artifact.version });
-      downloadTextFile({
-        filename: artifactFilename(artifact.name, data.mimeType),
-        content: data.content,
-        mimeType: data.mimeType,
+      const { url } = await getArtifactDownloadUrl({
+        id: artifact.id,
+        version: artifact.version,
       });
+      const link = document.createElement('a');
+      link.href = url;
+      link.rel = 'noreferrer';
+      link.click();
     } catch (error) {
       console.error('[artifact] download failed', error);
     } finally {
