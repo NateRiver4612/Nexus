@@ -10,10 +10,10 @@ export async function createPlannerItem(projectId: string, input: CreatePlannerI
 
 export async function updatePlannerItem(id: string, input: UpdatePlannerItemInputType) {
   return handleResponse(
-    await apiClient.api.v1.planner.items[':id'].$patch({ param: { id }, json: input }),
+    await apiClient.api.v1.planner[':id'].$patch({ param: { id }, json: input }),
   );
 }
 
 export async function deletePlannerItem(id: string) {
-  return handleResponse(await apiClient.api.v1.planner.items[':id'].$delete({ param: { id } }));
+  return handleResponse(await apiClient.api.v1.planner[':id'].$delete({ param: { id } }));
 }
