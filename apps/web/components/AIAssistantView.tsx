@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import type { ChatArtifactType } from '@nexus/types';
-import { chatArtifactTypeSchema } from '@nexus/zod-schemas';
+import type { ArtifactRefType } from '@nexus/types';
+import { artifactTypeSchema } from '@nexus/zod-schemas';
 import { Newspaper, PanelLeft } from 'lucide-react';
 import { useGroupRef, usePanelRef, type Layout } from 'react-resizable-panels';
 
@@ -28,7 +28,7 @@ export function AssistantView({ projectId }: { projectId: string }) {
 
   // Artifacts belong to the conversation, so the panel stays open but the selection resets
   // when the thread changes.
-  const [artifact, setArtifact] = useState<ChatArtifactType | null>(null);
+  const [artifact, setArtifact] = useState<ArtifactRefType | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -80,7 +80,7 @@ export function AssistantView({ projectId }: { projectId: string }) {
     animateArtifact(lastArtifactSize.current);
   };
 
-  const openArtifact = (next: ChatArtifactType) => {
+  const openArtifact = (next: ArtifactRefType) => {
     window.clearTimeout(closeTimer.current);
     setArtifact(next);
     setPanelOpen(true);
@@ -122,10 +122,10 @@ export function AssistantView({ projectId }: { projectId: string }) {
     conversationId: selectedId ?? undefined,
     enabled: Boolean(selectedId),
   });
-  const chatArtifacts: ChatArtifactType[] = useMemo(
+  const chatArtifacts: ArtifactRefType[] = useMemo(
     () =>
       (artifacts ?? []).flatMap((artifact) => {
-        const type = chatArtifactTypeSchema.safeParse(artifact.type);
+        const type = artifactTypeSchema.safeParse(artifact.type);
         if (!type.success) return [];
         return [
           {

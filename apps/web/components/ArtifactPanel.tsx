@@ -1,26 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import type { ChatArtifactType } from '@nexus/types';
+import type { ArtifactRefType } from '@nexus/types';
 import { ArrowLeft, Check, Copy, Download, X } from 'lucide-react';
 
+import { getArtifactDownloadUrl } from '@/api/artifacts';
+import { FilePreview } from '@/components/FilePreview';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGetArtifactContent } from '@/hooks/useArtifacts';
-import { artifactFilename, downloadTextFile } from '@/lib/utils';
+import { useFilePreview } from '@/hooks/useFilePreview';
+import { isTextLikeMime } from '@/lib/utils';
 import {
   ArtifactCard,
   ArtifactTypeIcon,
   ARTIFACT_TYPE_LABELS,
   displayArtifactType,
 } from './ArtifactCard';
-import { HighlightedCode } from './HighlightedCode';
-import { Markdown } from './Markdown';
-import { MermaidDiagram } from './MermaidDiagram';
 
 type ArtifactListPanelProps = {
-  artifacts: ChatArtifactType[];
-  onOpen: (artifact: ChatArtifactType) => void;
+  artifacts: ArtifactRefType[];
+  onOpen: (artifact: ArtifactRefType) => void;
   onClose: () => void;
 };
 
@@ -58,7 +58,7 @@ export const ArtifactListPanel = ({ artifacts, onOpen, onClose }: ArtifactListPa
 );
 
 type ArtifactPanelProps = {
-  artifact: ChatArtifactType;
+  artifact: ArtifactRefType;
   onClose: () => void;
   /** Returns to the artifact list; omitted when the panel is opened straight to one artifact. */
   onBack?: () => void;
@@ -73,30 +73,35 @@ export const ArtifactPanel = ({ artifact, onClose, onBack }: ArtifactPanelProps)
     variables: { id: artifact.id, version: selectedVersion },
   });
 
+  const isText = data ? isTextLikeMime(data.mimeType) : false;
+  // Text comes from the content endpoint; binary versions are fetched as bytes here.
+  const preview = useFilePreview({
+    source: data ? { kind: 'artifact', artifactId: artifact.id, version: data.version } : null,
+    mimeType: data?.mimeType ?? '',
+    enabled: Boolean(data) && !isText,
+  });
+
   const copy = async () => {
-    if (!data) return;
+    if (!data?.content) return;
     await navigator.clipboard.writeText(data.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const download = () => {
+  const download = async () => {
     if (!data) return;
-    downloadTextFile({
-      filename: artifactFilename(artifact.name, data.mimeType),
-      content: data.content,
-      mimeType: data.mimeType,
+    const { url } = await getArtifactDownloadUrl({
+      id: artifact.id,
+      version: data.version,
     });
+    const link = document.createElement('a');
+    link.href = url;
+    link.rel = 'noreferrer';
+    link.click();
   };
 
   // A `.md`/`.mmd` filename decides the rendering, even if the model saved it as `code`.
   const displayType = displayArtifactType(artifact);
-  const renderKind =
-    displayType === 'diagram' || data?.mimeType === 'text/vnd.mermaid'
-      ? 'mermaid'
-      : displayType === 'document' || data?.mimeType === 'text/markdown'
-        ? 'markdown'
-        : 'code';
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -130,7 +135,7 @@ export const ArtifactPanel = ({ artifact, onClose, onBack }: ArtifactPanelProps)
         <Button variant="ghost" aria-label="Download" disabled={!data} onClick={download}>
           <Download className="size-4" />
         </Button>
-        <Button variant="ghost" aria-label="Copy" disabled={!data} onClick={copy}>
+        <Button variant="ghost" aria-label="Copy" disabled={!data?.content} onClick={copy}>
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
         </Button>
         <Button variant="ghost" aria-label="Close" onClick={onClose}>
@@ -149,14 +154,17 @@ export const ArtifactPanel = ({ artifact, onClose, onBack }: ArtifactPanelProps)
         {isError && (
           <p className="text-sm text-error">This artifact could not be loaded. Try again.</p>
         )}
-        {data &&
-          (renderKind === 'mermaid' ? (
-            <MermaidDiagram source={data.content} />
-          ) : renderKind === 'markdown' ? (
-            <Markdown>{data.content}</Markdown>
-          ) : (
-            <HighlightedCode code={data.content} filename={artifact.name} />
-          ))}
+        {data && (
+          <FilePreview
+            name={artifact.name}
+            mimeType={data.mimeType}
+            text={isText ? data.content : null}
+            objectUrl={preview.objectUrl}
+            buffer={preview.buffer}
+            isLoading={preview.isLoading}
+            error={preview.error}
+          />
+        )}
 
         {data && data.sources.length > 0 && (
           <div className="mt-6 border-t border-border pt-4">
