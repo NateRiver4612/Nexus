@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, max, sql } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, isNull, max, sql } from 'drizzle-orm';
 
 import {
   artifacts,
@@ -130,11 +130,17 @@ export const ArtifactRepository = (db: Db) => ({
       .orderBy(desc(artifactVersions.version));
   },
 
-  async listVersionStorageKeys(artifactId: string) {
+  /** Version objects the artifact owns. Attachment-backed versions are deleted elsewhere. */
+  async listOwnedVersionStorageKeys(artifactId: string) {
     const rows = await db
       .select({ storageKey: artifactVersions.storageKey })
       .from(artifactVersions)
-      .where(eq(artifactVersions.artifactId, artifactId));
+      .where(
+        and(
+          eq(artifactVersions.artifactId, artifactId),
+          isNull(artifactVersions.sourceAttachmentId),
+        ),
+      );
     return rows.map((row) => row.storageKey);
   },
 

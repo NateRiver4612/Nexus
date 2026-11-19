@@ -63,12 +63,12 @@ export async function presignPutUrl(key: string, contentType: string) {
   return { url, key, bucket: s3Bucket() };
 }
 
-/** Presigned GET URL that downloads an object with its original name. */
+/** Presigned GET URL that downloads the object with its original name. */
 export async function presignGetUrl({ key, filename }: { key: string; filename: string }) {
   const command = new GetObjectCommand({
     Bucket: s3Bucket(),
     Key: key,
-    ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, '')}"`,
+    ResponseContentDisposition: `attachment; filename="${filename.replace(/["\\]/g, '')}"`,
   });
 
   const url = await getSignedUrl(getS3Client(), command, { expiresIn: 3600 });
