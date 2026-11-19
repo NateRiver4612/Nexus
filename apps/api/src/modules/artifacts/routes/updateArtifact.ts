@@ -16,7 +16,7 @@ import { ArtifactService } from '../service';
 export const updateArtifactRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
-    path: '/items/{id}',
+    path: '/{id}',
     security: bearerSecurity,
     middleware: [requireArtifactAccess],
     request: {

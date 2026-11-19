@@ -7,7 +7,7 @@ import { ProjectsRepository } from '../projects/repository';
 import { ArtifactRepository } from './repository';
 
 /**
- * Guards the standalone `GET /artifacts/items/:id/content` route. The path has no
+ * Guards the standalone `GET /artifacts/:id/content` route. The path has no
  * `projectId`, so access is resolved through the artifact row: load the artifact,
  * require its project to exist, then require the user to be a workspace member —
  * same "not found" treatment as `requireProjectAccess`.

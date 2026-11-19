@@ -11,7 +11,7 @@ import { ArtifactService } from '../service';
 export const deleteArtifactRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'delete',
-    path: '/items/{id}',
+    path: '/{id}',
     security: bearerSecurity,
     middleware: [requireArtifactAccess],
     request: {

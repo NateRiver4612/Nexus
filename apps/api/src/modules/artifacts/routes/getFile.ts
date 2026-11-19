@@ -17,7 +17,7 @@ const binarySchema = z.string().openapi({ type: 'string', format: 'binary' });
 export const getArtifactFileRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/items/{id}/file',
+    path: '/{id}/file',
     security: bearerSecurity,
     middleware: [requireArtifactAccess],
     request: {

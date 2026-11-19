@@ -10,7 +10,7 @@ import {
 export const updatePlannerRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
-    path: '/items/{id}',
+    path: '/{id}',
     request: {
       params: idParamsSchema,
       body: {
