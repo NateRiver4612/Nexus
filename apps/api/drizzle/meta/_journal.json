@@ -225,6 +225,13 @@
       "when": 1794806026862,
       "tag": "0031_sloppy_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795057358284,
+      "tag": "0032_fine_blindfold",
+      "breakpoints": true
     }
   ]
 }

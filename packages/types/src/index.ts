@@ -7,6 +7,7 @@ import {
   aiSuggestionListSchema,
   aiSuggestionSchema,
   artifactContentSchema,
+  artifactDownloadUrlSchema,
   artifactListItemSchema,
   artifactListSchema,
   artifactSchema,
@@ -229,11 +230,19 @@ export type CreatePlannerItemInputType = z.infer<typeof createPlannerItemSchema>
 export type UpdatePlannerItemInputType = z.infer<typeof updatePlannerItemSchema>;
 
 export type ArtifactType = z.infer<typeof artifactSchema>;
+/**
+ * Minimal identity the preview surfaces need. Deliberately not `ChatArtifactType`: chat artifacts
+ * are only the six kinds the model can write, while the panel also shows attachment artifacts
+ * (pdf, image, audio, video, file, …). It is a UI view-model, so it's derived from `ArtifactType`
+ * instead of adding a wire schema nothing validates.
+ */
+export type ArtifactRefType = Pick<ArtifactType, 'id' | 'name' | 'type'> & { version: number };
 export type ArtifactSourceType = z.infer<typeof artifactSourceSchema>;
 export type ArtifactListItemType = z.infer<typeof artifactListItemSchema>;
 export type ArtifactListType = z.infer<typeof artifactListSchema>;
 export type ArtifactVersionType = z.infer<typeof artifactVersionSchema>;
 export type ArtifactContentType = z.infer<typeof artifactContentSchema>;
+export type ArtifactDownloadUrlType = z.infer<typeof artifactDownloadUrlSchema>;
 export type CreateArtifactInputType = z.infer<typeof createArtifactSchema>;
 export type UpdateArtifactInputType = z.infer<typeof updateArtifactSchema>;
 
