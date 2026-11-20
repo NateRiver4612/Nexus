@@ -9,3 +9,4 @@ export * from './projects';
 export * from './research';
 export * from './search';
 export * from './users';
+export * from './richBlocks';

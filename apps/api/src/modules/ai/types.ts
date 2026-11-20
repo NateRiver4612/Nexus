@@ -1,6 +1,12 @@
 import type { z } from '@hono/zod-openapi';
 import type { Db } from '@nexus/db';
-import type { ChatArtifactType, ChatCitationType, ChatStreamEvent, Usage } from '@nexus/types';
+import type {
+  ChatArtifactType,
+  ChatCitationType,
+  ChatQuestionsType,
+  ChatStreamEvent,
+  Usage,
+} from '@nexus/types';
 
 /**
  * Who is asking and where. Built by the route from the authenticated user and the conversation
@@ -42,6 +48,13 @@ export type ToolResult = {
   sources?: ChatCitationType[];
   /** An artifact the tool saved; the loop streams it as an `artifact` event, the model never sees it. */
   artifact?: ChatArtifactType;
+  /** Questions for the user; the loop streams them as a `question` event, the model never sees them. */
+  questions?: ChatQuestionsType;
+  /**
+   * The turn is over once this tool has run: the loop stops instead of calling the model again.
+   * For tools that wait on the user (`ask_user`), whose answer arrives as the next message.
+   */
+  endsTurn?: boolean;
   /**
    * A tool that handled its own failure (returned an explanatory message instead of throwing).
    * The loop marks the trace as `error` so the UI doesn't show a misleading success.

@@ -262,6 +262,82 @@ export const chatArtifactsSchema = z.array(chatArtifactSchema);
 
 export const chatArtifactEventSchema = z.object({ artifact: chatArtifactSchema });
 
+/**
+ * Questions the assistant asks the user mid-chat (`ask_user`). Streamed in `question` and stored
+ * in `messages.metadata.questions`. The answer is an ordinary next user message, so nothing about
+ * answers is stored here: a card counts as answered once a later user message exists.
+ */
+export const chatQuestionKinds = ['single', 'multiple', 'text'] as const;
+
+export const chatQuestionOptionSchema = z.object({
+  label: z.string().min(1).max(80),
+  description: z.string().max(200).optional(),
+});
+
+export const chatQuestionSchema = z
+  .object({
+    /** Chosen by the model; it only has to be unique within one call. */
+    id: z.string().min(1).max(40),
+    prompt: z.string().min(1).max(300),
+    kind: z.enum(chatQuestionKinds),
+    /** Required for `single` and `multiple`, not allowed for `text`. */
+    options: z.array(chatQuestionOptionSchema).min(2).max(4).optional(),
+    /** Adds an "Other" free-text choice to a `single` or `multiple` question. */
+    allowOther: z.boolean().optional(),
+  })
+  .superRefine((question, ctx) => {
+    if (question.kind === 'text') {
+      if (question.options) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['options'],
+          message: 'A text question takes no options.',
+        });
+      }
+      if (question.allowOther) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['allowOther'],
+          message: 'A text question is already free text.',
+        });
+      }
+      return;
+    }
+
+    if (!question.options) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: 'A choice question needs 2 to 4 options.',
+      });
+      return;
+    }
+
+    const labels = question.options.map((option) => option.label.trim().toLowerCase());
+    if (new Set(labels).size !== labels.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: 'Option labels must be different.',
+      });
+    }
+  })
+  .openapi('ChatQuestion');
+
+/** One call asks 1 to 3 questions, each with its own id. */
+export const chatQuestionsSchema = z
+  .array(chatQuestionSchema)
+  .min(1)
+  .max(3)
+  .superRefine((questions, ctx) => {
+    const ids = questions.map((question) => question.id);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({ code: 'custom', message: 'Question ids must be different.' });
+    }
+  });
+
+export const chatQuestionEventSchema = z.object({ questions: chatQuestionsSchema });
+
 /** Mirrors `attachment_status` in packages/db/src/schema/attachments.ts. */
 export const attachmentStatusSchema = z.enum(['uploaded', 'processing', 'ready', 'failed']);
 

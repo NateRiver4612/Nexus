@@ -98,6 +98,7 @@ export async function* runChatLoop({
     let text = ''; // assistant text for this iteration
     const calls: ToolCall[] = []; // complete tool calls the model requested
     let cutOff = false; // the model hit its token limit before it finished
+    let endsTurn = false; // a tool that waits on the user ran, so the turn is over
 
     // Raw provider events here:
     //   { type: 'text-delta', text } | { type: 'tool-call', call } | { type: 'usage', usage }
@@ -202,6 +203,12 @@ export async function* runChatLoop({
           if (result.artifact) {
             yield { type: 'artifact', artifact: result.artifact };
           }
+
+          // Questions go to the UI as cards; the user's answer comes back as their next message.
+          if (result.questions) {
+            yield { type: 'question', questions: result.questions };
+          }
+          if (result.endsTurn && !result.failed) endsTurn = true;
         }
       }
 
@@ -230,5 +237,8 @@ export async function* runChatLoop({
         toolCallId: call.id,
       });
     }
+
+    // Every call has run and been reported. Don't ask the model to continue past a question.
+    if (endsTurn) return;
   }
 }
