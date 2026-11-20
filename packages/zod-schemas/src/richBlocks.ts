@@ -10,7 +10,7 @@ import { z } from '@hono/zod-openapi';
  */
 
 /** Fence languages that render as a component. The web renderer must handle every one. */
-export const richBlockLanguages = ['stats', 'steps', 'compare', 'accordion'] as const;
+export const richBlockLanguages = ['stats', 'steps', 'timeline', 'compare', 'accordion'] as const;
 export type RichBlockLanguage = (typeof richBlockLanguages)[number];
 
 const statSchema = z.object({
@@ -30,6 +30,17 @@ export const stepItemSchema = z.union([
   z.string().min(1).max(300),
 ]);
 export const stepsBlockSchema = z.array(stepItemSchema).min(1).max(12);
+
+const timelineItemSchema = z.object({
+  title: z.string().min(1).max(200),
+  /** Short time label, e.g. "Week 1" or "Phase 2". */
+  when: z.string().min(1).max(80).optional(),
+  /** Markdown. */
+  body: z.string().max(1000).optional(),
+  status: z.string().max(40).optional(),
+  tone: z.string().max(40).optional(),
+});
+export const timelineBlockSchema = z.array(timelineItemSchema).min(1).max(12);
 
 const compareColumnSchema = z.object({
   title: z.string().min(1).max(200),

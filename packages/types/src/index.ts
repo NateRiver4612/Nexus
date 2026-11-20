@@ -134,6 +134,7 @@ import {
   statsBlockSchema,
   stepItemSchema,
   stepsBlockSchema,
+  timelineBlockSchema,
   chatToolEventSchema,
   chatToolTraceSchema,
   chatSourcesEventSchema,
@@ -198,6 +199,7 @@ export type ChatQuestionEventType = z.infer<typeof chatQuestionEventSchema>;
 export type StatsBlockType = z.infer<typeof statsBlockSchema>;
 export type StepItemType = z.infer<typeof stepItemSchema>;
 export type StepsBlockType = z.infer<typeof stepsBlockSchema>;
+export type TimelineBlockType = z.infer<typeof timelineBlockSchema>;
 export type CompareBlockType = z.infer<typeof compareBlockSchema>;
 export type AccordionBlockType = z.infer<typeof accordionBlockSchema>;
 export type ChatAttachmentType = z.infer<typeof chatAttachmentSchema>;

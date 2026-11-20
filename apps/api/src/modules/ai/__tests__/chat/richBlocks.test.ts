@@ -4,13 +4,20 @@ import {
   richBlockLanguages,
   statsBlockSchema,
   stepsBlockSchema,
+  timelineBlockSchema,
 } from '@nexus/zod-schemas';
 import { describe, expect, test } from 'bun:test';
 
 describe('richBlockLanguages', () => {
   test('lists each block once', () => {
     expect(new Set(richBlockLanguages).size).toBe(richBlockLanguages.length);
-    expect([...richBlockLanguages].sort()).toEqual(['accordion', 'compare', 'stats', 'steps']);
+    expect([...richBlockLanguages].sort()).toEqual([
+      'accordion',
+      'compare',
+      'stats',
+      'steps',
+      'timeline',
+    ]);
   });
 });
 
@@ -54,6 +61,32 @@ describe('stepsBlockSchema', () => {
     expect(
       stepsBlockSchema.safeParse(Array.from({ length: 13 }, (_, i) => `Step ${i}`)).success,
     ).toBe(false);
+  });
+});
+
+describe('timelineBlockSchema', () => {
+  test('accepts an item with only a title', () => {
+    expect(timelineBlockSchema.safeParse([{ title: 'Week 1' }]).success).toBe(true);
+  });
+
+  test('keeps optional when, body, status and tone', () => {
+    const result = timelineBlockSchema.parse([
+      { title: 'Foundations', when: 'Week 1', body: '**Start** here', status: 'done', tone: 'success' },
+    ]);
+    expect(result[0]).toEqual({
+      title: 'Foundations',
+      when: 'Week 1',
+      body: '**Start** here',
+      status: 'done',
+      tone: 'success',
+    });
+  });
+
+  test('rejects an empty list, a missing title and more than 12 items', () => {
+    expect(timelineBlockSchema.safeParse([]).success).toBe(false);
+    expect(timelineBlockSchema.safeParse([{ when: 'Week 1' }]).success).toBe(false);
+    const thirteen = Array.from({ length: 13 }, (_, i) => ({ title: `Phase ${i}` }));
+    expect(timelineBlockSchema.safeParse(thirteen).success).toBe(false);
   });
 });
 
