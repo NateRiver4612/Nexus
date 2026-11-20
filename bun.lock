@@ -124,6 +124,7 @@
         "@nexus/types": "workspace:*",
         "@nexus/zod-schemas": "workspace:*",
         "@tailwindcss/postcss": "^4.1.0",
+        "@types/bun": "^1.2.0",
         "@types/node": "^24.0.0",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",

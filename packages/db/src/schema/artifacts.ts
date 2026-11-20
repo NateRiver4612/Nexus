@@ -84,10 +84,9 @@ export const artifactVersions = pgTable(
     storageKey: text('storage_key').notNull(),
     // Set when the bytes are borrowed from a chat attachment instead of owned by the artifact.
     // Such objects are deleted with the conversation, never when the artifact alone is removed.
-    sourceAttachmentId: uuid('source_attachment_id').references(
-      () => conversationAttachments.id,
-      { onDelete: 'set null' },
-    ),
+    sourceAttachmentId: uuid('source_attachment_id').references(() => conversationAttachments.id, {
+      onDelete: 'set null',
+    }),
     mimeType: varchar('mime_type', { length: 128 }).notNull(),
     size: bigint('size', { mode: 'number' }).notNull().default(0),
     sources: jsonb('sources').$type<ArtifactSource[]>().notNull().default([]),

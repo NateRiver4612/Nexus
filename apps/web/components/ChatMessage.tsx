@@ -3,16 +3,19 @@ import type {
   ChatArtifactType,
   ChatAttachmentType,
   ChatCitationType,
+  ChatQuestionsType,
   MessageType,
 } from '@nexus/types';
 import {
   chatArtifactsSchema,
   chatAttachmentsSchema,
   chatCitationsSchema,
+  chatQuestionsSchema,
 } from '@nexus/zod-schemas';
 
 import { ArtifactCard, ArtifactCardSkeleton } from './ArtifactCard';
 import { ChatAttachmentChip } from './ChatAttachmentChip';
+import { ChatQuestionCard } from './ChatQuestionCard';
 import { ChatSources } from './ChatSources';
 import { Markdown } from './Markdown';
 
@@ -27,6 +30,12 @@ type ChatMessageProps = {
   attachments?: ChatAttachmentType[];
   sources?: ChatCitationType[];
   artifacts?: ChatArtifactType[];
+  /** Questions from `ask_user`, shown as cards under the reply. */
+  questions?: ChatQuestionsType;
+  /** A later user message exists, so the questions are locked. */
+  answered?: boolean;
+  /** The later user message content, shown on an answered card. */
+  answer?: string;
   /** `create_artifact` is running — show a skeleton card in its place. */
   creatingArtifact?: boolean;
   onOpenArtifact?: (artifact: ArtifactRefType) => void;
@@ -54,6 +63,12 @@ export function attachmentsOf(metadata: MessageType['metadata']): ChatAttachment
   return parsed.success ? parsed.data : [];
 }
 
+/** Saved in `metadata.questions`; anything malformed is simply not shown. */
+export function questionsOf(metadata: MessageType['metadata']): ChatQuestionsType {
+  const parsed = chatQuestionsSchema.safeParse(metadata?.questions);
+  return parsed.success ? parsed.data : [];
+}
+
 export function ChatMessage({
   role,
   content,
@@ -61,6 +76,9 @@ export function ChatMessage({
   partial,
   attachments,
   artifacts,
+  questions,
+  answered,
+  answer,
   creatingArtifact,
   onOpenArtifact,
   onOpenAttachment,
@@ -82,9 +100,7 @@ export function ChatMessage({
                   name={attachment.name}
                   mimeType={attachment.mimeType}
                   size={attachment.size}
-                  onOpen={
-                    onOpenAttachment ? () => onOpenAttachment(attachment) : undefined
-                  }
+                  onOpen={onOpenAttachment ? () => onOpenAttachment(attachment) : undefined}
                 />
               ))}
             </div>
@@ -102,9 +118,18 @@ export function ChatMessage({
       {activity ? (
         <p className="mb-1 text-sm text-muted-foreground">{activity}</p>
       ) : (
-        !content && isStreaming && <p className="text-sm text-muted-foreground">Thinking…</p>
+        !content &&
+        !questions?.length &&
+        isStreaming && <p className="text-sm text-muted-foreground">Thinking…</p>
       )}
-      {content && <Markdown fadeIn>{content}</Markdown>}
+      {content && (
+        <Markdown fadeIn streaming={isStreaming || partial}>
+          {content}
+        </Markdown>
+      )}
+      {questions?.length ? (
+        <ChatQuestionCard questions={questions} answered={answered} answer={answer} />
+      ) : null}
       {sources && <ChatSources sources={sources} />}
       {creatingArtifact && (
         <div className="mt-2">

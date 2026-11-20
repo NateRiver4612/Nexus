@@ -41,7 +41,9 @@ export const DocxPreview = ({ buffer }: DocxPreviewProps) => {
 
   if (error) {
     return (
-      <p className="text-sm text-error">This document could not be previewed. Try downloading it.</p>
+      <p className="text-sm text-error">
+        This document could not be previewed. Try downloading it.
+      </p>
     );
   }
 

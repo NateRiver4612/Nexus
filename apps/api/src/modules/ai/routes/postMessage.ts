@@ -30,6 +30,8 @@ import type {
   ChatArtifactEventType,
   ChatArtifactType,
   ChatCitationType,
+  ChatQuestionEventType,
+  ChatQuestionsType,
   ChatTextDeltaEventType,
   ChatDoneEventType,
   ChatErrorEventType,
@@ -41,15 +43,12 @@ import type {
 import { collectUrls } from '@nexus/shared-helpers';
 
 import { generateConversationTitle } from '../chat/generateTitle';
+import { toModelMessages } from '../chat/historyContext';
 import { runChatLoop } from '../chat/runChatLoop';
 import { projectChatTools, webSearchEnabled } from '../tools/registry';
 import { AttachmentService } from '../attachments/service';
 import { ArtifactService } from '../../artifacts/service';
-import {
-  attachmentsOf,
-  formatAttachmentStubs,
-  formatCurrentTurnAttachments,
-} from '../chat/attachmentContext';
+import { attachmentsOf } from '../chat/attachmentContext';
 
 const HISTORY_LIMIT = 20;
 
@@ -74,7 +73,7 @@ const userFacingError = (kind: AIProviderErrorKind) => {
 // No False Promises to Client Generators
 // Flexibility for Mixed Events
 const RawFormatTextChunkDescription =
-  'SSE stream. Events: `text-delta` {text}, `tool` {id, name, label, status}, `sources` {sources}, `artifact` {artifact}, `done` {messageId, runId, title?}, `error` {kind, message}.';
+  'SSE stream. Events: `text-delta` {text}, `tool` {id, name, label, status}, `sources` {sources}, `artifact` {artifact}, `question` {questions}, `done` {messageId, runId, title?}, `error` {kind, message}.';
 
 export const postMessageRoute = defineOpenAPIRoute({
   route: createRoute({
@@ -218,42 +217,14 @@ export const postMessageRoute = defineOpenAPIRoute({
           webSearchEnabled,
         }),
       },
-      ...history.messages.flatMap((message): ChatMessage[] => {
-        if (message.role === 'system') return [];
-
-        const result: ChatMessage[] = [];
-        const attachments = attachmentsOf(message.metadata);
-
-        // "Current" = the message just sent in this run. "Earlier" = every message before it.
-        // The current message's files get their full text pasted in, so the model can answer right away.
-        // Older messages' files get a short stub instead, to keep the prompt small — the model reopens
-        // them with read_attachment when it needs them.
-        if (message.role === 'user' && attachments.length > 0) {
-          if (message.id === saved.id) {
-            // Current turn: inject the extracted text in full within the budgets.
-            const block = formatCurrentTurnAttachments(
-              attachments.map((attachment) => ({
-                name: attachment.name,
-                mimeType: attachment.mimeType,
-                text: currentTurnText.get(attachment.id) ?? '',
-              })),
-            );
-            if (block) result.push({ role: 'system', content: block });
-          } else {
-            // Earlier turn: a one-line stub; the model reopens it with read_attachment.
-            const stub = formatAttachmentStubs(
-              attachments.map((attachment) => ({
-                name: attachment.name,
-                chars: charCounts.get(attachment.id) ?? 0,
-              })),
-            );
-            if (stub) result.push({ role: 'system', content: stub });
-          }
-        }
-
-        result.push({ role: message.role, content: message.content });
-        return result;
-      }),
+      ...history.messages.flatMap((message) =>
+        toModelMessages({
+          message,
+          currentMessageId: saved.id,
+          currentTurnText,
+          charCounts,
+        }),
+      ),
     ];
 
     // Open the run row first so the streamed `done`/`error` events can reference run.id.
@@ -329,7 +300,7 @@ async function streamProjectChat({
     //   event: text-delta
     //   data: {"text":"…"}
     const send = async (
-      event: 'text-delta' | 'tool' | 'sources' | 'artifact' | 'done' | 'error',
+      event: 'text-delta' | 'tool' | 'sources' | 'artifact' | 'question' | 'done' | 'error',
       data: object,
     ): Promise<void> => {
       if (stream.aborted) {
@@ -355,6 +326,8 @@ async function streamProjectChat({
     const toolTrace: ChatToolTraceType = [];
     const citations = new Map<string, ChatCitationType>();
     const artifacts: ChatArtifactType[] = [];
+    // `ask_user` ends the turn without text; its cards live in metadata instead.
+    let questions: ChatQuestionsType | null = null;
 
     try {
       // Two levels on purpose: an error from the provider/loop is a normal failure we report
@@ -418,6 +391,12 @@ async function streamProjectChat({
             artifacts.push(event.artifact);
             // Wire shape: { artifact: { id, name, type, version } }
             await send('artifact', { artifact: event.artifact } satisfies ChatArtifactEventType);
+          } else if (event.type === 'question') {
+            questions = event.questions;
+            // Wire shape: { questions: [{ id, prompt, kind, options?, allowOther? }] }
+            await send('question', {
+              questions: event.questions,
+            } satisfies ChatQuestionEventType);
           }
         }
       } catch (err) {
@@ -461,14 +440,16 @@ async function streamProjectChat({
       }
 
       // Keep whatever the user already saw, flagged `partial`, so a reload matches the screen.
-      // Nothing is saved if no text arrived. metadata shape:
+      // A question-only turn is saved too: `ask_user` ends the turn with no text, and the cards
+      // live in metadata. Nothing is saved only when neither text nor questions arrived. Metadata:
       //   {
       //    runId, partial?: true, tools?: [{ id, name, label, status }],
       //    citations?: [...],
-      //    artifacts?: [{ id, name, type, version }]
+      //    artifacts?: [{ id, name, type, version }],
+      //    questions?: [{ id, prompt, kind, options?, allowOther? }]
       //   }
       let messageId: string | undefined;
-      if (text.trim()) {
+      if (text.trim() || questions) {
         const saved = await conversations.appendAssistantMessage({
           conversationId,
           userId,
@@ -479,6 +460,7 @@ async function streamProjectChat({
             ...(toolTrace.length ? { tools: toolTrace } : {}),
             ...(citations.size ? { citations: [...citations.values()] } : {}),
             ...(artifacts.length ? { artifacts } : {}),
+            ...(questions ? { questions } : {}),
           },
         });
 

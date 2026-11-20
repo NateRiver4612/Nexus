@@ -125,6 +125,16 @@ import {
   chatCitationSchema,
   chatArtifactSchema,
   chatArtifactEventSchema,
+  chatQuestionEventSchema,
+  chatQuestionOptionSchema,
+  chatQuestionSchema,
+  chatQuestionsSchema,
+  accordionBlockSchema,
+  compareBlockSchema,
+  statsBlockSchema,
+  stepItemSchema,
+  stepsBlockSchema,
+  timelineBlockSchema,
   chatToolEventSchema,
   chatToolTraceSchema,
   chatSourcesEventSchema,
@@ -181,6 +191,17 @@ export type ChatSourcesEventType = z.infer<typeof chatSourcesEventSchema>;
 export type ChatCitationType = z.infer<typeof chatCitationSchema>;
 export type ChatArtifactType = z.infer<typeof chatArtifactSchema>;
 export type ChatArtifactEventType = z.infer<typeof chatArtifactEventSchema>;
+export type ChatQuestionOptionType = z.infer<typeof chatQuestionOptionSchema>;
+export type ChatQuestionType = z.infer<typeof chatQuestionSchema>;
+export type ChatQuestionsType = z.infer<typeof chatQuestionsSchema>;
+export type ChatQuestionEventType = z.infer<typeof chatQuestionEventSchema>;
+
+export type StatsBlockType = z.infer<typeof statsBlockSchema>;
+export type StepItemType = z.infer<typeof stepItemSchema>;
+export type StepsBlockType = z.infer<typeof stepsBlockSchema>;
+export type TimelineBlockType = z.infer<typeof timelineBlockSchema>;
+export type CompareBlockType = z.infer<typeof compareBlockSchema>;
+export type AccordionBlockType = z.infer<typeof accordionBlockSchema>;
 export type ChatAttachmentType = z.infer<typeof chatAttachmentSchema>;
 export type ChatAttachmentsType = z.infer<typeof chatAttachmentsSchema>;
 export type AttachmentStatusType = z.infer<typeof attachmentStatusSchema>;
@@ -193,6 +214,7 @@ export type ChatStreamEvent =
   | ({ type: 'tool' } & ChatToolEventType)
   | ({ type: 'sources' } & ChatSourcesEventType)
   | ({ type: 'artifact' } & ChatArtifactEventType)
+  | ({ type: 'question' } & ChatQuestionEventType)
   | ({ type: 'done' } & ChatDoneEventType)
   | ({ type: 'error' } & ChatErrorEventType);
 
