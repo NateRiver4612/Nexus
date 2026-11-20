@@ -106,6 +106,12 @@ export const ChatQuestionCard = ({ questions, answered, answer }: ChatQuestionCa
 
   const submit = () => {
     if (locked || !complete) return;
+
+    if (questions.length === 1 && onlyQuestion?.kind === 'text') {
+      send(answers[onlyQuestion.id]?.trim() ?? '');
+      return;
+    }
+
     send(formatQuestionAnswers({ questions, answers }));
   };
 
