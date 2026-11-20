@@ -3,6 +3,7 @@ import type {
   ChatArtifactType,
   ChatAttachmentType,
   ChatCitationType,
+  ChatQuestionsType,
   CreateAiSuggestionInputType,
   CreateConversationInputType,
   UpdateAiSuggestionInputType,
@@ -144,6 +145,8 @@ export type PendingTurn = {
   sources: ChatCitationType[];
   /** Artifacts the assistant saved this turn, shown as cards under the reply. */
   artifacts: ChatArtifactType[];
+  /** Questions from `ask_user`, shown as cards under the reply. */
+  questions: ChatQuestionsType;
   /** `create_artifact` is running — show a skeleton card until the real one arrives. */
   creatingArtifact: boolean;
   /** Label of the tool that is running right now, e.g. "Searching knowledge…". */
@@ -186,6 +189,7 @@ export function useSendMessage({
         text: '',
         sources: [],
         artifacts: [],
+        questions: [],
         creatingArtifact: false,
         activity: null,
       });
@@ -232,6 +236,8 @@ export function useSendMessage({
                 : turn,
             );
             onArtifactCreated?.(event.artifact);
+          } else if (event.type === 'question') {
+            setPending((turn) => turn && { ...turn, questions: event.questions });
           } else if (event.type === 'error') {
             setError(event.message);
           }
