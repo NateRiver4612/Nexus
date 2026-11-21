@@ -55,12 +55,16 @@ const TaskCard = ({ task, selected, defaultOpen, onToggle }: TaskCardProps) => {
             <div className="flex shrink-0 items-center gap-2">
               <DifficultyIndicator difficulty={task.difficulty} />
               {estimated && (
-                <span className="rounded-pill border border-border px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
                   {estimated}
                 </span>
               )}
             </div>
           </div>
+
+          {task.description && (
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{task.description}</p>
+          )}
 
           {task.steps.length > 0 && (
             <>
