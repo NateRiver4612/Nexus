@@ -27,7 +27,9 @@ function buildResearchBriefCorrection({
   if (issues.length > 0) {
     return (
       `Your previous response failed validation. Fix exactly these issues and re-output the FULL object ` +
-      `(objective, known, scope), respecting each field's length limit:\n` +
+      `(objective, known, scope). Hard limits: objective <=400 chars, known <=800 chars, scope <=900 ` +
+      `chars. If "scope" is over the limit, shorten it by dropping examples and repeated context while ` +
+      `keeping the in/out boundaries:\n` +
       issues.map((issue) => `- ${issue}`).join('\n')
     );
   }

@@ -78,6 +78,9 @@ broadening the search, make that explicit (e.g. "survey the most impactful ... i
 the research doesn't repeat them. If nothing meaningful is known, keep "known" short.
 - Keep the brief clean and directed: a clear task statement plus the essential context. Do not dump \
 messy background.
+- Keep each section within its hard limit: objective at most 400 characters, known at most 800, scope \
+at most 900. If the scope runs long, tighten the wording — keep the in/out boundaries and drop \
+examples or repeated context.
 
 You only see goal-level information about the project. Never reference uploaded files, links, or pasted \
 documents — they are private and are not sent with this brief.

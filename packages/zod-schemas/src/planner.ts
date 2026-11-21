@@ -186,9 +186,11 @@ const kickoffTaskSchema = taskSchema
       .number()
       .int()
       .min(5)
+      .max(30)
       .describe(
         'How long this task will realistically take, in minutes — always provide a concrete estimate ' +
-          '(e.g. 45, 90, 240). Never null.',
+          '(e.g. 15, 20, 30). Target 15-20; 30 is the hard ceiling and should be rare. Anything longer ' +
+          'must become multiple smaller tasks in the same milestone. Never null.',
       ),
     dods: z
       .array(kickoffTaskDodSchema)
@@ -219,7 +221,7 @@ const kickoffMilestoneSchema = milestoneSchema
     updatedAt: true,
   })
   .extend({
-    tasks: z.array(kickoffTaskSchema).min(1).max(5),
+    tasks: z.array(kickoffTaskSchema).min(1).max(12),
   });
 
 export const kickoffKeyTopicSchema = z.object({
@@ -250,9 +252,30 @@ export const kickoffSummaryGenerationSchema = kickoffSummarySchema.extend({
 });
 
 /** Call-1 draft shape: only the milestones — the summary is generated separately. */
-export const kickoffMilestonesSchema = z.object({
-  milestones: z.array(kickoffMilestoneSchema).min(1).max(8),
-});
+export const KICKOFF_AVERAGE_TASK_MINUTES = 22;
+
+export const kickoffMilestonesSchema = z
+  .object({
+    milestones: z.array(kickoffMilestoneSchema).min(1).max(8),
+  })
+  .superRefine((plan, ctx) => {
+    const tasks = plan.milestones.flatMap((milestone) => milestone.tasks);
+    const average =
+      tasks.reduce((total, task) => total + task.estimatedTimeMinutes, 0) / tasks.length;
+
+    // The per-task ceiling alone still lets a plan fill up with 30-minute tasks.
+    // Enforce the target band at the plan level so the average actually stays small.
+    if (average > KICKOFF_AVERAGE_TASK_MINUTES) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['milestones'],
+        message:
+          `Average task estimate is ${average.toFixed(1)} minutes; the plan must average ` +
+          `${KICKOFF_AVERAGE_TASK_MINUTES} minutes or less (target 15-20). Split the longest tasks ` +
+          `into smaller consecutive tasks inside their milestone; do not lower estimates.`,
+      });
+    }
+  });
 
 /**
  * Tool-facing draft schemas — the shape the model is asked to produce. They omit
@@ -272,7 +295,7 @@ const kickoffToolTaskSchema = kickoffTaskSchema.omit({ position: true, status: t
 const kickoffToolMilestoneSchema = kickoffMilestoneSchema
   .omit({ position: true, status: true })
   .extend({
-    tasks: z.array(kickoffToolTaskSchema).min(1).max(5),
+    tasks: z.array(kickoffToolTaskSchema).min(1).max(12),
   });
 
 /** What the milestones tool advertises to the model — the validation schema minus server-owned fields. */

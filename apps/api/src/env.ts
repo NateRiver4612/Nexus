@@ -30,15 +30,16 @@ const envSchema = z.object({
   AI_RESEARCH_MODEL: z.string().default('deepseek-v4-flash'),
   // Hard wall-clock ceiling for a single AI run (measured from its first start, across
   // BullMQ retries). Also used as the per-request timeout so a hung provider call can't
-  // sit for the SDK's default.
+  // sit for the SDK's default. 5 minutes gives the finer kickoff plan headroom to finish
+  // both generation stages without tripping the ceiling.
   AI_RUN_TIMEOUT_MS: z.coerce
     .number()
     .int()
     .positive()
-    .default(3 * 60 * 1000),
+    .default(5 * 60 * 1000),
   AI_TRANSCRIPTION_MODEL: z.string().default('gpt-4o-mini-transcribe'),
   // Separate from AI_RUN_TIMEOUT_MS: a 25 MB recording can legitimately take several minutes
-  // to transcribe, which the 3-minute run ceiling would cut off.
+  // to transcribe, which the general run ceiling would cut off.
   AI_TRANSCRIPTION_TIMEOUT_MS: z.coerce
     .number()
     .int()

@@ -154,13 +154,15 @@ and the user's goal description, and make sure at least one milestone produces i
 const LEVEL_GUIDANCE: Record<string, string> = {
   beginner: `Scope the plan to a simple, achievable outcome: cover the fundamentals of this goal \
 and produce something basic but complete. This is the lightest of the three levels — keep the \
-number of milestones and tasks small and contained. The least overall time and effort should go \
-into this plan compared to intermediate or advanced.`,
+number of milestones small and contained, but keep the same 15-20 minute task unit, so expect more \
+small tasks inside those milestones rather than fewer large ones. The least overall time and effort \
+should go into this plan compared to intermediate or advanced.`,
 
   intermediate: `Scope the plan to a moderately challenging outcome. Cover the fundamentals \
 quickly and lightly — a brief milestone at most, not full depth — and put the majority of the \
 plan's milestones, tasks, and depth into the intermediate-level application itself. Fundamentals \
-are a stepping stone here, not where the effort should concentrate.`,
+are a stepping stone here, not where the effort should concentrate. Task size stays 15-20 minutes \
+at this level too — express the extra depth through more tasks, not longer ones.`,
 
   advanced: `Scope the plan to a comprehensive, challenging outcome covering the full arc: \
 fundamentals through intermediate through advanced, as one combined project. Weight the plan \
@@ -170,7 +172,9 @@ tasks, and depth belong in the advanced portion. Advanced is the actual point of
 level; don't spend equal effort across all three stages — the earlier stages exist only to set up \
 the advanced work, not to be developed in their own right. This should be the largest, most \
 demanding plan of the three, with its hardest tasks concentrated at the end. Be thorough in coverage \
-but economical in wording — favor more milestones/tasks over longer individual steps if you're running long.`,
+but economical in wording — favor more milestones/tasks over longer individual steps if you're running \
+long. Task size stays 15-20 minutes even for advanced work — express difficulty through what each task \
+does, not by making tasks longer.`,
 };
 
 export function buildLevelGuidance(level: OnboardingDataType['step2']['level']): string {
