@@ -458,8 +458,8 @@ export const ProjectMilestonesTasks = ({
           </Card>
         )}
 
-        <Card className="flex flex-col gap-5 p-6 xl:col-span-5">
-          <div className="flex items-center justify-between gap-3">
+        <Card className="flex min-h-0 flex-col gap-5 p-6 xl:col-span-5 xl:[contain:size] xl:overflow-hidden">
+          <div className="flex shrink-0 items-center justify-between gap-3">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Key Topic & Architectural Pillar
             </h3>
@@ -531,7 +531,7 @@ export const ProjectMilestonesTasks = ({
                   Verification & Exit Gates
                 </p>
                 {gates.length > 0 ? (
-                  <div className="flex max-h-64 min-h-0 flex-1 flex-wrap content-start gap-2 overflow-y-auto pr-1">
+                  <div className="flex min-h-16 flex-1 flex-wrap content-start gap-2 overflow-y-auto pr-1">
                     {gates.map((gate) => (
                       <div
                         key={gate}
