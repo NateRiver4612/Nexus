@@ -88,8 +88,10 @@ export function isAudioFile(file: File) {
 export function isTextLikeMime(mimeType: string) {
   const mime = mimeType.toLowerCase();
   return (
-    // mime.startsWith('text/') ||
-    mime === 'application/json' || mime === 'application/xml' || mime === 'application/javascript'
+    mime.startsWith('text/') ||
+    mime === 'application/json' ||
+    mime === 'application/xml' ||
+    mime === 'application/javascript'
   );
 }
 

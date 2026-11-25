@@ -39,7 +39,9 @@ export const PdfPreview = ({ src }: PdfPreviewProps) => {
   }, []);
 
   if (error) {
-    return <p className="text-sm text-error">This PDF could not be previewed. Try downloading it.</p>;
+    return (
+      <p className="text-sm text-error">This PDF could not be previewed. Try downloading it.</p>
+    );
   }
 
   const pageCount = Math.min(numPages, MAX_PAGES);

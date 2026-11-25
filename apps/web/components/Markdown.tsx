@@ -1,6 +1,6 @@
-import { Children, createContext, isValidElement, useContext } from 'react';
+import { Children, createContext, isValidElement, memo, useContext } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type ExtraProps } from 'react-markdown';
 import remarkAlert from 'remark-github-blockquote-alert';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -9,11 +9,23 @@ import rehypeKatex from 'rehype-katex';
 import { cn } from '@/lib/utils';
 import { HighlightedCode } from './HighlightedCode';
 import { MarkdownCallout, MarkdownCalloutTitle, type CalloutType } from './MarkdownCallout';
-import { isRichBlockLanguage, MarkdownRichBlock } from './MarkdownRichBlock';
+import {
+  isRichBlockLanguage,
+  MarkdownRichBlock,
+  MarkdownRichBlockSkeleton,
+} from './MarkdownRichBlock';
+import { endsInsideOpenFence } from '@/lib/markdownFence';
 
-type PreProps = { children?: ReactNode };
+type PreProps = { children?: ReactNode } & ExtraProps;
 
-const Pre = ({ children }: PreProps) => {
+/**
+ * Where the reply's unclosed fence ends (its text length), or null when every fence is closed.
+ * Only the last block of a streaming reply can be open, and it always runs to the end of the text.
+ */
+const OpenFenceContext = createContext<number | null>(null);
+
+const Pre = ({ children, node }: PreProps) => {
+  const openFenceEnd = useContext(OpenFenceContext);
   const child = Children.toArray(children)[0];
   if (!isValidElement<{ className?: string; children?: ReactNode }>(child)) {
     return <pre>{children}</pre>;
@@ -22,7 +34,15 @@ const Pre = ({ children }: PreProps) => {
   const language = /language-([\w-]+)/.exec(child.props.className ?? '')?.[1];
   const code = String(child.props.children ?? '').replace(/\n$/, '');
 
-  if (isRichBlockLanguage(language)) return <MarkdownRichBlock language={language!} code={code} />;
+  if (isRichBlockLanguage(language)) {
+    // Half a YAML list never parses, so show a placeholder until the closing fence arrives.
+    const isOpenBlock = openFenceEnd !== null && (node?.position?.end.offset ?? 0) >= openFenceEnd;
+    return isOpenBlock ? (
+      <MarkdownRichBlockSkeleton />
+    ) : (
+      <MarkdownRichBlock language={language!} code={code} />
+    );
+  }
   return <HighlightedCode code={code} language={language} copyable />;
 };
 
@@ -67,9 +87,16 @@ type MarkdownProps = {
   children: string;
   /** Fade in each block as it mounts — used for streaming assistant replies. */
   fadeIn?: boolean;
+  /** The text is still arriving, so a block that has no closing fence yet is unfinished. */
+  streaming?: boolean;
 };
 
-export const Markdown = ({ children, fadeIn }: MarkdownProps) => {
+// Props are primitives, so a parent re-render (e.g. typing in the composer) skips the
+// expensive markdown parse; streaming still updates because `children` changes per token.
+export const Markdown = memo(({ children, fadeIn, streaming }: MarkdownProps) => {
+  const openFenceEnd =
+    streaming && endsInsideOpenFence(children) ? children.trimEnd().length : null;
+
   return (
     <div
       className={cn(
@@ -87,27 +114,29 @@ export const Markdown = ({ children, fadeIn }: MarkdownProps) => {
         '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground',
       )}
     >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkAlert, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-        components={{
-          // Model output is untrusted: links never keep a reference to this page.
-          a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
-          pre: Pre,
-          div: CalloutDiv,
-          p: CalloutParagraph,
-          // Styled in globals.css under `.markdown-table`.
-          table: ({ children, ...props }) => (
-            <div className="markdown-table my-3">
-              <table className="w-full border-collapse text-sm" {...props}>
-                {children}
-              </table>
-            </div>
-          ),
-        }}
-      >
-        {children}
-      </ReactMarkdown>
+      <OpenFenceContext.Provider value={openFenceEnd}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkAlert, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+          components={{
+            // Model output is untrusted: links never keep a reference to this page.
+            a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+            pre: Pre,
+            div: CalloutDiv,
+            p: CalloutParagraph,
+            // Styled in globals.css under `.markdown-table`.
+            table: ({ children, ...props }) => (
+              <div className="markdown-table my-3">
+                <table className="w-full border-collapse text-sm" {...props}>
+                  {children}
+                </table>
+              </div>
+            ),
+          }}
+        >
+          {children}
+        </ReactMarkdown>
+      </OpenFenceContext.Provider>
     </div>
   );
-};
+});

@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -17,9 +18,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useGetMessages, useSendMessage, useUploadAttachment } from '@/hooks/useAi';
 import { deleteAttachment } from '@/api/attachments';
-import { ChatMessage, artifactsOf, attachmentsOf, citationsOf } from './ChatMessage';
+import { ChatMessage, artifactsOf, attachmentsOf, citationsOf, questionsOf } from './ChatMessage';
 import { ChatAttachmentDialog, type ChatAttachmentTarget } from './ChatAttachmentDialog';
 import { ChatAttachmentCardSkeleton, ChatAttachmentChip } from './ChatAttachmentChip';
+import { ChatSendContext } from './ChatSendContext';
 
 const ACCEPTED_EXTENSIONS =
   '.pdf,.docx,.xlsx,.csv,.json,.txt,.md,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.wav,.webm,.ogg,.flac';
@@ -69,6 +71,39 @@ export function ChatPanel({
   const messages = data?.messages ?? [];
 
   const isUploading = attachments.some((attachment) => attachment.status === 'uploading');
+
+  const chatSend = useMemo(
+    () => ({ send: (content: string) => void send(content), disabled: isStreaming }),
+    [send, isStreaming],
+  );
+
+  // A question card is answered once a later user message exists. `pending` is always newer
+  // than the saved messages, so it counts as a later message for every saved card.
+  const questionStates = useMemo(() => {
+    const states = new Map<string, { answered: boolean; answer?: string }>();
+    let laterUser: string | undefined;
+
+    for (let index = messages.length - 1; index >= 0; index--) {
+      const message = messages[index];
+      if (!message) continue;
+
+      if (message.role === 'user') {
+        laterUser = message.content;
+        continue;
+      }
+      if (message.role !== 'assistant') continue;
+
+      const questions = questionsOf(message.metadata);
+      if (questions.length === 0) continue;
+
+      states.set(message.id, {
+        answered: laterUser !== undefined || pending !== null,
+        answer: laterUser ?? pending?.content,
+      });
+    }
+
+    return states;
+  }, [messages, pending]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -200,69 +235,80 @@ export function ChatPanel({
         </div>
       )}
 
-      <div
-        ref={scrollRef}
-        onScroll={(event) => {
-          const el = event.currentTarget;
-          stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-        className="min-h-0 flex-1 h-[50%] space-y-8 overflow-y-auto px-4 py-4"
-      >
-        {isLoading ? (
-          <>
-            <Skeleton className="ml-auto h-9 w-1/3 rounded-2xl" />
-            <Skeleton className="h-16 w-2/3" />
-          </>
-        ) : messages.length === 0 && !pending ? (
-          <p className="pt-10 text-center text-sm text-muted-foreground">
-            Ask anything about this project.
-          </p>
-        ) : (
-          messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              role={message.role}
-              content={message.content}
-              conversationId={conversationId}
-              partial={message.metadata?.partial === true}
-              attachments={attachmentsOf(message.metadata)}
-              sources={citationsOf(message.metadata)}
-              artifacts={artifactsOf(message.metadata)}
-              onOpenArtifact={onOpenArtifact}
-              onOpenAttachment={openSentAttachment}
-            />
-          ))
-        )}
+      <ChatSendContext.Provider value={chatSend}>
+        <div
+          ref={scrollRef}
+          onScroll={(event) => {
+            const el = event.currentTarget;
+            stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          }}
+          className="min-h-0 flex-1 h-[50%] space-y-8 overflow-y-auto px-4 py-4"
+        >
+          {isLoading ? (
+            <>
+              <Skeleton className="ml-auto h-9 w-1/3 rounded-2xl" />
+              <Skeleton className="h-16 w-2/3" />
+            </>
+          ) : messages.length === 0 && !pending ? (
+            <p className="pt-10 text-center text-sm text-muted-foreground">
+              Ask anything about this project.
+            </p>
+          ) : (
+            messages.map((message) => {
+              const questionState = questionStates.get(message.id);
 
-        {pending && (
-          <>
-            <ChatMessage
-              role="user"
-              content={pending.content}
-              conversationId={conversationId}
-              attachments={pending.attachments}
-              onOpenAttachment={openSentAttachment}
-            />
-            <ChatMessage
-              role="assistant"
-              content={pending.text}
-              conversationId={conversationId}
-              sources={pending.sources}
-              artifacts={pending.artifacts}
-              creatingArtifact={pending.creatingArtifact}
-              activity={pending.activity}
-              isStreaming
-              onOpenArtifact={onOpenArtifact}
-            />
-          </>
-        )}
+              return (
+                <ChatMessage
+                  key={message.id}
+                  role={message.role}
+                  content={message.content}
+                  conversationId={conversationId}
+                  partial={message.metadata?.partial === true}
+                  attachments={attachmentsOf(message.metadata)}
+                  sources={citationsOf(message.metadata)}
+                  artifacts={artifactsOf(message.metadata)}
+                  questions={questionsOf(message.metadata)}
+                  answered={questionState?.answered}
+                  answer={questionState?.answer}
+                  onOpenArtifact={onOpenArtifact}
+                  onOpenAttachment={openSentAttachment}
+                />
+              );
+            })
+          )}
 
-        {error && (
-          <p role="alert" className="text-sm text-error">
-            {error}
-          </p>
-        )}
-      </div>
+          {pending && (
+            <>
+              <ChatMessage
+                role="user"
+                content={pending.content}
+                conversationId={conversationId}
+                attachments={pending.attachments}
+                onOpenAttachment={openSentAttachment}
+              />
+              <ChatMessage
+                role="assistant"
+                content={pending.text}
+                conversationId={conversationId}
+                sources={pending.sources}
+                artifacts={pending.artifacts}
+                questions={pending.questions}
+                answered={false}
+                creatingArtifact={pending.creatingArtifact}
+                activity={pending.activity}
+                isStreaming
+                onOpenArtifact={onOpenArtifact}
+              />
+            </>
+          )}
+
+          {error && (
+            <p role="alert" className="text-sm text-error">
+              {error}
+            </p>
+          )}
+        </div>
+      </ChatSendContext.Provider>
 
       <div className="border-t border-border p-3">
         {attachments.length > 0 && (

@@ -39,9 +39,7 @@ export const SpreadsheetPreview = ({ buffer }: SpreadsheetPreviewProps) => {
                 defval: '',
               }) as unknown[][])
             : [];
-          const rows = raw
-            .slice(0, MAX_ROWS)
-            .map((row) => row.map((cell) => String(cell ?? '')));
+          const rows = raw.slice(0, MAX_ROWS).map((row) => row.map((cell) => String(cell ?? '')));
 
           return { name, rows, truncated: raw.length > MAX_ROWS };
         });

@@ -379,13 +379,7 @@ export function ArtifactService(db: Db) {
   }
 
   /** Presigned download URL; keeps the artifact's real extension when it has one. */
-  async function getDownloadUrl({
-    artifactId,
-    version,
-  }: {
-    artifactId: string;
-    version?: number;
-  }) {
+  async function getDownloadUrl({ artifactId, version }: { artifactId: string; version?: number }) {
     const artifact = ensureExists(
       await repository.getById(artifactId),
       NotFoundError('Artifact not found.'),
