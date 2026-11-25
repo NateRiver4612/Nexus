@@ -1,144 +1,201 @@
-import { useCompleteTask, useUpdateTaskDodStatus, useUpdateTaskStepStatus } from '@/hooks/useTasks';
 import type { TaskDetailType } from '@nexus/types';
-import { Checkbox } from '../ui/checkbox';
-import { Check } from 'lucide-react';
-import { Card } from '../ui/card';
-import { Button } from '../ui/button';
-import { Skeleton } from '../ui/skeleton';
+import { BadgeCheck, ListChecks, PanelRightClose, PanelRightOpen } from 'lucide-react';
 
-const TaskSummarySectionSkeleton = () => {
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useUpdateTaskDodStatus, useUpdateTaskStepStatus } from '@/hooks/useTasks';
+
+import TaskChecklistItem from './TaskChecklistItem';
+import TaskChecklistSection from './TaskChecklistSection';
+
+type TaskSummarySectionProps = {
+  task?: TaskDetailType;
+  isLoading?: boolean;
+  /** Narrow checklist rail vs. the full Requirements/DoD cards. */
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+};
+
+export const TaskSummarySectionSkeleton = () => {
   return (
-    <Card className="bg-white w-full flex flex-col gap-6">
-      <div className="flex flex-col gap-2 text-sm">
-        <span className="text-gray-400 text-sm font-semibold uppercase">Goal</span>
-        <Skeleton className="h-5 w-full" />
-        <Skeleton className="h-5 w-2/3" />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-gray-400 text-sm font-semibold uppercase">Requirements</span>
-        <ul className="space-y-3 text-sm">
-          {[0, 1, 2].map((index) => (
-            <li key={index} className="flex items-center gap-2">
-              <Skeleton className="size-4 shrink-0 rounded-sm" />
-              <Skeleton className="h-5 flex-1" />
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-gray-400 text-sm font-semibold uppercase">Definition of done</span>
-        <ul className="space-y-3 text-sm">
-          {[0, 1].map((index) => (
-            <li key={index} className="flex items-center gap-2">
-              <Skeleton className="size-4 shrink-0 rounded-sm" />
-              <Skeleton className="h-5 flex-1" />
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <Skeleton className="h-8 w-32 rounded-lg" />
-    </Card>
+    <div className="flex flex-col gap-4">
+      {[0, 1].map((index) => (
+        <Card key={index} className="flex flex-col gap-4 p-5">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-9 rounded-pill" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-12 w-full rounded-item" />
+            ))}
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 };
 
+const EmptyChecklist = ({ label }: { label: string }) => {
+  return (
+    <p className="rounded-item border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+      {label}
+    </p>
+  );
+};
+
+type ChecklistRailProps = {
+  requirementsCompleted: number;
+  requirementsTotal: number;
+  dodsCompleted: number;
+  dodsTotal: number;
+  onExpand?: () => void;
+};
+
+/** Collapsed right column: expand control plus the two colored checklist counts. */
+const ChecklistRail = ({
+  requirementsCompleted,
+  requirementsTotal,
+  dodsCompleted,
+  dodsTotal,
+  onExpand,
+}: ChecklistRailProps) => {
+  return (
+    <div className="mx-auto flex h-full w-14 flex-col items-center gap-3 rounded-full border border-border bg-card px-1 py-3 shadow-2xs lg:mx-0 lg:w-full">
+      <button
+        type="button"
+        onClick={onExpand}
+        aria-label="Expand checklist"
+        title="Expand checklist"
+        className="flex size-10 items-center justify-center rounded-full bg-accent text-accent-foreground transition-colors hover:brightness-95"
+      >
+        <PanelRightOpen className="size-4" aria-hidden="true" />
+      </button>
+
+      <div className="h-px w-8 bg-border" />
+
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <span
+          title={`Requirements ${requirementsCompleted}/${requirementsTotal}`}
+          className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-[10px] font-bold tabular-nums text-primary-foreground"
+        >
+          {requirementsCompleted}/{requirementsTotal}
+        </span>
+        <span
+          title={`Definition of done ${dodsCompleted}/${dodsTotal}`}
+          className="flex size-10 items-center justify-center rounded-full bg-accent-secondary-soft text-[10px] font-bold tabular-nums text-accent-secondary-foreground"
+        >
+          {dodsCompleted}/{dodsTotal}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+/** Right column: requirements and definition-of-done checklists. */
 const TaskSummarySection = ({
   task,
   isLoading,
-}: {
-  task?: TaskDetailType;
-  isLoading?: boolean;
-}) => {
+  isCollapsed = false,
+  onToggleCollapse,
+}: TaskSummarySectionProps) => {
   const { mutate: updateDodStatus } = useUpdateTaskDodStatus();
   const { mutate: updateStepStatus } = useUpdateTaskStepStatus();
-  const { mutate: completeTask, isPending: isCompleting } = useCompleteTask();
 
   if (isLoading || !task) {
     return <TaskSummarySectionSkeleton />;
   }
 
   const taskId = task.id;
+  const completedSteps = task.steps.filter((step) => step.status === 'completed').length;
+  const completedDods = task.dods.filter((dod) => dod.status === 'completed').length;
 
-  const steps = task.steps;
-  const dods = task.dods;
-  const allDodsDone = dods.every((dod) => dod.status === 'completed');
-  const isTaskDone = task.status === 'completed';
+  if (isCollapsed) {
+    return (
+      <ChecklistRail
+        requirementsCompleted={completedSteps}
+        requirementsTotal={task.steps.length}
+        dodsCompleted={completedDods}
+        dodsTotal={task.dods.length}
+        onExpand={onToggleCollapse}
+      />
+    );
+  }
 
   return (
-    <Card className="bg-white w-full flex flex-col gap-6">
-      <div className="flex flex-col gap-2 text-sm">
-        <span className="text-gray-400 text-sm font-semibold uppercase">Goal</span>
-        <p>{task.description}</p>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-gray-400 text-sm font-semibold uppercase">Requirements</span>
-        <ul className="space-y-3 text-sm">
-          {steps.map((s) => (
-            <li key={s.id} className="flex items-center gap-2">
-              <Checkbox
-                id={`step-${s.id}`}
-                className="data-[state=checked]:bg-gray-100 data-[state=checked]:border-gray-400 data-[state=checked]:text-green-600"
-                checked={s.status === 'completed'}
-                onCheckedChange={(checked) =>
-                  updateStepStatus({
-                    taskId,
-                    stepId: s.id,
-                    status: checked ? 'completed' : 'todo',
-                  })
-                }
-              />
-              <label
-                htmlFor={`step-${s.id}`}
-                className={s.status === 'completed' ? 'line-through opacity-60' : ''}
-              >
-                {s.value}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-gray-400 text-sm font-semibold uppercase">Definition of done</span>
-        <ul className="space-y-3 text-sm">
-          {dods.map((dod) => (
-            <li className="flex items-center gap-2" key={dod.id}>
-              <Checkbox
-                id={`dod-${dod.id}`}
-                checked={dod.status === 'completed'}
-                className="data-[state=checked]:bg-gray-100 data-[state=checked]:border-gray-400 data-[state=checked]:text-green-600"
-                onCheckedChange={(checked) =>
-                  updateDodStatus({
-                    taskId,
-                    dodId: dod.id,
-                    status: checked ? 'completed' : 'todo',
-                  })
-                }
-              />
-              <label
-                htmlFor={`dod-${dod.id}`}
-                className={dod.status === 'completed' ? 'line-through opacity-60' : ''}
-              >
-                {dod.value}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <Button
-        variant="default"
-        onClick={() => completeTask(taskId)}
-        disabled={!allDodsDone || isTaskDone || isCompleting}
-        className="w-fit flex items-center"
+    <div className="flex flex-col gap-4">
+      <TaskChecklistSection
+        icon={ListChecks}
+        title="Requirements"
+        subtitle="Core deliverables required before committing scope"
+        completedCount={completedSteps}
+        totalCount={task.steps.length}
+        iconClassName="bg-primary-soft text-primary-foreground"
+        action={
+          onToggleCollapse ? (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label="Collapse checklist"
+              title="Collapse checklist"
+              className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <PanelRightClose className="size-3.5" aria-hidden="true" />
+            </button>
+          ) : undefined
+        }
       >
-        <Check size={16} />
-        <p>{isTaskDone ? 'Task completed' : isCompleting ? 'Completing…' : 'Mark Complete'}</p>
-      </Button>
-    </Card>
+        {task.steps.length > 0 ? (
+          task.steps.map((step) => (
+            <TaskChecklistItem
+              key={step.id}
+              label={step.value}
+              checked={step.status === 'completed'}
+              onToggle={(checked) =>
+                updateStepStatus({
+                  taskId,
+                  stepId: step.id,
+                  status: checked ? 'completed' : 'todo',
+                })
+              }
+            />
+          ))
+        ) : (
+          <EmptyChecklist label="No requirements have been added to this task yet." />
+        )}
+      </TaskChecklistSection>
+
+      <TaskChecklistSection
+        icon={BadgeCheck}
+        title="Definition of done"
+        subtitle="Verification criteria before closing this task"
+        completedCount={completedDods}
+        totalCount={task.dods.length}
+        iconClassName="bg-accent-secondary-soft text-accent-secondary-foreground"
+      >
+        {task.dods.length > 0 ? (
+          task.dods.map((dod) => (
+            <TaskChecklistItem
+              key={dod.id}
+              label={dod.value}
+              checked={dod.status === 'completed'}
+              onToggle={(checked) =>
+                updateDodStatus({
+                  taskId,
+                  dodId: dod.id,
+                  status: checked ? 'completed' : 'todo',
+                })
+              }
+            />
+          ))
+        ) : (
+          <EmptyChecklist label="No definition-of-done criteria have been added yet." />
+        )}
+      </TaskChecklistSection>
+    </div>
   );
 };
 
