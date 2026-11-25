@@ -17,6 +17,14 @@
   body {
     @apply bg-background font-sans text-sm font-normal leading-relaxed text-foreground;
   }
+
+  /* Tailwind v4's preflight no longer sets pointer on buttons (the browser default is
+     `default`). Utilities still win, so `disabled:cursor-not-allowed` / `cursor-default`
+     keep working on top of this. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
 }
 
 @keyframes accordion-down {

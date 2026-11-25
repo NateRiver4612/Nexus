@@ -2,7 +2,7 @@ import { Badge } from './ui/badge';
 
 const DIFFICULTY_VARIANTS = {
   low: 'accent-secondary-soft',
-  medium: 'accent-soft',
+  medium: 'accent',
   high: 'accent-tertiary-soft',
 } as const;
 

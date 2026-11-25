@@ -48,8 +48,8 @@ const statusStyles: Record<StatusType, { label: string; className: string; dotCl
     },
     todo: {
       label: 'Todo',
-      className: 'border-border bg-surface-secondary text-muted-foreground',
-      dotClassName: 'bg-muted-foreground',
+      className: 'border-primary/40 bg-primary-soft text-primary-foreground',
+      dotClassName: 'bg-primary-foreground',
     },
     cancelled: {
       label: 'Cancelled',
