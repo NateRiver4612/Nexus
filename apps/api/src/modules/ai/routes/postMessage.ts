@@ -44,6 +44,7 @@ import { generateConversationTitle } from '../chat/generateTitle';
 import { runChatLoop } from '../chat/runChatLoop';
 import { projectChatTools, webSearchEnabled } from '../tools/registry';
 import { AttachmentService } from '../attachments/service';
+import { ArtifactService } from '../../artifacts/service';
 import {
   attachmentsOf,
   formatAttachmentStubs,
@@ -162,6 +163,26 @@ export const postMessageRoute = defineOpenAPIRoute({
         conversationId,
       }),
     ]);
+
+    // Each sent file also lands in the project's artifact library, reusing the attachment's
+    // S3 object instead of copying it. Done after the artifact context is built so the new
+    // files don't pollute this turn's prompt. Best-effort: a failed save must not break the reply.
+    const artifactService = ArtifactService(db);
+    for (const attachment of attachmentRows) {
+      try {
+        await artifactService.saveAttachment({
+          attachment,
+          projectId: conversation.projectId,
+          conversationId,
+          userId: user.id,
+        });
+      } catch (error) {
+        console.warn(
+          `[postMessage] could not save attachment ${attachment.id} as an artifact`,
+          error,
+        );
+      }
+    }
 
     // Char counts for earlier-turn attachments, so their stubs can say how big the file is.
     const earlierAttachmentIds = [

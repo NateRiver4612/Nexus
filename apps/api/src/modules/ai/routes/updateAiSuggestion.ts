@@ -12,7 +12,7 @@ import type { AiSuggestionType } from '@nexus/types';
 export const updateAiSuggestionRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'patch',
-    path: '/suggestions/items/{id}',
+    path: '/suggestions/{id}',
     request: {
       params: idParamsSchema,
       body: {

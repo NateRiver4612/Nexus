@@ -5,6 +5,7 @@ import { confirmAttachmentRoute } from '../attachments/routes/confirmAttachment'
 import { createAttachmentUploadUrlRoute } from '../attachments/routes/createUploadUrl';
 import { deleteAttachmentRoute } from '../attachments/routes/deleteAttachment';
 import { getAttachmentDownloadUrlRoute } from '../attachments/routes/getDownloadUrl';
+import { getAttachmentFileRoute } from '../attachments/routes/getFile';
 import { createAiSuggestionRoute } from './createAiSuggestion';
 import { createConversationRoute } from './createConversation';
 import { deleteAiSuggestionRoute } from './deleteAiSuggestion';
@@ -41,5 +42,6 @@ export function aiRoutes() {
     { route: confirmAttachmentRoute.route, handler: confirmAttachmentRoute.handler },
     { route: deleteAttachmentRoute.route, handler: deleteAttachmentRoute.handler },
     { route: getAttachmentDownloadUrlRoute.route, handler: getAttachmentDownloadUrlRoute.handler },
+    { route: getAttachmentFileRoute.route, handler: getAttachmentFileRoute.handler },
   ] as const);
 }

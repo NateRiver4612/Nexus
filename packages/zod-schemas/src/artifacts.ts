@@ -13,6 +13,11 @@ export const artifactTypes = [
   'diagram',
   'study_guide',
   'code',
+  // Files attached in chat are saved as artifacts too, keeping their real kind.
+  'image',
+  'audio',
+  'video',
+  'file',
 ] as const;
 
 export const artifactStatuses = ['queued', 'generating', 'ready', 'failed'] as const;
@@ -107,6 +112,11 @@ export const artifactVersionListSchema = z.array(artifactVersionSchema).openapi(
 /** `version` is optional; leaving it out reads the newest one. */
 export const artifactContentQuerySchema = z.object({
   version: z.coerce.number().int().positive().optional(),
+});
+
+/** Presigned download URL for one artifact version. */
+export const artifactDownloadUrlSchema = z.object({
+  url: z.url({ error: 'Enter a valid URL' }),
 });
 
 /** One version's text, plus every version so the client can offer a switcher. */

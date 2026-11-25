@@ -11,7 +11,8 @@ import type {
 } from '@nexus/types';
 
 import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
-import { deleteObject, getObject, putObject } from '../../storage';
+import { deleteObject, getObject, presignGetUrl, putObject } from '../../storage';
+import { artifactTypeForFile } from './mime';
 import { ArtifactRepository } from './repository';
 
 /** Generated text is held in memory and sent to S3 in one piece, so it needs a ceiling. */
@@ -133,6 +134,85 @@ export function ArtifactService(db: Db) {
     }
   }
 
+  /**
+   * Saves an already-uploaded chat attachment as an artifact without copying its bytes: the
+   * version points at the attachment's S3 key and records `sourceAttachmentId`, so deleting the
+   * artifact alone must never delete the shared object.
+   */
+  async function saveAttachment({
+    attachment,
+    projectId,
+    conversationId,
+    userId,
+  }: {
+    attachment: { id: string; name: string; storageKey: string; mimeType: string; size: number };
+    projectId: string;
+    conversationId: string;
+    userId: string;
+  }): Promise<ArtifactWriteResult> {
+    const name = attachment.name;
+    const type = artifactTypeForFile({ mimeType: attachment.mimeType, name });
+    const existing = await repository.findByConversationAndName({ conversationId, name });
+
+    if (!existing) {
+      const artifact = await db.transaction(async (tx) => {
+        const txRepository = ArtifactRepository(tx);
+
+        const rows = await txRepository.insert({
+          projectId,
+          conversationId,
+          name,
+          type,
+          status: 'ready',
+          createdBy: userId,
+        });
+        const row = ensureExists(rows[0], NotFoundError('Artifact not found.'));
+
+        await txRepository.insertVersion({
+          artifactId: row.id,
+          version: 1,
+          storageKey: attachment.storageKey,
+          sourceAttachmentId: attachment.id,
+          mimeType: attachment.mimeType,
+          size: attachment.size,
+          sources: [],
+          createdBy: userId,
+        });
+
+        return row;
+      });
+
+      return { artifact: toView(artifact), version: 1 };
+    }
+
+    const { artifact, version } = await db.transaction(async (tx) => {
+      const txRepository = ArtifactRepository(tx);
+
+      ensureExists(await txRepository.lockById(existing.id), NotFoundError('Artifact not found.'));
+      const next = (await txRepository.latestVersionNumber(existing.id)) + 1;
+
+      await txRepository.insertVersion({
+        artifactId: existing.id,
+        version: next,
+        storageKey: attachment.storageKey,
+        sourceAttachmentId: attachment.id,
+        mimeType: attachment.mimeType,
+        size: attachment.size,
+        sources: [],
+        createdBy: userId,
+      });
+      // The newest version can be a different kind of file; keep the artifact label honest.
+      const updated = await txRepository.update(existing.id, { status: 'ready', type });
+
+      return {
+        artifact: ensureExists(updated, NotFoundError('Artifact not found.')),
+        version: next,
+      };
+    });
+
+    return { artifact: toView(artifact), version };
+  }
+
   /** Saves new content as the next version (v2, v3, …) of an existing artifact. */
   async function addVersion({
     artifactId,
@@ -241,6 +321,8 @@ export function ArtifactService(db: Db) {
           mimeType,
           size: body.length,
           sources,
+          // The version now owns a freshly written object rather than borrowing the attachment's.
+          sourceAttachmentId: null,
         });
 
         return ensureExists(
@@ -249,7 +331,8 @@ export function ArtifactService(db: Db) {
         );
       });
 
-      await discardObject(current.storageKey);
+      // Shared attachment objects belong to the attachment and must survive an artifact edit.
+      if (current.sourceAttachmentId === null) await discardObject(current.storageKey);
       return { artifact: toView(artifact), version };
     } catch (error) {
       await discardObject(storageKey);
@@ -264,6 +347,17 @@ export function ArtifactService(db: Db) {
       NotFoundError('Artifact version not found.'),
     );
 
+    // Binary versions (PDF, images, audio, office files) have no text body; the preview
+    // fetches their bytes from `getFile` instead of decoding them as UTF-8 here.
+    if (!isTextLikeMime(row.mimeType)) {
+      return {
+        content: '',
+        mimeType: row.mimeType,
+        version: row.version,
+        sources: row.sources,
+      };
+    }
+
     const object = await getObject(row.storageKey);
     return {
       content: object.body.toString('utf8'),
@@ -273,6 +367,40 @@ export function ArtifactService(db: Db) {
     };
   }
 
+  /** Raw bytes for an in-app preview, mirroring the chat attachment file route. */
+  async function getFile({ artifactId, version }: { artifactId: string; version?: number }) {
+    const row = ensureExists(
+      await repository.getVersion({ artifactId, version }),
+      NotFoundError('Artifact version not found.'),
+    );
+
+    const object = await getObject(row.storageKey);
+    return { body: object.body, mimeType: row.mimeType };
+  }
+
+  /** Presigned download URL; keeps the artifact's real extension when it has one. */
+  async function getDownloadUrl({
+    artifactId,
+    version,
+  }: {
+    artifactId: string;
+    version?: number;
+  }) {
+    const artifact = ensureExists(
+      await repository.getById(artifactId),
+      NotFoundError('Artifact not found.'),
+    );
+    const row = ensureExists(
+      await repository.getVersion({ artifactId, version }),
+      NotFoundError('Artifact version not found.'),
+    );
+
+    return presignGetUrl({
+      key: row.storageKey,
+      filename: withExtension(artifact.name, row.mimeType),
+    });
+  }
+
   /** Newest first. `storageKey` is internal and never leaves the service. */
   async function listVersions(artifactId: string): Promise<ArtifactVersionType[]> {
     const rows = await repository.listVersions(artifactId);
@@ -280,7 +408,9 @@ export function ArtifactService(db: Db) {
   }
 
   async function remove(id: string) {
-    const storageKeys = await repository.listVersionStorageKeys(id);
+    // Only objects this artifact owns. Versions backed by a chat attachment share that
+    // attachment's object, which is removed with the conversation instead.
+    const storageKeys = await repository.listOwnedVersionStorageKeys(id);
 
     // Row first: if S3 cleanup fails we only leak bytes, instead of leaving a row that
     // points at objects that are gone.
@@ -303,15 +433,37 @@ export function ArtifactService(db: Db) {
     create,
     findByName,
     update,
+    saveAttachment,
     createWithContent,
     addVersion,
     replaceVersionContent,
     getContent,
+    getFile,
+    getDownloadUrl,
     listVersions,
     remove,
     listStorageKeysByConversation,
     removeStorageObjects,
   };
+}
+
+/** Text artifacts go through the JSON content route; everything else is fetched as bytes. */
+function isTextLikeMime(mime: string) {
+  return /^text\//i.test(mime) || mime === 'application/json';
+}
+
+const EXTENSION_BY_MIME: Record<string, string> = {
+  'text/markdown': '.md',
+  'text/vnd.mermaid': '.mmd',
+  'text/plain': '.txt',
+  'application/json': '.json',
+  'application/pdf': '.pdf',
+};
+
+/** Text artifacts are named like "Nexus architecture"; downloads need a real extension. */
+function withExtension(name: string, mimeType: string) {
+  if (/\.[a-z0-9]{2,5}$/i.test(name)) return name;
+  return `${name}${EXTENSION_BY_MIME[mimeType] ?? ''}`;
 }
 
 function toBody(content: string) {

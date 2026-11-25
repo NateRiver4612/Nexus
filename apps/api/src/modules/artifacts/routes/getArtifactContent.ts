@@ -16,7 +16,7 @@ import { ArtifactService } from '../service';
 export const getArtifactContentRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'get',
-    path: '/items/{id}/content',
+    path: '/{id}/content',
     security: bearerSecurity,
     middleware: [requireArtifactAccess],
     request: {

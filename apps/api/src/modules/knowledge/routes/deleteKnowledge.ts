@@ -7,7 +7,7 @@ import { bearerSecurity } from '../../../openapi';
 export const deleteKnowledgeRoute = defineOpenAPIRoute({
   route: createRoute({
     method: 'delete',
-    path: '/items/{id}',
+    path: '/{id}',
     security: bearerSecurity,
     request: {
       params: idParamsSchema,
