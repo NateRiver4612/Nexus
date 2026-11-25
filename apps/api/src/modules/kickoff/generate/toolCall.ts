@@ -232,7 +232,8 @@ export async function attemptToolCallWithRetry<T>({
   if (retry.finishReason === 'length') {
     throw new Error(
       `AI ${label} exceeded the token limit even after a retry (${maxTokensRetry} completion tokens). ` +
-        `The request is too large — trim the scope or lower per-item requirements.`,
+        `The request is too large — split the scope into more milestones/tasks rather than dropping ` +
+        `the required detail or shortening the plan below its real shape.`,
     );
   }
   throw retry.error;

@@ -122,11 +122,11 @@ export const RESEARCH_DIGEST_OUTPUT_SCHEMA: Record<string, unknown> = (() => {
  */
 export const researchBriefSchema = z.object({
   /** A clear, directional task statement — what to research. */
-  objective: z.string().min(20).max(300),
+  objective: z.string().min(20).max(400),
   /** Prior knowledge, assumptions, and decisions already made, so research doesn't repeat them. */
-  known: z.string().max(600).default(''),
+  known: z.string().max(800).default(''),
   /** Explicit in/out boundaries; state that it's exploratory when the user wants discovery. */
-  scope: z.string().min(10).max(600),
+  scope: z.string().min(10).max(900),
 });
 
 /**

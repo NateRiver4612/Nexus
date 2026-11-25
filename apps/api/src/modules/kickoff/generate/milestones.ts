@@ -1,6 +1,10 @@
 import type { KickoffPlanType } from '@nexus/types';
 import type { CompletionUsage } from 'openai/resources/completions.mjs';
-import { kickoffMilestonesSchema, kickoffMilestonesToolSchema } from '@nexus/zod-schemas';
+import {
+  KICKOFF_AVERAGE_TASK_MINUTES,
+  kickoffMilestonesSchema,
+  kickoffMilestonesToolSchema,
+} from '@nexus/zod-schemas';
 import {
   buildMilestonesSystemPrompt,
   buildMilestonesUserPrompt,
@@ -13,15 +17,29 @@ export const MILESTONES_TOOL_NAME = 'generate_project_milestones';
 
 /**
  * Milestones are the big, structurally-hard payload — give them the largest
- * budget and the escalated retry.
+ * budget and the escalated retry. The finer 45-minute task breakdown needs more
+ * headroom than the old 5-tasks-per-milestone shape.
  */
-export const MILESTONES_MAX_TOKENS = 24000;
-export const MILESTONES_MAX_TOKENS_RETRY = 32000;
+export const MILESTONES_MAX_TOKENS = 32000;
+export const MILESTONES_MAX_TOKENS_RETRY = 40000;
 
 export type MilestonesResult = {
   milestones: KickoffPlanType['milestones'];
   usage?: CompletionUsage;
 };
+
+/**
+ * Shared rules restated on every retry: the model most often fails by keeping
+ * tasks too large or by trimming detail to fit, so spell out the granularity
+ * contract alongside the exact validation issues.
+ */
+const MILESTONES_CORRECTION_RULES =
+  `Rules: target 15-20 minutes per task (hard max 30) and keep the plan's average at or below ` +
+  `${KICKOFF_AVERAGE_TASK_MINUTES} minutes — split longer work into multiple consecutive tasks inside ` +
+  `the same milestone instead of lowering its estimate; do not add milestones to solve granularity; ` +
+  `aim for 6-10 tasks per milestone (hard max 12); 1-2 steps for most tasks (max 3) and 2-3 DoDs per ` +
+  `task; task descriptions <=260 chars, milestone descriptions <=360 chars, step/DoD values <=190 ` +
+  `chars, titles <=120 chars.`;
 
 /**
  * Field-level length/shape failures — feed the exact issue paths back so the
@@ -35,9 +53,9 @@ function buildMilestonesCorrection({
     return (
       `Your previous response failed validation. Fix exactly these issues and \
 re-output the FULL "milestones" array (every milestone's tasks fully populated with "steps", "dods" \
-and "estimatedTimeMinutes"; shorten any over-length field to respect its limit — task descriptions \
-<=260 chars, milestone descriptions <=360 chars, step/DoD values <=190 chars, titles <=120 chars):\n` +
-      issues.map((issue) => `- ${issue}`).join('\n')
+and "estimatedTimeMinutes":\n` +
+      issues.map((issue) => `- ${issue}`).join('\n') +
+      `\n${MILESTONES_CORRECTION_RULES}`
     );
   }
 
@@ -46,7 +64,7 @@ and "estimatedTimeMinutes"; shorten any over-length field to respect its limit �
       `Your previous response was incomplete: it was missing required field(s): ` +
       `${missingKeys.join(', ')}. Re-generate the FULL "milestones" array — every milestone's ` +
       `tasks fully populated with "steps", "dods" and "estimatedTimeMinutes". Never omit any ` +
-      `required field.`
+      `required field. ${MILESTONES_CORRECTION_RULES}`
     );
   }
 

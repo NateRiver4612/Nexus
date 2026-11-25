@@ -48,26 +48,44 @@ hit a target count, and never compress a broad goal into too few milestones to b
 milestone's tasks must be actionable and specific to what the user described — never generic placeholders \
 or "learn about X" tasks with no output.
 
-Every task carries 2-6 concrete steps (its steps array), each a single specific action the user performs: name \
-the exact commands, APIs, files, or concepts involved (see the step field's own constraints for wording). \
-Steps are the detailed how-to of the task — they should be complete enough that the user can follow them \
-without going back to the source material.
+TASK GRANULARITY (hard rule): every task must be a single focused sitting of 15-20 minutes, with 30 \
+minutes as the absolute ceiling. This applies at every level — beginner, intermediate, and advanced all \
+use the same task size; level changes depth and milestone count, not task size. If the natural unit of \
+work would take longer — or would need more than 3 substantive steps — split it into two or more \
+consecutive tasks, each independently completable, with its own steps and DoD. Never shrink the estimate \
+to fit; split the work instead. Split inside the milestone: add smaller tasks, never extra milestones, \
+when the work naturally decomposes. Aim for 6-10 tasks per milestone.
 
-Every task also carries 1-5 definition-of-done criteria (its "dods" array): concrete, verifiable \
-statements of how the user knows the task is actually finished — acceptance criteria or outcomes, not \
-actions. A task may only be completed when every one of these is satisfied. "dods" entries use the EXACT \
-SAME OBJECT SHAPE as "steps" — { "value": "<the criterion text>" } — never a plain string.
+Every task carries 1-2 concrete steps (its "steps" array) — use 3 only for a rare 30-minute task. Each \
+step is exactly one action the user performs, written as an imperative: name the exact command, API, \
+file, URL, or concept involved (see the step field's own constraints for wording). Keep steps ordered and \
+non-compound — no "do X and Y" steps. Steps are the detailed how-to: complete enough that the user can \
+follow them without going back to the source material, and together they must make every DoD criterion \
+satisfiable.
+
+Every task also carries 2-3 definition-of-done criteria (its "dods" array): concrete, verifiable \
+outcomes that prove the task is actually finished — acceptance criteria, not actions. Each criterion \
+must be independently checkable without judgment (e.g. a command exits 0, a test passes, a file exists \
+or renders, an endpoint returns the expected response), and at least one must prove the task's \
+end-to-end result. Never use unverifiable criteria like "understand X" or "be familiar with Y"; if the \
+task is learning-oriented, require a concrete artifact (notes, summary, demo) as the proof. A task may \
+only be completed when every one of these is satisfied. "dods" entries use the EXACT SAME OBJECT SHAPE \
+as "steps" — { "value": "<the criterion text>" } — never a plain string.
 
 Order the arrays themselves — emit milestones, tasks, steps, and dods in the intended execution order \
 (first item = the first thing to do). Do not include "position" or "status" fields anywhere in your \
 output — the system derives their numbering and initial status from array order.
 
 Every task must include a realistic "estimatedTimeMinutes" value — how long that task will actually take, \
-in whole minutes (e.g. 45, 90, 240). Estimate from the task's own steps and difficulty: heavier tasks \
-get longer estimates, trivial tasks get short ones. Never omit it and never use null.
+in whole minutes. Estimate from the task's own steps and difficulty; use 15 for most tasks and 20 when \
+the task genuinely needs a second step. Use 25-30 only when splitting would create an artificial \
+fragment. The value must be between 5 and 30. If your estimate exceeds 30, you must split the task \
+instead. Never omit it and never use null.
 
 LENGTH BUDGET (hard limits, enforced) — keep every text field tight so the plan reads at a glance in a \
 list view:
+- tasks per milestone: 6-10 (hard max 12).
+- each task: 1-2 "steps" for most tasks (max 3), and 2-3 "dods".
 - task "title": 20-120 characters.
 - task "description": at most 260 characters — a short phrase stating the concrete outcome and its \
   key approach, not a paragraph (aim for 1-2 tight sentences).
@@ -75,6 +93,12 @@ list view:
 - milestone "description": at most 360 characters — 1-3 tight sentences.
 - each "steps"/"dods" entry's "value": at most 190 characters — a single, tightly-worded action or criterion.
 When in doubt, shorter. Respect these limits exactly — fields that exceed them are rejected.
+
+SELF-CHECK before submitting: scan every task once more. If any task has an estimate above 30 minutes, or \
+needs more than 3 substantive steps, split it into consecutive smaller tasks and re-estimate each from \
+its own steps. If the average estimate across all tasks is above 22 minutes, split the longest tasks \
+until the average is at or below 22 — never lower estimates just to pass this check. Do not leave a \
+milestone with only one or two oversized tasks when its work can be decomposed further.
 
 Where a level covers multiple stages (e.g. advanced covering fundamentals through advanced), \
 earlier stages should be represented but brief — the plan's size and depth should scale with how \
