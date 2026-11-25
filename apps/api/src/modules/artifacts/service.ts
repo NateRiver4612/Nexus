@@ -12,6 +12,7 @@ import type {
 
 import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
 import { deleteObject, getObject, presignGetUrl, putObject } from '../../storage';
+import { deleteThumbnail, getThumbnailUrl as presignThumbnailUrl } from '../../thumbnails';
 import { artifactTypeForFile } from './mime';
 import { ArtifactRepository } from './repository';
 
@@ -378,6 +379,23 @@ export function ArtifactService(db: Db) {
     return { body: object.body, mimeType: row.mimeType };
   }
 
+  /** Presigned thumbnail URL for a version's backing object, or null when none exists. */
+  async function getThumbnailUrl({
+    artifactId,
+    version,
+  }: {
+    artifactId: string;
+    version?: number;
+  }): Promise<{ url: string | null }> {
+    const row = ensureExists(
+      await repository.getVersion({ artifactId, version }),
+      NotFoundError('Artifact version not found.'),
+    );
+
+    const thumbnail = await presignThumbnailUrl(row.storageKey);
+    return { url: thumbnail?.url ?? null };
+  }
+
   /** Presigned download URL; keeps the artifact's real extension when it has one. */
   async function getDownloadUrl({ artifactId, version }: { artifactId: string; version?: number }) {
     const artifact = ensureExists(
@@ -433,6 +451,7 @@ export function ArtifactService(db: Db) {
     replaceVersionContent,
     getContent,
     getFile,
+    getThumbnailUrl,
     getDownloadUrl,
     listVersions,
     remove,
@@ -489,6 +508,7 @@ function buildStorageKey({
 async function discardObject(key: string) {
   try {
     await deleteObject(key);
+    await deleteThumbnail(key);
   } catch (error) {
     // Best-effort: a leftover object costs storage only, and must not mask the real outcome.
     console.warn(`[artifacts] could not delete S3 object ${key}`, error);

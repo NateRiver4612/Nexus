@@ -75,6 +75,33 @@ export async function presignGetUrl({ key, filename }: { key: string; filename: 
   return { url };
 }
 
+/**
+ * Presigned GET URL for an inline asset (e.g. a thumbnail): no download disposition, so the
+ * browser can render it with `<img src>`.
+ *
+ * Thumbnails are served as presigned URLs (Option 2) instead of streaming bytes through the API
+ * (Option 1). Option 1 would keep every thumbnail byte on our API and lose native lazy-loading
+ * and browser caching; Option 2 lets the browser load and cache straight from S3 and only signs
+ * URLs for thumbnails we actually render. The tradeoff is a short-lived bearer URL, so keep the
+ * expiry modest for private files.
+ */
+export async function presignInlineUrl({
+  key,
+  expiresIn = 6 * 60 * 60,
+}: {
+  key: string;
+  expiresIn?: number;
+}) {
+  const command = new GetObjectCommand({
+    Bucket: s3Bucket(),
+    Key: key,
+    ResponseContentDisposition: 'inline',
+  });
+
+  const url = await getSignedUrl(getS3Client(), command, { expiresIn });
+  return { url };
+}
+
 /** Fetch an object's bytes. */
 export async function getObject(key: string) {
   const command = new GetObjectCommand({ Bucket: s3Bucket(), Key: key });

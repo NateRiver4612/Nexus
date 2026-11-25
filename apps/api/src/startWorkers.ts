@@ -3,6 +3,7 @@ import { getRedis } from './redis';
 import KnowledgeWorker from './modules/knowledge/worker';
 import AIWorker from './modules/ai/worker';
 import ResearchWorker from './modules/research/worker';
+import ThumbnailWorker from './thumbnails/worker';
 
 const globalForWorkers = globalThis as unknown as {
   nexusWorkers?: Worker[] & {
@@ -40,12 +41,13 @@ export function startWorkers() {
   const knowledgeWorkder = KnowledgeWorker();
   const aiWorker = AIWorker();
   const researchWorker = ResearchWorker();
+  const thumbnailWorker = ThumbnailWorker();
 
   pingWorker.on('completed', onComplete);
   pingWorker.on('failed', onFailed);
 
   globalForWorkers.nexusWorkers = Object.assign(
-    [pingWorker, knowledgeWorkder, aiWorker, researchWorker],
+    [pingWorker, knowledgeWorkder, aiWorker, researchWorker, thumbnailWorker],
     {
       startedAt: new Date().toISOString(),
     },

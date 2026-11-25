@@ -17,6 +17,11 @@ import type {
 } from '@nexus/types';
 import { mapInputToRow, publishStatus, sanitizeExtractedText, toSourceView } from './helpers';
 import { enqueueKnowledge, KNOWLEDGE_QUEUE_PROCESS, KNOWLEDGE_QUEUE_REMOVE } from './queues';
+import {
+  getThumbnailUrl as presignThumbnailUrl,
+  isThumbnailableMime,
+} from '../../thumbnails';
+import { enqueueThumbnail } from '../../thumbnails/queue';
 
 type CreateSourceInput = {
   projectId: string;
@@ -108,6 +113,29 @@ export function KnowledgeService(db: Db) {
     return { url, key, bucket };
   }
 
+  /** Presigned thumbnail URL, or null while none has been generated (client falls back to an icon). */
+  async function getThumbnailUrl({
+    projectId,
+    sourceId,
+  }: {
+    projectId: string;
+    sourceId: string;
+  }): Promise<{ url: string | null }> {
+    const source = ensureExists(
+      await repository.getSourceById(sourceId),
+      NotFoundError('Knowledge source not found.'),
+    );
+    ensure(source.projectId === projectId, NotFoundError('Knowledge source not found.'));
+
+    if (source.storageKey) {
+      const thumbnail = await presignThumbnailUrl(source.storageKey);
+      return { url: thumbnail?.url ?? null };
+    }
+
+    // URL sources render a favicon client-side; copied text has no thumbnail.
+    return { url: null };
+  }
+
   async function getDownloadUrl({ projectId, sourceId }: { projectId: string; sourceId: string }) {
     const source = ensureExists(
       await repository.getSourceById(sourceId),
@@ -143,6 +171,17 @@ export function KnowledgeService(db: Db) {
   }) {
     const source = await repository.getSourceById(sourceId);
     if (!source) throw new Error('source not found');
+
+    // Best-effort: a thumbnail is a nice-to-have and must never fail ingestion.
+    if (source.storageKey && isThumbnailableMime(source.mimeType)) {
+      await enqueueThumbnail({
+        storageKey: source.storageKey,
+        mimeType: source.mimeType ?? '',
+        name: source.name,
+      }).catch((error) => {
+        console.warn(`[knowledge] could not enqueue thumbnail for ${source.id}`, error);
+      });
+    }
 
     await repository.updateSource(sourceId, { status: 'processing', errorMessage: null });
     // Publish path: `publishStatus` writes to Redis channel `knowledge:${projectId}`, which
@@ -222,6 +261,7 @@ export function KnowledgeService(db: Db) {
     listSources,
     getUploadUrl,
     getDownloadUrl,
+    getThumbnailUrl,
     processSource,
     deleteSource,
     deleteSources,

@@ -19,6 +19,13 @@ import {
   presignPutUrl,
 } from '../../../storage';
 import {
+  deleteThumbnail,
+  ensureThumbnail,
+  getThumbnailUrl as presignThumbnailUrl,
+  isThumbnailableMime,
+} from '../../../thumbnails';
+import { enqueueThumbnail } from '../../../thumbnails/queue';
+import {
   extractAudioFromBuffer,
   extractFromBuffer,
   fetchStoredObject,
@@ -131,6 +138,27 @@ export function AttachmentService(db: Db) {
       }
 
       const { body } = await fetchStoredObject(attachment.storageKey);
+
+      // Images are cheap to render from the bytes we already hold; Office/CSV go to the queue
+      // so a LibreOffice conversion never blocks this request.
+      if (isThumbnailableMime(attachment.mimeType)) {
+        const work = attachment.mimeType.startsWith('image/')
+          ? ensureThumbnail({
+              storageKey: attachment.storageKey,
+              mimeType: attachment.mimeType,
+              name: attachment.name,
+              body,
+            })
+          : enqueueThumbnail({
+              storageKey: attachment.storageKey,
+              mimeType: attachment.mimeType,
+              name: attachment.name,
+            });
+        await work.catch((error) => {
+          console.warn(`[attachments] could not create thumbnail for ${attachmentId}`, error);
+        });
+      }
+
       const isAudio = attachment.mimeType.startsWith('audio/');
       const rawText = isAudio
         ? await extractAudioFromBuffer({
@@ -216,6 +244,21 @@ export function AttachmentService(db: Db) {
     return { body: object.body, mimeType: attachment.mimeType, name: attachment.name };
   }
 
+  /** Presigned thumbnail URL, or null while none has been generated (client falls back to an icon). */
+  async function getThumbnailUrl({
+    conversationId,
+    attachmentId,
+    userId,
+  }: {
+    conversationId: string;
+    attachmentId: string;
+    userId: string;
+  }): Promise<{ url: string | null }> {
+    const attachment = await requireOwned({ conversationId, attachmentId, userId });
+    const thumbnail = await presignThumbnailUrl(attachment.storageKey);
+    return { url: thumbnail?.url ?? null };
+  }
+
   /**
    * Loads the attachments for a send and rejects anything that isn't ready, isn't in this
    * conversation/user's scope, or is already attached to a message. Returns the full rows so
@@ -297,6 +340,7 @@ export function AttachmentService(db: Db) {
     remove,
     getDownloadUrl,
     getFile,
+    getThumbnailUrl,
     listReadyForSend,
     getCharCounts,
     findByName,
@@ -310,6 +354,7 @@ export type AttachmentServiceType = ReturnType<typeof AttachmentService>;
 async function discardObject(key: string) {
   try {
     await deleteObject(key);
+    await deleteThumbnail(key);
   } catch (error) {
     // Best-effort: a leftover object costs storage only, and must not mask the real outcome.
     console.warn(`[attachments] could not delete S3 object ${key}`, error);

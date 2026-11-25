@@ -21,6 +21,9 @@ const envSchema = z.object({
   // Path-style addressing is a MinIO / S3-compatible need. AWS S3 uses
   // virtual-hosted addressing, so this stays false unless S3_ENDPOINT is set.
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(false),
+  // Gotenberg wraps LibreOffice in its own container; the API posts Office/CSV files here to
+  // get a PDF for thumbnail rendering. Unreachable in prod via the Compose service name only.
+  GOTENBERG_URL: z.url().default('http://localhost:3005'),
   OPENAI_API_KEY: z.string().default(''),
   DEEPSEEK_API_KEY: z.string().default(''),
   AI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),

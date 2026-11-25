@@ -1,19 +1,14 @@
 import { UnrecoverableError } from 'bullmq';
 import type { TranscriptResponse } from 'youtube-transcript';
 
+import { youtubeVideoId } from '@nexus/shared-helpers';
+
 import { withUnrecoverable } from '../../queue-errors';
 
 export type ExtractResult = { title: string; content: string };
 
 /** Only English transcripts are accepted for now; other languages fail rather than fall back. */
 const TRANSCRIPT_LANG = 'en';
-
-/** Extract a stable video id from common YouTube URL shapes. */
-export function youtubeVideoId(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const match = url.match(/(?:youtu\.be\/|v=|watch\?v=)([\w-]{11})/);
-  return match?.[1] ?? null;
-}
 
 /** oEmbed is public, unauthenticated, and gives exactly the title — no API key needed. */
 export async function fetchYoutubeTitle(videoId: string): Promise<string> {
@@ -31,7 +26,7 @@ export async function fetchYoutubeTitle(videoId: string): Promise<string> {
 
 /** Fetch the caption transcript and the page title together — single metadata round-trip. */
 export async function extractFromYoutube(url?: string | null): Promise<ExtractResult> {
-  const videoId = youtubeVideoId(url);
+  const videoId = youtubeVideoId({ url });
   if (!videoId) throw new UnrecoverableError('unable to parse a YouTube video id from the url');
 
   const {
