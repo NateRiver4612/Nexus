@@ -5,7 +5,7 @@ import { idSchema } from './common';
 export const searchResultSchema = z
   .object({
     type: z.enum(['project', 'planner', 'artifact', 'knowledge']),
-    id: z.string().uuid(),
+    id: z.uuid(),
     title: z.string(),
     snippet: z.string().nullable(),
   })

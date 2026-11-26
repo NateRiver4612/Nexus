@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGetArtifactContent } from '@/hooks/useArtifacts';
 import { useFilePreview } from '@/hooks/useFilePreview';
-import { isTextLikeMime } from '@/lib/utils';
+import { isTextPreviewMime } from '@/lib/utils';
 import {
   ArtifactCard,
   ArtifactTypeIcon,
@@ -73,7 +73,7 @@ export const ArtifactPanel = ({ artifact, onClose, onBack }: ArtifactPanelProps)
     variables: { id: artifact.id, version: selectedVersion },
   });
 
-  const isText = data ? isTextLikeMime(data.mimeType) : false;
+  const isText = data ? isTextPreviewMime(data.mimeType) : false;
   // Text comes from the content endpoint; binary versions are fetched as bytes here.
   const preview = useFilePreview({
     source: data ? { kind: 'artifact', artifactId: artifact.id, version: data.version } : null,
@@ -157,7 +157,7 @@ export const ArtifactPanel = ({ artifact, onClose, onBack }: ArtifactPanelProps)
         {data && (
           <FilePreview
             name={artifact.name}
-            mimeType={data.mimeType}
+            mimeType={preview.mimeType || data.mimeType}
             text={isText ? data.content : null}
             objectUrl={preview.objectUrl}
             buffer={preview.buffer}

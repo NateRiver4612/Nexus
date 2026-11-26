@@ -232,6 +232,13 @@
       "when": 1795057358284,
       "tag": "0032_fine_blindfold",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795623966922,
+      "tag": "0033_wet_black_knight",
+      "breakpoints": true
     }
   ]
 }

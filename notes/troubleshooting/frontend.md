@@ -17,7 +17,7 @@ reading `window` at init/module time throws outright during SSR.
 ### Fix
 
 `useMediaQuery` (`apps/web/hooks/useMediaQuery.ts`) goes through `useSyncExternalStore` and
-supplies a server snapshot of `false`. `getServerSnapshot` is used for SSR *and* the first
+supplies a server snapshot of `false`. `getServerSnapshot` is used for SSR _and_ the first
 hydration render, so server and client agree on `false`; React then swaps in the real match
 after hydration and re-reads it on every `change`. The initial `false` is the deliberate
 tradeoff — pick your breakpoint so the server-safe answer is the collapsed/mobile default.

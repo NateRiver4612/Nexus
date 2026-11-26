@@ -10,5 +10,6 @@ export * from './notifications';
 export * from './activities';
 export * from './planner';
 export * from './projects';
+export * from './thumbnails';
 export * from './users';
 export * from './workspaces';

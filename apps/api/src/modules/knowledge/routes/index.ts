@@ -10,6 +10,9 @@ import { deleteKnowledgeSourceRoute } from './deleteKnowledgeSource';
 import { deleteKnowledgeSourcesRoute } from './deleteKnowledgeSources';
 import { getKnowledgeRoute } from './getKnowledge';
 import { getKnowledgeSourceDownloadUrlRoute } from './getKnowledgeSourceDownloadUrl';
+import { getKnowledgeSourceFileRoute } from './getKnowledgeSourceFile';
+import { getKnowledgeSourcePreviewRoute } from './getKnowledgeSourcePreview';
+import { getKnowledgeSourceThumbnailUrlRoute } from './getKnowledgeSourceThumbnailUrl';
 import { getKnowledgeSourcesRoute } from './getKnowledgeSources';
 import { updateKnowledgeRoute } from './updateKnowledge';
 import { getRedis } from '../../../redis';
@@ -57,6 +60,18 @@ export function knowledgeRoutes() {
     {
       route: getKnowledgeSourceDownloadUrlRoute.route,
       handler: getKnowledgeSourceDownloadUrlRoute.handler,
+    },
+    {
+      route: getKnowledgeSourceFileRoute.route,
+      handler: getKnowledgeSourceFileRoute.handler,
+    },
+    {
+      route: getKnowledgeSourcePreviewRoute.route,
+      handler: getKnowledgeSourcePreviewRoute.handler,
+    },
+    {
+      route: getKnowledgeSourceThumbnailUrlRoute.route,
+      handler: getKnowledgeSourceThumbnailUrlRoute.handler,
     },
     { route: deleteKnowledgeSourceRoute.route, handler: deleteKnowledgeSourceRoute.handler },
     { route: deleteKnowledgeSourcesRoute.route, handler: deleteKnowledgeSourcesRoute.handler },

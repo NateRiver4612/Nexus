@@ -73,7 +73,7 @@ export const ChatAttachmentDialog = ({ attachment, onClose }: ChatAttachmentDial
           {attachment && (
             <FilePreview
               name={attachment.name}
-              mimeType={attachment.mimeType}
+              mimeType={preview.mimeType || attachment.mimeType}
               text={preview.text}
               objectUrl={preview.objectUrl}
               buffer={preview.buffer}

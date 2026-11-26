@@ -10,7 +10,7 @@ import type {
   UpdateKnowledgeItemInputType,
 } from '@nexus/types';
 
-import { apiClient, handleResponse } from '@/lib/client';
+import { apiClient, fetchArrayBuffer, handleResponse } from '@/lib/client';
 
 export async function getKnowledge(projectId: string) {
   return handleResponse(
@@ -73,6 +73,26 @@ export async function getKnowledgeSourceDownloadUrl(
       param: { projectId, sourceId },
     }),
   )) as KnowledgeSourceDownloadUrlType;
+}
+
+/** Raw bytes for an in-app preview; downloads use the presigned URL endpoint instead. */
+export async function getKnowledgeSourceFile(
+  projectId: string,
+  sourceId: string,
+): Promise<ArrayBuffer> {
+  return fetchArrayBuffer(
+    `/api/v1/knowledge/${encodeURIComponent(projectId)}/sources/${encodeURIComponent(sourceId)}/file`,
+  );
+}
+
+/** PDF rendering of a Word source (converted server-side with LibreOffice). */
+export async function getKnowledgeSourcePreview(
+  projectId: string,
+  sourceId: string,
+): Promise<ArrayBuffer> {
+  return fetchArrayBuffer(
+    `/api/v1/knowledge/${encodeURIComponent(projectId)}/sources/${encodeURIComponent(sourceId)}/preview`,
+  );
 }
 
 export async function deleteKnowledgeSource(

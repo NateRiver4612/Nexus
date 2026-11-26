@@ -14,11 +14,11 @@ import {
   useGetKnowledgeSources,
 } from '@/hooks/useKnowledge';
 import { cn } from '@/lib/utils';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { fileIcon, formatBytes } from '../UploadKnowledgeSource';
+import { formatBytes } from '../UploadKnowledgeSource';
 import DeleteConfirmDialog from '../DeleteConfirmDialog';
 import { SourceActionsMenu } from './SourceActionsMenu';
 import { SourcePreviewDialog } from './SourcePreviewDialog';
+import { SourceThumbnail } from './SourceThumbnail';
 import { Info, Trash2 } from 'lucide-react';
 import { Spinner } from '../ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -211,20 +211,38 @@ export function SourceList({
           const isDeletable = isCompleted || isFailed;
           const canPreview = isCompleted && Boolean(file.content);
 
-          const { icon, color } = fileIcon({
-            name: file.name,
-            type: file.mimeType ?? file.sourceType ?? 'txt',
-          });
-
           return (
             <li
               key={`${file.id}`}
               aria-disabled={isPending || isFailed}
+              role={canPreview ? 'button' : undefined}
+              tabIndex={canPreview ? 0 : undefined}
+              aria-label={canPreview ? `Preview ${file.name}` : undefined}
+              onClick={(event) => {
+                if (!canPreview) return;
+                // Nested controls (checkbox, actions menu, tooltip) own their
+                // clicks; only a click on the card body should open the preview.
+                if ((event.target as Element).closest('button, a, input, [role="menuitem"]')) {
+                  return;
+                }
+                setPreview(file);
+              }}
+              onKeyDown={(event) => {
+                if (!canPreview) return;
+                // Only react when the card itself is focused, not a nested control.
+                if (event.target !== event.currentTarget) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setPreview(file);
+                }
+              }}
               className={cn(
                 'flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2',
                 {
                   'bg-gray-100 animate-pulse': isPending,
                   'bg-destructive/4': isFailed,
+                  'cursor-pointer transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:outline-none':
+                    canPreview,
                 },
               )}
             >
@@ -240,9 +258,7 @@ export function SourceList({
                   />
                 )}
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className={cn(color)}>
-                    <FontAwesomeIcon icon={icon} color={color} size="xl" />
-                  </span>
+                  <SourceThumbnail source={file} />
                   <div className="min-w-0 text-start">
                     <div className="flex items-center gap-1.5">
                       <p
@@ -265,7 +281,9 @@ export function SourceList({
                         </Tooltip>
                       )}
                     </div>
-                    {!isYouTube && (
+                    {isYouTube ? (
+                      <p className="text-xs text-muted-foreground">YouTube</p>
+                    ) : (
                       <p
                         className={cn('text-xs text-muted-foreground', {
                           'text-destructive': isFailed,
@@ -320,6 +338,7 @@ export function SourceList({
       <SourcePreviewDialog
         source={preview}
         open={preview !== null}
+        onDownload={preview ? () => downloadSource(preview) : undefined}
         onOpenChange={(open) => {
           if (!open) setPreview(null);
         }}

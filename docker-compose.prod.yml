@@ -37,6 +37,16 @@ services:
       - nexus-redis:/data
     command: redis-server --appendonly yes
 
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: nexus-gotenberg
+    restart: unless-stopped
+    # Markdown thumbnails only need static layout; disabling JS removes the script-execution
+    # surface for user-provided markdown (the template also sets a strict CSP).
+    command: ['gotenberg', '--chromium-disable-javascript']
+    # Internal only: no `ports`. The API reaches it as http://gotenberg:3000.
+    mem_limit: 2g
+
   benchwork:
     image: ghcr.io/pontusab/workbench-standalone:latest
     platform: linux/amd64
@@ -44,7 +54,7 @@ services:
       - '3002:3000'
     environment:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      QUEUE_NAMES: ${QUEUE_NAMES:-ai-generation,artifact-generation,kickoff,knowledge,knowledge-process,knowledge-remove}
+      QUEUE_NAMES: ${QUEUE_NAMES:-ai-generation,artifact-generation,kickoff,knowledge,knowledge-process,knowledge-remove,thumbnail}
     depends_on:
       - redis
 
@@ -75,6 +85,7 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      GOTENBERG_URL: ${GOTENBERG_URL:-http://gotenberg:3000}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-text-embedding-3-small}
@@ -89,6 +100,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+      gotenberg:
         condition: service_started
 
   nexus-web:

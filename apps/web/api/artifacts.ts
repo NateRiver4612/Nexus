@@ -47,6 +47,18 @@ export async function getArtifactFile({
   return fetchArrayBuffer(`/api/v1/artifacts/${encodeURIComponent(id)}/file${query}`);
 }
 
+/** PDF rendering of a Word artifact version (converted server-side with LibreOffice). */
+export async function getArtifactPreview({
+  id,
+  version,
+}: {
+  id: string;
+  version?: number;
+}): Promise<ArrayBuffer> {
+  const query = version !== undefined ? `?version=${version}` : '';
+  return fetchArrayBuffer(`/api/v1/artifacts/${encodeURIComponent(id)}/preview${query}`);
+}
+
 export async function getArtifactDownloadUrl({
   id,
   version,

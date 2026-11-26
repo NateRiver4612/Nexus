@@ -1,5 +1,6 @@
 import type { ChatCitationType } from '@nexus/types';
 import { citationKey } from '@nexus/zod-schemas';
+import { isYouTubeUrl } from '@nexus/shared-helpers';
 import { BookOpenText } from 'lucide-react';
 
 import {
@@ -9,11 +10,25 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { SourceFavicon } from './SourceFavicon';
+import { YouTubeBookmark } from './YouTubeBookmark';
 
 const CARD_CLASS =
   'flex flex-col justify-center rounded-xl border border-border bg-background px-4 py-3';
 
 const SourceCard = ({ source }: { source: ChatCitationType }) => {
+  if (source.kind === 'web' && isYouTubeUrl(source.url)) {
+    return (
+      <a
+        href={source.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${CARD_CLASS} transition-colors hover:bg-accent`}
+      >
+        <YouTubeBookmark url={source.url} title={source.name} />
+      </a>
+    );
+  }
+
   if (source.kind === 'web') {
     return (
       <a

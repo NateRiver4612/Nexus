@@ -327,6 +327,7 @@ function ChatPanelImpl({
                   key={attachment.key}
                   conversationId={conversationId}
                   attachmentId={attachmentId}
+                  file={attachment.file}
                   name={attachment.name}
                   mimeType={attachment.mimeType}
                   size={attachment.size}

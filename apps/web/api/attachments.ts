@@ -68,3 +68,13 @@ export async function getAttachmentFile(
     `/api/v1/ai/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}/file`,
   );
 }
+
+/** PDF rendering of a Word attachment (converted server-side with LibreOffice). */
+export async function getAttachmentPreview(
+  conversationId: string,
+  attachmentId: string,
+): Promise<ArrayBuffer> {
+  return fetchArrayBuffer(
+    `/api/v1/ai/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}/preview`,
+  );
+}

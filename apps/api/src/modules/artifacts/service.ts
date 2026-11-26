@@ -12,6 +12,14 @@ import type {
 
 import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
 import { deleteObject, getObject, presignGetUrl, putObject } from '../../storage';
+import { deletePdfPreview, getPdfPreview, isPdfPreviewMime } from '../../documents/preview';
+import {
+  deleteThumbnail,
+  getThumbnailUrl as presignThumbnailUrl,
+  isThumbnailableMime,
+  type ThumbnailResult,
+} from '../../thumbnails';
+import { enqueueThumbnail } from '../../thumbnails/queue';
 import { artifactTypeForFile } from './mime';
 import { ArtifactRepository } from './repository';
 
@@ -127,6 +135,9 @@ export function ArtifactService(db: Db) {
         return rows[0]!;
       });
 
+      void enqueueThumbnail({ storageKey, mimeType, name: input.name }).catch((error) => {
+        console.warn(`[artifacts] could not enqueue thumbnail for ${storageKey}`, error);
+      });
       return { artifact: toView(artifact), version: 1 };
     } catch (error) {
       await discardObject(storageKey);
@@ -269,6 +280,9 @@ export function ArtifactService(db: Db) {
         };
       });
 
+      void enqueueThumbnail({ storageKey, mimeType, name: existing.name }).catch((error) => {
+        console.warn(`[artifacts] could not enqueue thumbnail for ${storageKey}`, error);
+      });
       return { artifact: toView(artifact), version };
     } catch (error) {
       await discardObject(storageKey);
@@ -333,6 +347,9 @@ export function ArtifactService(db: Db) {
 
       // Shared attachment objects belong to the attachment and must survive an artifact edit.
       if (current.sourceAttachmentId === null) await discardObject(current.storageKey);
+      void enqueueThumbnail({ storageKey, mimeType, name: existing.name }).catch((error) => {
+        console.warn(`[artifacts] could not enqueue thumbnail for ${storageKey}`, error);
+      });
       return { artifact: toView(artifact), version };
     } catch (error) {
       await discardObject(storageKey);
@@ -376,6 +393,46 @@ export function ArtifactService(db: Db) {
 
     const object = await getObject(row.storageKey);
     return { body: object.body, mimeType: row.mimeType };
+  }
+
+  /** PDF preview for a Word artifact version, converted with LibreOffice and cached by key. */
+  async function getPreview({ artifactId, version }: { artifactId: string; version?: number }) {
+    const artifact = ensureExists(
+      await repository.getById(artifactId),
+      NotFoundError('Artifact not found.'),
+    );
+    const row = ensureExists(
+      await repository.getVersion({ artifactId, version }),
+      NotFoundError('Artifact version not found.'),
+    );
+    ensure(
+      isPdfPreviewMime(row.mimeType),
+      ValidationError('This artifact cannot be previewed as a PDF.'),
+    );
+
+    const body = await getPdfPreview({
+      storageKey: row.storageKey,
+      mimeType: row.mimeType,
+      name: artifact.name,
+    });
+    return { body, name: artifact.name };
+  }
+
+  /** Presigned thumbnail URL + generation status for a version's backing object. */
+  async function getThumbnailUrl({
+    artifactId,
+    version,
+  }: {
+    artifactId: string;
+    version?: number;
+  }): Promise<ThumbnailResult> {
+    const row = ensureExists(
+      await repository.getVersion({ artifactId, version }),
+      NotFoundError('Artifact version not found.'),
+    );
+
+    if (!isThumbnailableMime(row.mimeType)) return { url: null, status: 'unavailable' };
+    return presignThumbnailUrl(row.storageKey);
   }
 
   /** Presigned download URL; keeps the artifact's real extension when it has one. */
@@ -433,6 +490,8 @@ export function ArtifactService(db: Db) {
     replaceVersionContent,
     getContent,
     getFile,
+    getPreview,
+    getThumbnailUrl,
     getDownloadUrl,
     listVersions,
     remove,
@@ -489,6 +548,8 @@ function buildStorageKey({
 async function discardObject(key: string) {
   try {
     await deleteObject(key);
+    await deleteThumbnail(key);
+    await deletePdfPreview(key);
   } catch (error) {
     // Best-effort: a leftover object costs storage only, and must not mask the real outcome.
     console.warn(`[artifacts] could not delete S3 object ${key}`, error);

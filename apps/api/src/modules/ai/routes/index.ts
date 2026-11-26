@@ -6,6 +6,8 @@ import { createAttachmentUploadUrlRoute } from '../attachments/routes/createUplo
 import { deleteAttachmentRoute } from '../attachments/routes/deleteAttachment';
 import { getAttachmentDownloadUrlRoute } from '../attachments/routes/getDownloadUrl';
 import { getAttachmentFileRoute } from '../attachments/routes/getFile';
+import { getAttachmentPreviewRoute } from '../attachments/routes/preview';
+import { getAttachmentThumbnailUrlRoute } from '../attachments/routes/getThumbnailUrl';
 import { createAiSuggestionRoute } from './createAiSuggestion';
 import { createConversationRoute } from './createConversation';
 import { deleteAiSuggestionRoute } from './deleteAiSuggestion';
@@ -43,5 +45,10 @@ export function aiRoutes() {
     { route: deleteAttachmentRoute.route, handler: deleteAttachmentRoute.handler },
     { route: getAttachmentDownloadUrlRoute.route, handler: getAttachmentDownloadUrlRoute.handler },
     { route: getAttachmentFileRoute.route, handler: getAttachmentFileRoute.handler },
+    { route: getAttachmentPreviewRoute.route, handler: getAttachmentPreviewRoute.handler },
+    {
+      route: getAttachmentThumbnailUrlRoute.route,
+      handler: getAttachmentThumbnailUrlRoute.handler,
+    },
   ] as const);
 }

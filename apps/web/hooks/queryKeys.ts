@@ -89,3 +89,13 @@ export const messageKeys = {
   all: ['ai', 'messages'] as const,
   list: (conversationId: string) => ['ai', 'messages', conversationId] as const,
 };
+
+export const thumbnailKeys = {
+  all: ['thumbnails'] as const,
+  knowledge: (projectId: string, sourceId: string) =>
+    ['thumbnails', 'knowledge', projectId, sourceId] as const,
+  attachment: (conversationId: string, attachmentId: string) =>
+    ['thumbnails', 'attachment', conversationId, attachmentId] as const,
+  artifact: (artifactId: string, version?: number) =>
+    ['thumbnails', 'artifact', artifactId, version ?? null] as const,
+};

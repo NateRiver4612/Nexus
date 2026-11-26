@@ -1,11 +1,10 @@
 'use client';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ArrowRight, Circle, CircleCheck, Sparkles } from 'lucide-react';
 import type { KnowledgeSourceListType, OnboardingStep4InputType } from '@nexus/types';
 
+import { SourceThumbnail } from '@/components/knowledge/SourceThumbnail';
 import { Button } from '@/components/ui/button';
-import { fileIcon } from '@/components/UploadKnowledgeSource';
 import { cn } from '@/lib/utils';
 import {
   getCategoryMeta,
@@ -147,24 +146,12 @@ export const BlueprintPreview = ({
           ) : (
             <ul className="flex flex-col gap-1.5">
               {sources.slice(0, 4).map((source) => {
-                const { icon, color } = fileIcon({
-                  name: source.name || source.sourceRef || 'source',
-                  type: source.mimeType ?? source.sourceType ?? 'txt',
-                });
-
                 return (
                   <li
                     key={source.id}
                     className="flex items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-2.5"
                   >
-                    <span className={cn('shrink-0', color)}>
-                      <FontAwesomeIcon
-                        icon={icon}
-                        color={color}
-                        className="size-3.5"
-                        aria-hidden="true"
-                      />
-                    </span>
+                    <SourceThumbnail source={source} />
                     <span className="truncate text-xs font-bold text-foreground">
                       {source.name || source.sourceRef || 'Untitled source'}
                     </span>

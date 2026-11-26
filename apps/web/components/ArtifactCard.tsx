@@ -19,7 +19,9 @@ import {
 
 import { getArtifactDownloadUrl } from '@/api/artifacts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useThumbnailUrl } from '@/hooks/useThumbnailUrl';
 import { cn } from '@/lib/utils';
+import { MediaThumbnail } from './MediaThumbnail';
 
 export const ARTIFACT_TYPE_LABELS: Record<ArtifactRefType['type'], string> = {
   report: 'Report',
@@ -36,6 +38,17 @@ export const ARTIFACT_TYPE_LABELS: Record<ArtifactRefType['type'], string> = {
   video: 'Video',
   file: 'File',
 };
+
+/**
+ * Only artifacts backed by an uploaded file have a stored thumbnail (the attachment path
+ * generates it). AI-generated text artifacts intentionally stay icon-only.
+ */
+const THUMBNAIL_ARTIFACT_TYPES = new Set<ArtifactRefType['type']>([
+  'image',
+  'pdf',
+  'document',
+  'spreadsheet',
+]);
 
 const ARTIFACT_TYPE_ICONS: Record<ArtifactRefType['type'], LucideIcon> = {
   report: FileText,
@@ -86,6 +99,10 @@ type ArtifactCardProps = {
 export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
   const [downloading, setDownloading] = useState(false);
   const displayType = displayArtifactType(artifact);
+  const thumbnail = useThumbnailUrl({
+    source: { kind: 'artifact', artifactId: artifact.id, version: artifact.version },
+    enabled: THUMBNAIL_ARTIFACT_TYPES.has(displayType),
+  });
 
   // Presigned URL on demand — rendering a card shouldn't load every artifact's bytes.
   const download = async () => {
@@ -123,7 +140,15 @@ export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
           onOpen && 'cursor-pointer',
         )}
       >
-        <ArtifactTypeIcon type={displayType} className="size-5 shrink-0 text-muted-foreground" />
+        <MediaThumbnail
+          src={thumbnail.data?.url}
+          alt={artifact.name}
+          isLoading={thumbnail.status === 'loading'}
+          className="size-10 rounded-md bg-muted"
+          fallback={
+            <ArtifactTypeIcon type={displayType} className="size-5 text-muted-foreground" />
+          }
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{artifact.name}</p>
           <p className="text-xs text-muted-foreground">

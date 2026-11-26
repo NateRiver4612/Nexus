@@ -42,6 +42,7 @@ import {
   notificationSchema,
   okSchema,
   paginationSchema,
+  thumbnailUrlSchema,
   plannerItemListSchema,
   plannerItemSchema,
   milestoneSchema,
@@ -340,6 +341,7 @@ export type AITaskResultMap = {
 export type UserType = z.infer<typeof userSchema>;
 
 export type OkType = z.infer<typeof okSchema>;
+export type ThumbnailUrlType = z.infer<typeof thumbnailUrlSchema>;
 /** Success responses wrapped as `{ data, message }` — the message is surfaced
  *  to the user (e.g. sonner toasts) and is not part of the DTO itself. */
 export type SuccessResponse<T> = { data: T; message: string };
