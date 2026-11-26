@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { Download, LoaderCircle, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { isThumbnailableMime } from '@nexus/shared-helpers';
+import { Download, FileText, LoaderCircle, X } from 'lucide-react';
 
 import { getAttachmentDownloadUrl } from '@/api/attachments';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFilePreview } from '@/hooks/useFilePreview';
+import { useThumbnailUrl } from '@/hooks/useThumbnailUrl';
 import { cn, isAudioMime } from '@/lib/utils';
+import { MediaThumbnail } from './MediaThumbnail';
 import { AudioPlayer } from './preview/AudioPlayer';
 import { formatBytes } from './UploadKnowledgeSource';
 
@@ -20,6 +23,8 @@ type ChatAttachmentChipProps = {
   /** Needed to play/download the file before it is attached to a sent message. */
   conversationId?: string;
   attachmentId?: string;
+  /** The local file for a draft upload, so an image preview is instant (before it's processed). */
+  file?: File;
   /** Opens the detail dialog; omitted for files that can't be previewed yet. */
   onOpen?: () => void;
   onRemove?: () => void;
@@ -52,12 +57,36 @@ export const ChatAttachmentChip = ({
   errorMessage,
   conversationId,
   attachmentId,
+  file,
   onOpen,
   onRemove,
 }: ChatAttachmentChipProps) => {
   const [downloading, setDownloading] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file || !mimeType.startsWith('image/')) {
+      setLocalPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setLocalPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file, mimeType]);
 
   const isAudio = isAudioMime(mimeType) && status !== 'failed';
+  const isThumbnailable = isThumbnailableMime(mimeType) && status !== 'failed';
+  const canLoadThumbnail =
+    Boolean(conversationId && attachmentId) && status !== 'uploading' && status !== 'failed';
+  const thumbnail = useThumbnailUrl({
+    source:
+      isThumbnailable && canLoadThumbnail && conversationId && attachmentId
+        ? { kind: 'attachment', conversationId, attachmentId }
+        : null,
+    enabled: isThumbnailable && canLoadThumbnail && !localPreviewUrl,
+  });
+  const previewSrc = localPreviewUrl ?? thumbnail.data?.url ?? null;
   const canAccess = Boolean(conversationId && attachmentId);
   const audio = useFilePreview({
     source:
@@ -149,22 +178,35 @@ export const ChatAttachmentChip = ({
 
   return (
     <div
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      aria-disabled={!onOpen}
+      aria-label={onOpen ? `Open ${name}` : undefined}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (!onOpen) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      title={status === 'failed' ? (errorMessage ?? 'Upload failed') : name}
       className={cn(
-        'relative flex transition hover:shadow-md min-h-[7rem] w-40 flex-col rounded-xl border border-border bg-background p-3 text-xs',
+        'relative flex min-h-[7rem] w-40 flex-col rounded-xl border border-border bg-background p-3 text-xs transition',
+        onOpen ? 'cursor-pointer hover:shadow-md' : 'cursor-default',
         status === 'failed' && 'border-destructive/40 bg-destructive/5',
       )}
     >
-      <button
-        type="button"
-        disabled={!onOpen}
-        onClick={onOpen}
-        title={status === 'failed' ? (errorMessage ?? 'Upload failed') : name}
-        className={cn(
-          'flex min-w-0 flex-1 flex-col gap-1.5 text-left',
-          onOpen ? 'cursor-pointer' : 'cursor-default',
-        )}
-      >
-        <span className="line-clamp-3 pr-4 font-medium leading-snug break-words">{name}</span>
+      {isThumbnailable ? (
+        <MediaThumbnail
+          src={previewSrc}
+          alt={name}
+          className="mb-1.5 h-20 w-full rounded-md bg-muted"
+          fallback={<FileText className="size-6 text-muted-foreground" aria-hidden />}
+        />
+      ) : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-1 text-left">
+        <span className="line-clamp-2 pr-4 font-medium leading-snug break-words">{name}</span>
         <span
           className={cn(
             'line-clamp-2 break-words text-muted-foreground',
@@ -173,7 +215,7 @@ export const ChatAttachmentChip = ({
         >
           {detail}
         </span>
-        <span className="mt-auto flex items-center gap-1.5 pt-0.5">
+        <span className="flex justify-end items-center gap-1.5">
           <span className="w-fit rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
             {extensionOf({ name, mimeType })}
           </span>
@@ -181,12 +223,16 @@ export const ChatAttachmentChip = ({
             <LoaderCircle className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
           )}
         </span>
-      </button>
+      </div>
 
       {onRemove && (
         <button
           type="button"
-          onClick={onRemove}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+          onKeyDown={(event) => event.stopPropagation()}
           aria-label={`Remove ${name}`}
           className="absolute top-1.5 right-1.5 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >

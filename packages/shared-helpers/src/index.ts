@@ -67,7 +67,7 @@ export function youtubeVideoId({ url }: { url: string | null | undefined }): str
 }
 
 /** Formats we can render a server-side thumbnail for (Office/CSV go through Gotenberg). */
-const THUMBNAILABLE_OFFICE_TYPES = new Set([
+export const THUMBNAILABLE_OFFICE_TYPES = new Set([
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel',
@@ -77,7 +77,11 @@ const THUMBNAILABLE_OFFICE_TYPES = new Set([
 ]);
 
 /** Text formats rendered as a document snippet. Mermaid stays an icon (not a rendered diagram). */
-const THUMBNAILABLE_TEXT_TYPES = new Set(['text/markdown', 'text/plain', 'application/json']);
+export const THUMBNAILABLE_TEXT_TYPES = new Set([
+  'text/markdown',
+  'text/plain',
+  'application/json',
+]);
 
 export function isThumbnailableMime(mimeType: string | null | undefined): boolean {
   if (!mimeType) return false;
