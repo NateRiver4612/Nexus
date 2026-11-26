@@ -1,97 +1,29 @@
 'use client';
 
-import {
-  useEditor,
-  EditorContent,
-  ReactNodeViewRenderer,
-  useEditorState,
-  Extension,
-  Editor,
-} from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
-import { Placeholder, Dropcursor } from '@tiptap/extensions';
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
-
+import { memo, useEffect, useState, type ReactNode } from 'react';
+import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
-import Document from '@tiptap/extension-document';
-import { createLowlight } from 'lowlight';
-import css from 'highlight.js/lib/languages/css';
-import js from 'highlight.js/lib/languages/javascript';
-import ts from 'highlight.js/lib/languages/typescript';
-import html from 'highlight.js/lib/languages/xml';
-import CodeBlockComponent from '@/components/CodeBlockComponent';
-import { TaskList, TaskItem } from '@tiptap/extension-list';
+import DragHandle from '@tiptap/extension-drag-handle-react';
+import { NodeSelection } from '@tiptap/pm/state';
+import { Copy, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import '@/styles/styles.scss';
+
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import EditorPopupMenu from '@/components/EditorPopupMenu';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   useCreateTaskNote,
   useDeleteTaskNote,
   useGetTaskNote,
-  useGetTaskNotes,
   useUpdateTaskNote,
 } from '@/hooks/useTasks';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
-import { useEffect, useRef, useState } from 'react';
-import type { TaskNoteType } from '@nexus/types';
-import DragHandle from '@tiptap/extension-drag-handle-react';
+import { cn } from '@/lib/utils';
+
 import SuggestionMenu from './SuggestionMenu';
-import {
-  CircleEllipsis,
-  FileText,
-  GripVertical,
-  SaveCheck,
-  Plus,
-  Save,
-  Trash2,
-} from 'lucide-react';
-import Link from 'next/link';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { NodeSelection } from '@tiptap/pm/state';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { Kbd, KbdGroup } from '../ui/kbd';
-
-const lowlight = createLowlight();
-
-lowlight.register('html', html);
-lowlight.register('css', css);
-lowlight.register('js', js);
-lowlight.register('ts', ts);
-
-const CustomDocument = Document.extend({
-  content: 'heading block*',
-});
-
-type SaveShortcutOptions = {
-  onSave: (editor: Editor) => void;
-};
-
-const SaveShortcut = Extension.create<SaveShortcutOptions>({
-  name: 'saveShortcut',
-
-  addOptions() {
-    return {
-      onSave: (_editor: Editor) => {},
-    };
-  },
-
-  addKeyboardShortcuts() {
-    return {
-      'Mod-s': ({ editor }) => {
-        this.options.onSave(editor);
-
-        return true;
-      },
-    };
-  },
-});
+import { createTaskNoteExtensions } from './taskNoteExtensions';
+import TaskNoteEditorToolbar from './TaskNoteEditorToolbar';
 
 type TaskNoteEditorProps = {
   taskId: string;
@@ -101,33 +33,53 @@ type TaskNoteEditorProps = {
   onCreated?: (noteId: string) => void;
   /** Called after the note is deleted so the caller can navigate away. */
   onDeleted?: () => void;
+  /** Switches the workbench to a blank note. */
+  onNewNote?: () => void;
+  /** Rendered at the end of the title/save header (e.g. the workbench tabs). */
+  headerEnd?: ReactNode;
+  className?: string;
 };
 
-const TaskNoteEditorSkeleton = () => {
+export const TaskNoteEditorSkeleton = ({ headerEnd }: { headerEnd?: ReactNode }) => {
   return (
-    <div className="flex h-full flex-col w-full overflow-hidden">
-      <div className="relative h-screen rounded-2xl w-full bg-white">
-        <div className="flex items-center justify-between px-6 pt-4">
-          <Skeleton className="size-5 rounded" />
-          <Skeleton className="size-5 rounded" />
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-5 w-16 rounded-pill" />
         </div>
-        <div className="w-full px-6 pt-8">
-          <Skeleton className="h-6 w-2/3" />
-          <Skeleton className="mt-4 h-4 w-full" />
-          <Skeleton className="mt-2 h-4 w-3/4" />
-        </div>
+        {headerEnd}
+      </div>
+      <div className="px-4 pb-3 pt-3">
+        <Skeleton className="h-9 w-full rounded-item" />
+      </div>
+      <div className="flex-1 px-4 py-4">
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="mt-4 h-4 w-full" />
+        <Skeleton className="mt-2 h-4 w-3/4" />
+      </div>
+      <div className="border-t border-border px-4 py-3">
+        <Skeleton className="h-8 w-32 rounded-pill" />
       </div>
     </div>
   );
 };
 
-const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditorProps) => {
-  const [isSuggestionOpen, setIsSuggestionOpen] = useState<boolean>(false);
+const normalizeText = (text?: string | null) => (text ?? '').trim().replaceAll('\n', '');
+
+/** Note editor panel: Tiptap document with save, copy, and delete actions. */
+const TaskNoteEditor = ({
+  taskId,
+  noteId,
+  onCreated,
+  onDeleted,
+  onNewNote,
+  headerEnd,
+  className,
+}: TaskNoteEditorProps) => {
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [openMenu, setOpenMenu] = useState<boolean>(false);
-
-  const taskNoteRef = useRef<TaskNoteType | undefined>(undefined);
 
   const { data: taskNote } = useGetTaskNote({
     variables: {
@@ -137,10 +89,6 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
     options: {
       enabled: !!noteId?.length,
     },
-  });
-
-  const { data: notes } = useGetTaskNotes({
-    variables: taskId,
   });
 
   const { mutate: createTaskNote, isPending: isCreatingTaskNote } = useCreateTaskNote({
@@ -164,49 +112,11 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
 
   const editor = useEditor({
     autofocus: 'start',
-    extensions: [
-      StarterKit.configure({
-        codeBlock: false,
-        trailingNode: {
-          node: 'paragraph',
-        },
-      }),
-      SaveShortcut.configure({
-        onSave: (editor) => {
-          handleSave(editor);
-        },
-      }),
-      CustomDocument,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Placeholder.configure({
-        placeholder: ({ node }) => {
-          if (node.type.name === 'heading') {
-            return 'New Note';
-          }
-
-          return 'Can you add some further context?';
-        },
-        emptyNodeClass: ({ node }) => {
-          if (node.type.name === 'heading') {
-            return 'my-custom-is-empty-heading-class';
-          }
-          return '';
-        },
-        showOnlyCurrent: false,
-      }),
-      CodeBlockLowlight.extend({
-        addNodeView() {
-          return ReactNodeViewRenderer(CodeBlockComponent);
-        },
-      }).configure({ lowlight }),
-      Image,
-      Dropcursor,
-    ],
+    extensions: createTaskNoteExtensions((nextEditor) => handleSave(nextEditor)),
     content: taskNote?.content,
     editorProps: {
       attributes: {
-        class: 'tiptap h-full! outline-none w-full',
+        class: 'tiptap outline-none w-full min-h-full',
       },
     },
 
@@ -214,31 +124,18 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
     immediatelyRender: false,
   });
 
+  // Subscribing to the text re-renders on every transaction, keeping dirty/save state live.
   const editorState = useEditorState({
     editor,
-
-    // the selector function is used to select the state you want to react to
-    selector: ({ editor }) => {
-      if (!editor) return null;
-
-      return {
-        isEditable: editor.isEditable,
-        currentSelection: editor.state.selection,
-        currentContent: editor.getJSON(),
-        currentContentText: editor.getText(),
-      };
-    },
+    selector: ({ editor }) => ({
+      contentText: editor?.getText() ?? '',
+    }),
   });
 
-  const currentContentText = editorState?.currentContent.content
-    ?.map((c: any) => {
-      if (c.type === 'image') {
-        return c.attrs.src;
-      }
-      return c.content?.[0].text;
-    })
-    .join('')
-    .replaceAll('\n', '');
+  const contentText = editorState?.contentText ?? '';
+  const isDirty = normalizeText(contentText) !== normalizeText(taskNote?.contentText);
+  const firstLine = contentText.split('\n')[0]?.trim();
+  const displayTitle = firstLine || taskNote?.title || 'New Note';
 
   useEffect(() => {
     if (!editor || !taskNote) {
@@ -248,36 +145,22 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
     editor.commands.setContent(taskNote.content);
   }, [editor, taskNote]);
 
-  useEffect(() => {
-    taskNoteRef.current = taskNote;
-  }, [taskNote]);
-
-  const contentText = editor?.getText();
-
-  const isDirty =
-    contentText?.trim().replaceAll('\n', '') !== taskNote?.contentText?.trim().replaceAll('\n', '');
-
-  const handleSave = (editor?: Editor) => {
-    const content = editor?.getJSON();
+  function handleSave(nextEditor?: Editor) {
+    const content = nextEditor?.getJSON();
 
     if (!taskId || !content) {
       return;
     }
 
-    const title =
-      (
-        content.content?.find((c) => c.type === 'heading')?.content?.[0] as { text: string }
-      )?.text.trim() ?? 'New Note';
+    const latestText = nextEditor?.getText() ?? '';
 
-    // const contentText = editor?.getText();
-
-    // const isDirty =
-    //   contentText?.trim().replaceAll('\n', '') !==
-    //   taskNote?.contentText?.trim().replaceAll('\n', '');
-
-    if (!isDirty) {
+    if (normalizeText(latestText) === normalizeText(taskNote?.contentText)) {
       return;
     }
+
+    const heading = content.content?.find((node) => node.type === 'heading')?.content?.[0] as
+      { text: string } | undefined;
+    const title = heading?.text.trim() || 'New Note';
 
     if (noteId) {
       updateTaskNote({
@@ -286,7 +169,7 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
         input: {
           content,
           title,
-          contentText,
+          contentText: latestText,
         },
       });
       return;
@@ -297,101 +180,80 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
       input: {
         content,
         title,
+        contentText: latestText,
       },
     });
+  }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(contentText);
+      toast.success('Note copied to clipboard.');
+    } catch {
+      toast.error('Could not copy the note.');
+    }
   };
 
-  if (!editor || !editorState) {
-    return <TaskNoteEditorSkeleton />;
+  if (!editor) {
+    return <TaskNoteEditorSkeleton headerEnd={headerEnd} />;
   }
 
   const isSaving = noteId ? isUpdatingTaskNote : isCreatingTaskNote;
-  const isSaved = !isSaving && !isDirty;
+  const statusLabel = isSaving ? 'Saving…' : isDirty ? 'Unsaved changes' : 'Saved';
+  const statusClassName = isSaving
+    ? 'bg-accent-soft text-accent-foreground'
+    : isDirty
+      ? 'bg-accent-tertiary-soft text-accent-tertiary-foreground'
+      : 'bg-success-soft text-success-foreground';
 
   return (
-    <div className="flex h-full flex-col w-full overflow-hidden">
-      <div className="relative h-screen rounded-2xl w-full bg-white">
-        <div className="flex items-center pt-4 px-6 text-gray-400 justify-between">
-          <div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {isSaved ? (
-                  <SaveCheck size={22} className="cursor-pointer" />
-                ) : (
-                  <Save
-                    size={22}
-                    className="cursor-pointer"
-                    onClick={() => handleSave(editor)}
-                    aria-disabled={isSaving}
-                  />
-                )}
-              </TooltipTrigger>
-              <TooltipContent>
-                <KbdGroup>
-                  <Kbd>⌘</Kbd>
-                  <span>+</span>
-                  <Kbd>s</Kbd>
-                </KbdGroup>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          <DropdownMenu open={openMenu} onOpenChange={setOpenMenu}>
-            <DropdownMenuTrigger asChild className="px-0!">
-              <CircleEllipsis
-                size={22}
-                strokeWidth={1.5}
-                className="cursor-pointer"
-              ></CircleEllipsis>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className={` p-0 bg-white shadow-xl text-sm rounded-lg overflow-hidden`}
-            >
-              <DropdownMenuItem
-                onSelect={() => {
-                  setDeleteError(null);
-                  setDeleteOpen(true);
-                }}
-                className="flex items-center justify-between px-2 border-none! cursor-pointer rounded text-foreground"
-              >
-                {noteId && taskNote && (
-                  <div className="text-destructive flex items-center gap-2">
-                    <Trash2 size={16} />
-                    Delete
-                  </div>
-                )}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        {editor && (
-          <BubbleMenu
-            className="bubble-menu"
-            editor={editor}
-            draggable
-            shouldShow={({ state }) => {
-              const { selection } = state;
-
-              if (selection instanceof NodeSelection && selection.node.type.name === 'image') {
-                return false;
-              }
-
-              // Don't show when there's only a cursor
-              if (selection.empty) {
-                return false;
-              }
-
-              return true;
-            }}
+    <div className={cn('flex h-full min-h-0 flex-col', className)}>
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="min-w-0 truncate text-sm font-bold text-foreground">{displayTitle}</p>
+          <span
+            className={cn(
+              'shrink-0 rounded-pill px-2.5 py-1 text-[10px] font-bold',
+              statusClassName,
+            )}
           >
-            <EditorPopupMenu editor={editor}></EditorPopupMenu>
-          </BubbleMenu>
-        )}
-        <div className="w-full pt-8 ">
-          <EditorContent editor={editor} className="h-full pb-12 overflow-y-auto max-h-200" />
+            {statusLabel}
+          </span>
         </div>
+        {headerEnd}
+      </div>
+
+      <div className="px-4 pb-3 pt-3">
+        <TaskNoteEditorToolbar editor={editor} />
+      </div>
+
+      <div className="relative min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <EditorContent editor={editor} className="h-full" />
+
+        <BubbleMenu
+          className="bubble-menu"
+          editor={editor}
+          draggable
+          shouldShow={({ state }) => {
+            const { selection } = state;
+
+            if (selection instanceof NodeSelection && selection.node.type.name === 'image') {
+              return false;
+            }
+
+            // Don't show when there's only a cursor
+            if (selection.empty) {
+              return false;
+            }
+
+            return true;
+          }}
+        >
+          <EditorPopupMenu editor={editor} />
+        </BubbleMenu>
+
         <DragHandle editor={editor} className="pb-2 pr-2">
-          <div className="flex items-center mb-1 mr-1 gap-0.5">
+          <div className="mb-1 mr-1 flex items-center gap-0.5">
             <SuggestionMenu
               editor={editor}
               open={isSuggestionOpen}
@@ -400,43 +262,71 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
               <Button
                 type="button"
                 draggable={false}
-                className="flex items-center text-gray-500 bg-gray-200 justify-center rounded transition"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
+                className="flex items-center justify-center rounded bg-gray-200 text-gray-500 transition"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
                 }}
                 onClick={(event) => {
                   event.stopPropagation();
                   setIsSuggestionOpen(true);
                 }}
               >
-                <Plus size={16}></Plus>
+                <Plus className="size-4" />
               </Button>
             </SuggestionMenu>
-            <Button type="button" className=" text-gray-500 bg-gray-200 cursor-grab rounded">
-              <GripVertical size={16}></GripVertical>
+            <Button type="button" className="cursor-grab rounded bg-gray-200 text-gray-500">
+              <GripVertical className="size-4" />
             </Button>
           </div>
         </DragHandle>
-        {!currentContentText?.length && (
-          <div className="flex px-6 text-sm gap-3 absolute w-full bottom-4 items-start flex-col">
-            <div className="text-start">
-              <span className="text-[#d6d4d2]">Recents</span>
-            </div>
-            <div className="flex flex-wrap gap-3 text-xs">
-              {notes?.map((n) => {
-                return (
-                  <Link
-                    href={`/tasks/${taskId}/note/${n.id}`}
-                    className="flex gap-1 items-center hover:opacity-70 transition cursor-pointer text-[#737371]  bg-[#f2f1ef] rounded-full pl-3 pr-4 py-2"
-                  >
-                    <FileText size={15} />
-                    <p className="truncate max-w-30">{n.title}</p>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3">
+        <div className="flex items-center gap-1">
+          {noteId && taskNote && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Delete note"
+              onClick={() => {
+                setDeleteError(null);
+                setDeleteOpen(true);
+              }}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" aria-hidden="true" />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleCopy}
+            disabled={!contentText.trim()}
+          >
+            <Copy className="size-3.5" aria-hidden="true" />
+            Copy
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {onNewNote && (
+            <Button type="button" variant="outline" size="sm" onClick={onNewNote}>
+              <Plus className="size-3.5" aria-hidden="true" />
+              New Note
+            </Button>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleSave(editor)}
+            disabled={!isDirty || isSaving}
+            isLoading={isSaving}
+          >
+            Save
+          </Button>
+        </div>
       </div>
 
       {noteId && (
@@ -454,4 +344,5 @@ const TaskNoteEditor = ({ taskId, noteId, onCreated, onDeleted }: TaskNoteEditor
   );
 };
 
-export default TaskNoteEditor;
+// Props are stable (see TaskWorkbench), so hide/show tab switches skip re-rendering the editor.
+export default memo(TaskNoteEditor);

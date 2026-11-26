@@ -47,3 +47,11 @@ Modules: `projects`, `planner`, `artifacts`, `knowledge`, `notifications`, `sear
 
 - oxlint (lint) · prettier (format) · turborepo (task orchestration)
 - Root scripts: `bun run dev|build|lint|format:check|typecheck`
+
+## Troubleshooting
+
+Running notes on bugs we've hit and how they were fixed, grouped by area:
+
+- [Backend](notes/troubleshooting/backend.md)
+- [Frontend](notes/troubleshooting/frontend.md)
+- [AI](notes/troubleshooting/ai.md)

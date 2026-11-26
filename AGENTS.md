@@ -30,7 +30,8 @@ Bun + Turborepo, TypeScript. Hono API (`apps/api`, typed end-to-end via `AppType
 - Reuse existing schemas/types/utilities before creating new ones.
 - Keep changes to 1-3 files per step.
 - Never commit without approval — draft the message, show it, wait for the go-ahead.
-- After a commit, suggest 2–3 candidates for `notes/troubleshooting.md`: the non-obvious
+- After a commit, suggest 2–3 candidates for `notes/troubleshooting/` (`backend.md`,
+  `frontend.md`, or `ai.md`): the non-obvious
   logic, tricky tradeoffs, or hardest parts of the change — not trivial code bugs. Give
   short titles only; the user decides what to write up later. Don't write the entries
   unless asked.
@@ -99,4 +100,4 @@ If writing a custom script or skill whose output is read back by the agent itsel
 
 `docs/product-blueprint.md`, `product-identity.md`, `ai-architecture.md`, `backend-architecture.md`, `system-design.md`, `database-schemas.md`, `frontend-architecture.md`, `tech-stack.md`, `development-plan.md`, `knowledge-sources.md`
 
-Human-facing notes live in `notes/`: `concepts.md` (system-design concept catalog with code examples) and `troubleshooting.md` (post-commit writeups).
+Human-facing notes live in `notes/`: `concepts.md` (system-design concept catalog with code examples) and `troubleshooting/` (post-commit writeups split into `backend.md`, `frontend.md`, and `ai.md`).

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  memo,
   useEffect,
   useMemo,
   useRef,
@@ -39,7 +40,7 @@ type DraftAttachment = {
 };
 
 /** Mount with `key={conversationId}` so streaming state never leaks between threads. */
-export function ChatPanel({
+function ChatPanelImpl({
   projectId,
   conversationId,
   onOpenArtifact,
@@ -409,3 +410,6 @@ export function ChatPanel({
     </div>
   );
 }
+
+// Props are stable per conversation, so layout/artifact state changes don't re-render messages.
+export const ChatPanel = memo(ChatPanelImpl);

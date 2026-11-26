@@ -71,7 +71,13 @@ describe('timelineBlockSchema', () => {
 
   test('keeps optional when, body, status and tone', () => {
     const result = timelineBlockSchema.parse([
-      { title: 'Foundations', when: 'Week 1', body: '**Start** here', status: 'done', tone: 'success' },
+      {
+        title: 'Foundations',
+        when: 'Week 1',
+        body: '**Start** here',
+        status: 'done',
+        tone: 'success',
+      },
     ]);
     expect(result[0]).toEqual({
       title: 'Foundations',

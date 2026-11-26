@@ -6,7 +6,7 @@ the code that backs it, and a plain-language example of the situation it handles
 Two audiences, two folders:
 
 - `docs/` — the agent's reference model (architecture, schemas, product intent).
-- `notes/` — human-facing explainers like this one and `troubleshooting.md`.
+- `notes/` — human-facing explainers like this one and `troubleshooting/` (backend, frontend, AI).
 
 Scope: **implemented code only**. Scaffolded-but-unwired areas (cross-module search, notifications
 logic, Redis caching/rate limiting, the pgvector _query_ path) are deliberately left out.

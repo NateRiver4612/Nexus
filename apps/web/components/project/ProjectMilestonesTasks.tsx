@@ -30,6 +30,10 @@ export type PlanMilestone = Omit<
   tasks: PlanTask[];
 };
 
+// Stable empty fallback: a fresh `[]` default in the props destructure would change identity
+// every render while milestones load, re-running the sync effect below forever.
+const DEFAULT: MilestoneWithTasksListType = [];
+
 type ProjectMilestonesTasksProps = {
   projectId: string;
   keyTopics?: KickoffPlanType['summary']['keyTopics'];
@@ -105,7 +109,7 @@ const ProjectMilestonesTasksSkeleton = ({ className }: { className?: string }) =
 export const ProjectMilestonesTasks = ({
   projectId,
   keyTopics = [],
-  milestones = [],
+  milestones = DEFAULT,
   className,
   isLoading,
   onContinueTask,
