@@ -44,8 +44,18 @@ export const errorResponseSchema = z.object({ error: errorSchema }).openapi('Err
 
 export const okSchema = z.object({ ok: z.boolean() }).openapi('Ok');
 
-/** Presigned inline image URL, or null while a thumbnail hasn't been generated yet. */
-export const thumbnailUrlSchema = z.object({ url: z.url().nullable() }).openapi('ThumbnailUrl');
+export const thumbnailStatusSchema = z.enum([
+  'pending',
+  'processing',
+  'ready',
+  'failed',
+  'unavailable',
+]);
+
+/** Presigned inline image URL plus its generation status (`url` is null until `ready`). */
+export const thumbnailUrlSchema = z
+  .object({ url: z.url().nullable(), status: thumbnailStatusSchema })
+  .openapi('ThumbnailUrl');
 
 /** Wraps a success DTO with a human message the client can surface (toasts).
  *  `z.ZodTypeAny` allows both object and array schemas as the `data` payload. */
