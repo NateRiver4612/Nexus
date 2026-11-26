@@ -11,6 +11,7 @@
  *   Promise<Buffer | null>
  *   WebP (quality 72):
  *     images / PDF / Office -> fit inside 480x480
+ *     spreadsheets          -> 480x320 grid card from the first sheet
  *     text / Markdown       -> 480x320 white card
  *   null -> MIME is not thumbnailable (e.g. text/vnd.mermaid)
  *
@@ -19,15 +20,17 @@
  *   out: <480x320 WebP: white card, `"count"` blue, `3` orange, `true` red>
  *
  * Notes:
- *   - Dispatch: image -> sharp; PDF -> page 1; DOCX/XLSX/CSV -> Gotenberg (LibreOffice) -> page 1;
- *     Markdown -> Gotenberg (Chromium) screenshot; JSON/plain text -> SVG card.
- *   - Markdown falls back to the SVG card when Gotenberg is unreachable; every other failure
- *     throws so the thumbnail worker retries.
+ *   - Dispatch: image -> sharp; PDF -> page 1; DOCX -> Gotenberg (LibreOffice) -> page 1;
+ *     XLSX/CSV -> parsed grid card; Markdown -> Gotenberg (Chromium) screenshot; JSON/plain text -> SVG card.
+ *   - Markdown falls back to the SVG card when Gotenberg is unreachable; a PDF the canvas
+ *     renderer rejects falls back to a generic card; other failures throw so the worker retries.
  *   - Images respect EXIF rotation and are capped at 50M input pixels.
  */
+import { isSpreadsheetMime, THUMBNAILABLE_OFFICE_TYPES } from '@nexus/shared-helpers';
 import { pdf } from 'pdf-to-img';
 import sharp from 'sharp';
 
+import { convertOfficeToPdf } from '../documents/preview';
 import { env } from '../env';
 
 /** Rendered thumbnails are small list previews, not full-size images. */
@@ -35,7 +38,6 @@ const THUMB_SIZE = 480;
 const THUMB_QUALITY = 72;
 /** Bound decompression work so a hostile image can't exhaust memory. */
 const MAX_INPUT_PIXELS = 50_000_000;
-const GOTENBERG_TIMEOUT_MS = 60_000;
 /** Chromium cold starts are slower than LibreOffice, but this stays inside the worker. */
 const GOTENBERG_SCREENSHOT_TIMEOUT_MS = 30_000;
 
@@ -44,6 +46,12 @@ const TEXT_PREVIEW_LINES = 12;
 const TEXT_PREVIEW_LINE_CHARS = 56;
 const TEXT_THUMB_WIDTH = 480;
 const TEXT_THUMB_HEIGHT = 320;
+
+/** How much of a sheet to draw: enough to read as a spreadsheet without bloating the SVG. */
+const SPREADSHEET_MAX_ROWS = 8;
+const SPREADSHEET_MAX_COLS = 5;
+const SPREADSHEET_CELL_CHARS = 12;
+const SPREADSHEET_HEADER_BG = '#f3f4f6';
 
 /** Matches the preview dialog: white card (`bg-card`) with a dark syntax inset (`.syntax-block`). */
 const CARD_BG = '#ffffff';
@@ -56,16 +64,6 @@ const TOKEN_KEY = '#70cff8';
 const TOKEN_STRING = '#b9f18d';
 const TOKEN_NUMBER = '#fbbc88';
 const TOKEN_LITERAL = '#f98181';
-
-/** Formats Gotenberg (LibreOffice) can turn into a PDF before we render page 1. */
-const OFFICE_MIME_TYPES = new Set([
-  'application/msword', // .doc
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-  'application/vnd.ms-excel', // .xls
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-  'text/csv',
-  'application/csv',
-]);
 
 function escapeXml(value: string): string {
   return value
@@ -81,12 +79,14 @@ function truncate(value: string, max: number): string {
 }
 
 function cleanPreviewLines(text: string): string[] {
-  return text
-    // Control chars break SVG/XML; strip them rather than escaping.
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
-    .slice(0, TEXT_PREVIEW_MAX_CHARS)
-    .split(/\r?\n/)
-    .slice(0, TEXT_PREVIEW_LINES);
+  return (
+    text
+      // Control chars break SVG/XML; strip them rather than escaping.
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      .slice(0, TEXT_PREVIEW_MAX_CHARS)
+      .split(/\r?\n/)
+      .slice(0, TEXT_PREVIEW_LINES)
+  );
 }
 
 function stripMarkdown(line: string): string {
@@ -115,16 +115,18 @@ async function svgToWebp(svg: string): Promise<Buffer> {
 }
 
 function markdownBody(text: string): string {
-  return cleanPreviewLines(text)
-    // Fence markers add noise; the code lines themselves still render.
-    .filter((line) => !line.trim().startsWith('```'))
-    .map((line, index) => {
-      const isHeading = /^#{1,3}\s+/.test(line);
-      const plain = truncate(stripMarkdown(line), TEXT_PREVIEW_LINE_CHARS);
-      const y = 80 + index * 19;
-      return `<text x="24" y="${y}" font-family="'DejaVu Sans', sans-serif" font-size="${isHeading ? 16 : 13}" font-weight="${isHeading ? 700 : 400}" fill="${isHeading ? CARD_TITLE : MARKDOWN_TEXT}" xml:space="preserve">${escapeXml(plain || ' ')}</text>`;
-    })
-    .join('');
+  return (
+    cleanPreviewLines(text)
+      // Fence markers add noise; the code lines themselves still render.
+      .filter((line) => !line.trim().startsWith('```'))
+      .map((line, index) => {
+        const isHeading = /^#{1,3}\s+/.test(line);
+        const plain = truncate(stripMarkdown(line), TEXT_PREVIEW_LINE_CHARS);
+        const y = 80 + index * 19;
+        return `<text x="24" y="${y}" font-family="'DejaVu Sans', sans-serif" font-size="${isHeading ? 16 : 13}" font-weight="${isHeading ? 700 : 400}" fill="${isHeading ? CARD_TITLE : MARKDOWN_TEXT}" xml:space="preserve">${escapeXml(plain || ' ')}</text>`;
+      })
+      .join('')
+  );
 }
 
 type JsonToken = { text: string; color: string };
@@ -243,13 +245,7 @@ function markdownPreviewHtml(name: string): string {
 }
 
 /** Chromium-rendered markdown preview, matching the dialog rather than approximating it. */
-async function screenshotMarkdown({
-  text,
-  name,
-}: {
-  text: string;
-  name: string;
-}): Promise<Buffer> {
+async function screenshotMarkdown({ text, name }: { text: string; name: string }): Promise<Buffer> {
   const form = new FormData();
   form.append('files', new Blob([markdownPreviewHtml(name)], { type: 'text/html' }), 'index.html');
   form.append('files', new Blob([text], { type: 'text/markdown' }), 'content.md');
@@ -304,6 +300,73 @@ async function codeCardToWebp({
   return svgToWebp(textCardSvg({ name, content: `${inset}${codeBody({ text, colorize })}` }));
 }
 
+/** Neutral card when a file's real preview can't be rendered, so a thumbnail still exists. */
+async function fallbackCardToWebp({ name }: { name: string }): Promise<Buffer> {
+  const shell = `<rect x="24" y="72" width="${TEXT_THUMB_WIDTH - 48}" height="196" rx="10" fill="#f9fafb" stroke="${CARD_BORDER}"/>`;
+  const lines = Array.from({ length: 4 }, (_, index) => {
+    const y = 92 + index * 26;
+    return `<line x1="36" y1="${y}" x2="${TEXT_THUMB_WIDTH - 36}" y2="${y}" stroke="${CARD_BORDER}" stroke-width="1"/>`;
+  }).join('');
+
+  return svgToWebp(textCardSvg({ name, content: `${shell}${lines}` }));
+}
+
+/**
+ * Spreadsheet -> grid card. Parses the first sheet with the same `xlsx` library the preview
+ * dialog uses, then draws a small table. Rendering the cells directly avoids Gotenberg's PDF
+ * export, which some wide sheets turn into a PDF the canvas renderer rejects.
+ */
+async function spreadsheetToWebp({ body, name }: { body: Buffer; name: string }): Promise<Buffer> {
+  try {
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(body, { type: 'buffer' });
+    const firstSheetName = workbook.SheetNames[0];
+    const sheet = firstSheetName ? workbook.Sheets[firstSheetName] : undefined;
+
+    const raw = sheet
+      ? (XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          blankrows: false,
+          defval: '',
+        }) as unknown[][])
+      : [];
+    const rows = raw
+      .slice(0, SPREADSHEET_MAX_ROWS)
+      .map((row) => row.slice(0, SPREADSHEET_MAX_COLS).map((cell) => String(cell ?? '')));
+
+    if (rows.length === 0) return fallbackCardToWebp({ name });
+
+    const cols = Math.max(1, ...rows.map((row) => row.length));
+    const tableX = 24;
+    const tableY = 72;
+    const tableWidth = TEXT_THUMB_WIDTH - tableX * 2;
+    const rowHeight = 26;
+    const colWidth = tableWidth / cols;
+
+    const cells = rows
+      .flatMap((row, rowIndex) =>
+        Array.from({ length: cols }, (_, colIndex) => {
+          const x = tableX + colIndex * colWidth;
+          const y = tableY + rowIndex * rowHeight;
+          const isHeader = rowIndex === 0;
+          const value = truncate(row[colIndex] ?? '', SPREADSHEET_CELL_CHARS);
+          const rect = `<rect x="${x}" y="${y}" width="${colWidth}" height="${rowHeight}" fill="${isHeader ? SPREADSHEET_HEADER_BG : CARD_BG}" stroke="${CARD_BORDER}" stroke-width="1"/>`;
+          if (!value) return rect;
+
+          const text = `<text x="${x + 6}" y="${y + 17}" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="${isHeader ? 700 : 400}" fill="${isHeader ? CARD_TITLE : MARKDOWN_TEXT}" xml:space="preserve">${escapeXml(value)}</text>`;
+          return `${rect}${text}`;
+        }),
+      )
+      .join('');
+
+    return svgToWebp(textCardSvg({ name, content: cells }));
+  } catch (error) {
+    // A corrupt workbook shouldn't leave the source stuck on a failed row.
+    console.warn('[thumbnails] spreadsheet render failed, using fallback card', error);
+    return fallbackCardToWebp({ name });
+  }
+}
+
 async function toWebp(input: Buffer): Promise<Buffer> {
   return sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
     .rotate() // respect EXIF orientation
@@ -317,41 +380,22 @@ async function toWebp(input: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-/** Render the first PDF page, then shrink it. */
-async function pdfToWebp(body: Buffer): Promise<Buffer> {
-  const document = await pdf(body, { scale: 2 });
+/** Render the first PDF page, then shrink it; fall back to a card if the renderer rejects it. */
+async function pdfToWebp({ body, name }: { body: Buffer; name: string }): Promise<Buffer> {
   try {
-    const firstPage = await document.getPage(1);
-    return await toWebp(firstPage);
-  } finally {
-    await document.destroy();
+    const document = await pdf(body, { scale: 2 });
+    try {
+      const firstPage = await document.getPage(1);
+      return await toWebp(firstPage);
+    } finally {
+      await document.destroy();
+    }
+  } catch (error) {
+    // pdf-to-img (PDF.js on canvas) rejects some LibreOffice PDFs, e.g. a clip without a
+    // Path2D. A generic card beats failing the whole thumbnail.
+    console.warn('[thumbnails] PDF render failed, using fallback card', error);
+    return fallbackCardToWebp({ name });
   }
-}
-
-/** Gotenberg runs LibreOffice in its own container; we only send it the file and get PDF back. */
-async function convertOfficeToPdf({
-  body,
-  name,
-  mimeType,
-}: {
-  body: Buffer;
-  name: string;
-  mimeType: string;
-}): Promise<Buffer> {
-  const form = new FormData();
-  form.append('files', new Blob([new Uint8Array(body)], { type: mimeType }), name);
-
-  const response = await fetch(`${env.GOTENBERG_URL}/forms/libreoffice/convert`, {
-    method: 'POST',
-    body: form,
-    signal: AbortSignal.timeout(GOTENBERG_TIMEOUT_MS),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Gotenberg conversion failed (${response.status}).`);
-  }
-
-  return Buffer.from(await response.arrayBuffer());
 }
 
 /** Returns the thumbnail bytes, or null for a type we don't render. */
@@ -367,7 +411,7 @@ export async function generateThumbnail({
   const mime = mimeType.toLowerCase();
 
   if (mime.startsWith('image/')) return toWebp(body);
-  if (mime === 'application/pdf') return pdfToWebp(body);
+  if (mime === 'application/pdf') return pdfToWebp({ body, name });
 
   if (mime === 'text/markdown') return markdownToWebp({ text: body.toString('utf8'), name });
   if (mime === 'application/json') {
@@ -377,9 +421,12 @@ export async function generateThumbnail({
     return codeCardToWebp({ text: body.toString('utf8'), name, colorize: false });
   }
 
-  if (OFFICE_MIME_TYPES.has(mime)) {
+  // Spreadsheets before the generic office branch: their PDF export breaks the canvas renderer.
+  if (isSpreadsheetMime(mime)) return spreadsheetToWebp({ body, name });
+
+  if (THUMBNAILABLE_OFFICE_TYPES.has(mime)) {
     const pdfBuffer = await convertOfficeToPdf({ body, name, mimeType });
-    return pdfToWebp(pdfBuffer);
+    return pdfToWebp({ body: pdfBuffer, name });
   }
 
   return null;

@@ -66,15 +66,29 @@ export function youtubeVideoId({ url }: { url: string | null | undefined }): str
   return match?.[1] ?? null;
 }
 
-/** Formats we can render a server-side thumbnail for (Office/CSV go through Gotenberg). */
-export const THUMBNAILABLE_OFFICE_TYPES = new Set([
+const THUMBNAILABLE_WORD_TYPES = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+/** Spreadsheets render as a grid card from their cells; Gotenberg's PDF export trips the canvas. */
+export const THUMBNAILABLE_SPREADSHEET_TYPES = new Set([
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/csv',
   'application/csv',
 ]);
+
+/** Formats we can render a server-side thumbnail for (Word goes through Gotenberg). */
+export const THUMBNAILABLE_OFFICE_TYPES = new Set([
+  ...THUMBNAILABLE_WORD_TYPES,
+  ...THUMBNAILABLE_SPREADSHEET_TYPES,
+]);
+
+export function isSpreadsheetMime(mimeType: string | null | undefined): boolean {
+  if (!mimeType) return false;
+  return THUMBNAILABLE_SPREADSHEET_TYPES.has(mimeType.toLowerCase());
+}
 
 /** Text formats rendered as a document snippet. Mermaid stays an icon (not a rendered diagram). */
 export const THUMBNAILABLE_TEXT_TYPES = new Set([

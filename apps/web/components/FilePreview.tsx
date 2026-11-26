@@ -9,7 +9,7 @@ import {
   isImageMime,
   isPdfMime,
   isSpreadsheetMime,
-  isTextLikeMime,
+  isTextPreviewMime,
   isVideoMime,
 } from '@/lib/utils';
 
@@ -39,7 +39,12 @@ export type FilePreviewProps = {
   error?: string | null;
 };
 
-/** One renderer for every preview surface: chat attachments and artifact versions. */
+// Picks one renderer from the preview state. text → mermaid/markdown/code; objectUrl →
+// image/audio/video/pdf; buffer → docx/xlsx. isLoading/error short-circuit first.
+//
+// Example — raw docx in, buffer renderer out (converted docs arrive as a pdf objectUrl instead):
+//   input:  { name: 'report.docx', mimeType: '…wordprocessingml.document', buffer: <bytes>, objectUrl: null }
+//   output: <DocxPreview buffer={bytes} />
 export const FilePreview = ({
   name,
   mimeType,
@@ -58,13 +63,12 @@ export const FilePreview = ({
     );
   }
 
-  console.log(mimeType);
-
   if (error) {
     return <p className="text-sm text-error">{error}</p>;
   }
 
-  if (isTextLikeMime(mimeType) && text !== null && text !== undefined) {
+  if (isTextPreviewMime(mimeType) && text !== null && text !== undefined) {
+    // Generic text/* hides these; also match by extension.
     const isMermaid = mimeType === 'text/vnd.mermaid' || /\.(mmd|mermaid)$/i.test(name);
     if (isMermaid) return <MermaidDiagram source={text} />;
 
@@ -95,6 +99,7 @@ export const FilePreview = ({
     if (isPdfMime(mimeType)) return <PdfPreview src={objectUrl} />;
   }
 
+  // Formats that parse their own bytes (docx/xlsx) never become an object URL.
   if (buffer) {
     if (isDocxMime(mimeType)) return <DocxPreview buffer={buffer} />;
     if (isSpreadsheetMime(mimeType)) return <SpreadsheetPreview buffer={buffer} />;

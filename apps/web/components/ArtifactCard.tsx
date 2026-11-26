@@ -102,8 +102,6 @@ export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
   const thumbnail = useThumbnailUrl({
     source: { kind: 'artifact', artifactId: artifact.id, version: artifact.version },
     enabled: THUMBNAIL_ARTIFACT_TYPES.has(displayType),
-    // Artifact thumbnails are generated when the file is written/uploaded, before the card exists.
-    poll: false,
   });
 
   // Presigned URL on demand — rendering a card shouldn't load every artifact's bytes.
@@ -145,8 +143,11 @@ export const ArtifactCard = ({ artifact, onOpen }: ArtifactCardProps) => {
         <MediaThumbnail
           src={thumbnail.data?.url}
           alt={artifact.name}
+          isLoading={thumbnail.status === 'loading'}
           className="size-10 rounded-md bg-muted"
-          fallback={<ArtifactTypeIcon type={displayType} className="size-5 text-muted-foreground" />}
+          fallback={
+            <ArtifactTypeIcon type={displayType} className="size-5 text-muted-foreground" />
+          }
         />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{artifact.name}</p>

@@ -15,8 +15,7 @@ import { fileIcon } from '../UploadKnowledgeSource';
 export const SourceThumbnail = ({ source }: { source: KnowledgeSourceType }) => {
   const isYouTube = source.sourceType === 'youtube';
   const isUrl = source.sourceType === 'url';
-  const canHaveThumbnail =
-    Boolean(source.storageKey) && isThumbnailableMime(source.mimeType);
+  const canHaveThumbnail = Boolean(source.storageKey) && isThumbnailableMime(source.mimeType);
 
   const thumbnail = useThumbnailUrl({
     source: canHaveThumbnail
@@ -41,7 +40,7 @@ export const SourceThumbnail = ({ source }: { source: KnowledgeSourceType }) => 
       <MediaThumbnail
         src={siteFaviconUrl({ url: source.sourceRef })}
         alt={source.name}
-        className="size-10 rounded bg-muted"
+        className="size-14 2xl:size-16 rounded bg-muted"
         fallback={<Globe className="size-5 text-muted-foreground" aria-hidden />}
       />
     );
@@ -56,7 +55,8 @@ export const SourceThumbnail = ({ source }: { source: KnowledgeSourceType }) => 
     <MediaThumbnail
       src={thumbnail.data?.url}
       alt={source.name}
-      className={cn('size-10 rounded', color)}
+      isLoading={thumbnail.status === 'loading'}
+      className={cn('size-14 2xl:size-16 rounded', color)}
       fallback={<FontAwesomeIcon icon={icon} color={color} size="xl" />}
     />
   );

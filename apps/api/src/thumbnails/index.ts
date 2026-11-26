@@ -1,10 +1,18 @@
+import { getDb } from '@nexus/db';
 import { isThumbnailableMime } from '@nexus/shared-helpers';
 
 import { deleteObject, getObject, getObjectSize, presignInlineUrl, putObject } from '../storage';
 
 import { generateThumbnail } from './generate';
+import { ThumbnailRepository, type ThumbnailStatusType } from './repository';
 
 export { isThumbnailableMime };
+
+export type ThumbnailResult = { url: string | null; status: ThumbnailStatusType };
+
+function repository() {
+  return ThumbnailRepository(getDb());
+}
 
 /** Derived from the source key, so a shared attachment/artifact object shares one thumbnail. */
 function thumbKeyFor(storageKey: string): string {
@@ -28,33 +36,68 @@ export async function ensureThumbnail({
 }): Promise<string | null> {
   if (!isThumbnailableMime(mimeType)) return null;
 
-  const source = body ?? (await getObject(storageKey)).body;
-  const thumbnail = await generateThumbnail({ body: source, mimeType, name });
-  if (!thumbnail) return null;
+  const thumbnails = repository();
+  await thumbnails.processing(storageKey);
 
-  const key = thumbKeyFor(storageKey);
-  await putObject(key, thumbnail, 'image/webp');
-  return key;
+  try {
+    const source = body ?? (await getObject(storageKey)).body;
+    const thumbnail = await generateThumbnail({ body: source, mimeType, name });
+    if (!thumbnail) {
+      await thumbnails.failed(storageKey, 'No thumbnail could be generated.');
+      return null;
+    }
+
+    const key = thumbKeyFor(storageKey);
+    await putObject(key, thumbnail, 'image/webp');
+    await thumbnails.ready(storageKey);
+    return key;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Thumbnail generation failed.';
+    // Best-effort: failing to record the status must not mask the generation error.
+    await thumbnails.failed(storageKey, message).catch(() => undefined);
+    throw error;
+  }
 }
 
 /**
- * Presigned inline URL for a stored thumbnail, or null while it hasn't been generated yet. The
- * client renders the URL directly and falls back to a file icon when this returns null.
+ * Presigned inline URL for a stored thumbnail plus its generation status. The status lets the
+ * client tell "still generating" from "generation failed" instead of inferring from a timeout.
  */
-export async function getThumbnailUrl(storageKey: string): Promise<{ url: string } | null> {
-  const key = thumbKeyFor(storageKey);
-  const size = await getObjectSize(key);
-  if (size === null) return null;
+export async function getThumbnailUrl(storageKey: string): Promise<ThumbnailResult> {
+  const thumbnails = repository();
+  const row = await thumbnails.get(storageKey);
 
-  return presignInlineUrl({ key });
+  if (row?.status === 'ready') {
+    const url = await presignInlineUrl({ key: thumbKeyFor(storageKey) });
+    return { url: url.url, status: 'ready' };
+  }
+  if (row?.status === 'failed' || row?.status === 'unavailable') {
+    return { url: null, status: row.status };
+  }
+  if (row) return { url: null, status: row.status };
+
+  // Legacy: a thumbnail may exist from before status rows were tracked. Backfill it lazily.
+  const size = await getObjectSize(thumbKeyFor(storageKey));
+  if (size === null) return { url: null, status: 'pending' };
+
+  await thumbnails.ready(storageKey).catch(() => undefined);
+  const url = await presignInlineUrl({ key: thumbKeyFor(storageKey) });
+  return { url: url.url, status: 'ready' };
 }
 
-/** Best-effort cleanup for a stored object's thumbnail. */
+/** Best-effort cleanup for a stored object's thumbnail (object + status row). */
 export async function deleteThumbnail(storageKey: string): Promise<void> {
   const key = thumbKeyFor(storageKey);
   try {
     await deleteObject(key);
   } catch (error) {
     console.warn(`[thumbnails] could not delete thumbnail for ${storageKey}`, error);
+  }
+
+  try {
+    await repository().remove(storageKey);
+  } catch (error) {
+    // A leftover row costs nothing and must not block the object deletion.
+    console.warn(`[thumbnails] could not delete status for ${storageKey}`, error);
   }
 }

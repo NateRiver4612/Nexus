@@ -1,13 +1,13 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getThumbnailUrl, type ThumbnailSource } from '@/api/thumbnails';
 
 import { thumbnailKeys } from './queryKeys';
 
 const THUMBNAIL_POLL_MS = 3000;
-/** Heavy formats (Office/CSV) are queued, so poll for a while, then give up and show the icon. */
+/** Safety cap for a row stuck in `pending` (e.g. a lost job), then show the icon. */
 const MAX_THUMBNAIL_POLLS = 10;
 
 function keyFor(source: ThumbnailSource) {
@@ -21,27 +21,58 @@ function keyFor(source: ThumbnailSource) {
   }
 }
 
+/** UI-facing state derived from the persisted server status. */
+export type ThumbnailStatus = 'idle' | 'loading' | 'ready' | 'failed';
+
 /**
- * Resolves a presigned thumbnail URL. Polls while the server reports `null` (thumbnail still
- * being generated) up to a bounded number of times, so non-thumbnailable files don't poll forever.
+ * Resolves a presigned thumbnail URL and polls while the server reports it is still being
+ * generated. The server persists `pending`/`processing`/`ready`/`failed`/`unavailable`, so
+ * a genuine failure falls back to the icon instead of waiting for a timeout.
  */
 export function useThumbnailUrl({
   source,
   enabled = true,
-  /** Off for sources whose thumbnail is produced before the row exists (artifacts). */
-  poll = true,
 }: {
   source: ThumbnailSource | null;
   enabled?: boolean;
-  poll?: boolean;
 }) {
-  return useQuery({
-    queryKey: source ? keyFor(source) : thumbnailKeys.all,
+  const queryClient = useQueryClient();
+  const queryKey = source ? keyFor(source) : thumbnailKeys.all;
+  const query = useQuery({
+    queryKey,
     queryFn: () => getThumbnailUrl(source!),
     enabled: enabled && source !== null,
     refetchInterval: (query) => {
-      if (!poll || query.state.data?.url) return false;
+      const status = query.state.data?.status;
+      if (
+        status === 'ready' ||
+        status === 'failed' ||
+        status === 'unavailable' ||
+        query.state.status === 'error'
+      ) {
+        return false;
+      }
       return query.state.dataUpdateCount < MAX_THUMBNAIL_POLLS ? THUMBNAIL_POLL_MS : false;
     },
   });
+  const dataUpdateCount = queryClient.getQueryState(queryKey)?.dataUpdateCount ?? 0;
+
+  let status: ThumbnailStatus;
+  if (!enabled || source === null) {
+    status = 'idle';
+  } else if (query.isError) {
+    status = 'failed';
+  } else if (query.data?.status === 'ready') {
+    status = 'ready';
+  } else if (query.data?.status === 'failed' || query.data?.status === 'unavailable') {
+    status = 'failed';
+  } else if (query.data?.status === 'pending' || query.data?.status === 'processing') {
+    // Safety cap in case a row gets stuck (e.g. the job was lost).
+    status = dataUpdateCount < MAX_THUMBNAIL_POLLS ? 'loading' : 'failed';
+  } else {
+    // First request in flight.
+    status = 'loading';
+  }
+
+  return { ...query, status };
 }

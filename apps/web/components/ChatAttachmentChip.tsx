@@ -201,6 +201,7 @@ export const ChatAttachmentChip = ({
         <MediaThumbnail
           src={previewSrc}
           alt={name}
+          isLoading={!localPreviewUrl && thumbnail.status === 'loading'}
           className="mb-1.5 h-20 w-full rounded-md bg-muted"
           fallback={<FileText className="size-6 text-muted-foreground" aria-hidden />}
         />
