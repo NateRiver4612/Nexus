@@ -6,6 +6,7 @@ import { deleteArtifactRoute } from './deleteArtifact';
 import { getArtifactContentRoute } from './getArtifactContent';
 import { getArtifactDownloadUrlRoute } from './getDownloadUrl';
 import { getArtifactFileRoute } from './getFile';
+import { getArtifactPreviewRoute } from './preview';
 import { getArtifactThumbnailUrlRoute } from './getThumbnailUrl';
 import { getArtifactsRoute } from './getArtifacts';
 import { updateArtifactRoute } from './updateArtifact';
@@ -19,6 +20,7 @@ export function artifactRoutes() {
     { route: createArtifactRoute.route, handler: createArtifactRoute.handler },
     { route: getArtifactContentRoute.route, handler: getArtifactContentRoute.handler },
     { route: getArtifactFileRoute.route, handler: getArtifactFileRoute.handler },
+    { route: getArtifactPreviewRoute.route, handler: getArtifactPreviewRoute.handler },
     {
       route: getArtifactThumbnailUrlRoute.route,
       handler: getArtifactThumbnailUrlRoute.handler,

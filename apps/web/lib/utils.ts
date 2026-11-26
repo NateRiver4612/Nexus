@@ -124,3 +124,7 @@ export function isSpreadsheetMime(mimeType: string) {
     mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
 }
+
+export function isTextPreviewMime(mimeType: string) {
+  return isTextLikeMime(mimeType) && !isSpreadsheetMime(mimeType);
+}

@@ -18,11 +18,13 @@ import {
   presignGetUrl,
   presignPutUrl,
 } from '../../../storage';
+import { deletePdfPreview, getPdfPreview, isPdfPreviewMime } from '../../../documents/preview';
 import {
   deleteThumbnail,
   ensureThumbnail,
   getThumbnailUrl as presignThumbnailUrl,
   isThumbnailableMime,
+  type ThumbnailResult,
 } from '../../../thumbnails';
 import { enqueueThumbnail } from '../../../thumbnails/queue';
 import {
@@ -244,6 +246,30 @@ export function AttachmentService(db: Db) {
     return { body: object.body, mimeType: attachment.mimeType, name: attachment.name };
   }
 
+  /** PDF preview for a Word attachment, converted with LibreOffice and cached by storage key. */
+  async function getPreview({
+    conversationId,
+    attachmentId,
+    userId,
+  }: {
+    conversationId: string;
+    attachmentId: string;
+    userId: string;
+  }) {
+    const attachment = await requireOwned({ conversationId, attachmentId, userId });
+    ensure(
+      isPdfPreviewMime(attachment.mimeType),
+      ValidationError('This attachment cannot be previewed as a PDF.'),
+    );
+
+    const body = await getPdfPreview({
+      storageKey: attachment.storageKey,
+      mimeType: attachment.mimeType,
+      name: attachment.name,
+    });
+    return { body, name: attachment.name };
+  }
+
   /** Presigned thumbnail URL, or null while none has been generated (client falls back to an icon). */
   async function getThumbnailUrl({
     conversationId,
@@ -253,10 +279,13 @@ export function AttachmentService(db: Db) {
     conversationId: string;
     attachmentId: string;
     userId: string;
-  }): Promise<{ url: string | null }> {
+  }): Promise<ThumbnailResult> {
     const attachment = await requireOwned({ conversationId, attachmentId, userId });
-    const thumbnail = await presignThumbnailUrl(attachment.storageKey);
-    return { url: thumbnail?.url ?? null };
+    if (!isThumbnailableMime(attachment.mimeType)) {
+      return { url: null, status: 'unavailable' };
+    }
+
+    return presignThumbnailUrl(attachment.storageKey);
   }
 
   /**
@@ -340,6 +369,7 @@ export function AttachmentService(db: Db) {
     remove,
     getDownloadUrl,
     getFile,
+    getPreview,
     getThumbnailUrl,
     listReadyForSend,
     getCharCounts,
@@ -355,6 +385,7 @@ async function discardObject(key: string) {
   try {
     await deleteObject(key);
     await deleteThumbnail(key);
+    await deletePdfPreview(key);
   } catch (error) {
     // Best-effort: a leftover object costs storage only, and must not mask the real outcome.
     console.warn(`[attachments] could not delete S3 object ${key}`, error);

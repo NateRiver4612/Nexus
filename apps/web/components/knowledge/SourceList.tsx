@@ -338,6 +338,7 @@ export function SourceList({
       <SourcePreviewDialog
         source={preview}
         open={preview !== null}
+        onDownload={preview ? () => downloadSource(preview) : undefined}
         onOpenChange={(open) => {
           if (!open) setPreview(null);
         }}

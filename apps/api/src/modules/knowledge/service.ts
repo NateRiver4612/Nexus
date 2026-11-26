@@ -1,7 +1,8 @@
 import { UnrecoverableError } from 'bullmq';
 
-import { presignGetUrl, presignPutUrl } from '../../storage';
-import { ensure, ensureExists, NotFoundError } from '../../errors';
+import { getObject, presignGetUrl, presignPutUrl } from '../../storage';
+import { ensure, ensureExists, NotFoundError, ValidationError } from '../../errors';
+import { deletePdfPreview, getPdfPreview, isPdfPreviewMime } from '../../documents/preview';
 import { env } from '../../env';
 import { getOpenAIProvider } from '../ai/providers';
 import { chunkText } from './chunk';
@@ -20,6 +21,7 @@ import { enqueueKnowledge, KNOWLEDGE_QUEUE_PROCESS, KNOWLEDGE_QUEUE_REMOVE } fro
 import {
   getThumbnailUrl as presignThumbnailUrl,
   isThumbnailableMime,
+  type ThumbnailResult,
 } from '../../thumbnails';
 import { enqueueThumbnail } from '../../thumbnails/queue';
 
@@ -36,6 +38,12 @@ export function KnowledgeService(db: Db) {
     const created: KnowledgeSourceType[] = [];
 
     for (const item of input.inputs) {
+      // Knowledge storage keys are filename-based, so a re-upload reuses the key; drop the
+      // previous document's cached PDF preview before the new bytes are processed.
+      if ((item.sourceType === 'file' || item.sourceType === 'audio') && item.storageKey) {
+        await deletePdfPreview(item.storageKey);
+      }
+
       const sourceRow = await mapInputToRow(item, input.projectId, input.userId);
       const rows = await repository.insertSource(sourceRow);
 
@@ -120,20 +128,19 @@ export function KnowledgeService(db: Db) {
   }: {
     projectId: string;
     sourceId: string;
-  }): Promise<{ url: string | null }> {
+  }): Promise<ThumbnailResult> {
     const source = ensureExists(
       await repository.getSourceById(sourceId),
       NotFoundError('Knowledge source not found.'),
     );
     ensure(source.projectId === projectId, NotFoundError('Knowledge source not found.'));
 
-    if (source.storageKey) {
-      const thumbnail = await presignThumbnailUrl(source.storageKey);
-      return { url: thumbnail?.url ?? null };
+    // URL sources render a favicon client-side; copied text/audio have no stored thumbnail.
+    if (!source.storageKey || !isThumbnailableMime(source.mimeType)) {
+      return { url: null, status: 'unavailable' };
     }
 
-    // URL sources render a favicon client-side; copied text has no thumbnail.
-    return { url: null };
+    return presignThumbnailUrl(source.storageKey);
   }
 
   async function getDownloadUrl({ projectId, sourceId }: { projectId: string; sourceId: string }) {
@@ -149,6 +156,56 @@ export function KnowledgeService(db: Db) {
     );
 
     return presignGetUrl({ key: storageKey, filename: source.name });
+  }
+
+  /**
+   * Raw bytes for an in-app preview, mirroring the chat attachment file route. Previews fetch
+   * through the authenticated API instead of a presigned URL, so they don't depend on S3 CORS
+   * or URL expiry.
+   */
+  async function getFile({ projectId, sourceId }: { projectId: string; sourceId: string }) {
+    const source = ensureExists(
+      await repository.getSourceById(sourceId),
+      NotFoundError('Knowledge source not found.'),
+    );
+    ensure(source.projectId === projectId, NotFoundError('Knowledge source not found.'));
+
+    const storageKey = ensureExists(
+      source.storageKey,
+      NotFoundError('This source has no stored file.'),
+    );
+
+    const object = await getObject(storageKey);
+    return {
+      body: object.body,
+      mimeType: source.mimeType ?? object.contentType,
+      name: source.name,
+    };
+  }
+
+  /** PDF preview for a Word document, converted with LibreOffice and cached by storage key. */
+  async function getPreview({ projectId, sourceId }: { projectId: string; sourceId: string }) {
+    const source = ensureExists(
+      await repository.getSourceById(sourceId),
+      NotFoundError('Knowledge source not found.'),
+    );
+    ensure(source.projectId === projectId, NotFoundError('Knowledge source not found.'));
+
+    const storageKey = ensureExists(
+      source.storageKey,
+      NotFoundError('This source has no stored file.'),
+    );
+    ensure(
+      isPdfPreviewMime(source.mimeType),
+      ValidationError('This source cannot be previewed as a PDF.'),
+    );
+
+    const body = await getPdfPreview({
+      storageKey,
+      mimeType: source.mimeType ?? '',
+      name: source.name,
+    });
+    return { body, name: source.name };
   }
 
   /**
@@ -261,6 +318,8 @@ export function KnowledgeService(db: Db) {
     listSources,
     getUploadUrl,
     getDownloadUrl,
+    getFile,
+    getPreview,
     getThumbnailUrl,
     processSource,
     deleteSource,
