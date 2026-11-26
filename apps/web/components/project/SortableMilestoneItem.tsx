@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/react/sortable';
-import { Check, Circle, Pin, Play, RotateCcw } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Circle, Pin, Play, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useId, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn, formatTimeMinutes } from '@/lib/utils';
@@ -41,6 +42,8 @@ export const SortableTaskRow = ({
   const done = task.status === 'completed';
   const estimated = formatTimeMinutes(task.estimatedTimeMinutes);
   const current = isCurrent && !done;
+  const [open, setOpen] = useState(index === 0);
+  const stepsId = useId();
 
   return (
     <div
@@ -101,9 +104,53 @@ export const SortableTaskRow = ({
             {task.title}
           </p>
           {task.description && (
-            <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-              {task.description}
-            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">{task.description}</p>
+          )}
+
+          {task.steps.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpen((current) => !current);
+                }}
+                aria-expanded={open}
+                aria-controls={stepsId}
+                className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-foreground transition-colors hover:text-action-hover"
+              >
+                {open ? 'Hide' : 'View'} {task.steps.length} execution steps
+                {open ? (
+                  <ChevronUp className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="size-3.5" aria-hidden="true" />
+                )}
+              </button>
+
+              <div
+                id={stepsId}
+                className={cn(
+                  'grid transition-all duration-300 ease-out',
+                  open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+                )}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <ul className="mt-1 flex flex-col gap-1.5">
+                    {task.steps.map((step, stepIndex) => (
+                      <li
+                        key={stepIndex}
+                        className="flex gap-2 text-xs leading-relaxed text-muted-foreground"
+                      >
+                        <span className="select-none" aria-hidden="true">
+                          •
+                        </span>
+                        <span className="min-w-0 flex-1">{step.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </>
           )}
         </div>
 

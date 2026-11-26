@@ -458,8 +458,8 @@ export const ProjectMilestonesTasks = ({
           </Card>
         )}
 
-        <Card className="flex flex-col gap-5 p-6 xl:col-span-5">
-          <div className="flex items-center justify-between gap-3">
+        <Card className="flex min-h-0 flex-col gap-5 p-6 xl:col-span-5 xl:[contain:size] xl:overflow-hidden">
+          <div className="flex shrink-0 items-center justify-between gap-3">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Key Topic & Architectural Pillar
             </h3>
@@ -502,8 +502,8 @@ export const ProjectMilestonesTasks = ({
               ))}
             </div>
           ) : keyTopic ? (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-border/60 bg-surface-secondary p-5">
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+              <div className="shrink-0 rounded-2xl border border-border/60 bg-surface-secondary p-5">
                 <div className="flex items-center gap-3">
                   <span
                     className={cn(
@@ -526,12 +526,12 @@ export const ProjectMilestonesTasks = ({
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="flex min-h-0 flex-1 flex-col gap-2">
+                <p className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Verification & Exit Gates
                 </p>
                 {gates.length > 0 ? (
-                  <div className="max-h-64 flex flex-wrap gap-2 space-y-2 overflow-y-auto pr-1">
+                  <div className="flex min-h-16 flex-1 flex-wrap content-start gap-2 overflow-y-auto pr-1">
                     {gates.map((gate) => (
                       <div
                         key={gate}
@@ -558,7 +558,7 @@ export const ProjectMilestonesTasks = ({
             </div>
           )}
 
-          <div className="mt-auto flex items-center justify-between gap-3 rounded-2xl border border-accent-secondary/50 bg-accent-secondary-soft p-4">
+          <div className="flex shrink-0 items-center justify-between gap-3 rounded-2xl border border-accent-secondary/50 bg-accent-secondary-soft p-4">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-accent-secondary-foreground">
                 Project Deliverable

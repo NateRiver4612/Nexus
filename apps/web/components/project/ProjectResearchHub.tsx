@@ -156,13 +156,13 @@ export const ProjectResearchHub = ({
         </div>
       )}
 
-      {!isGenerating && researchFailed && (
+      {!isGenerating && !isLoading && !isStarting && researchFailed && sources.length === 0 && (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-xs font-medium text-destructive">
           Research isn’t working right now — please try again later.
         </div>
       )}
 
-      {!isGenerating && !researchFailed && sources.length === 0 && (
+      {!isGenerating && !isStarting && !researchFailed && sources.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-surface-secondary p-8 text-center">
           <p className="text-sm font-semibold text-foreground">No research yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
